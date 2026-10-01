@@ -1,4 +1,4 @@
-name: AndeMarket quality gate
+name: Tangamandapio quality gate
 
 on:
   push:

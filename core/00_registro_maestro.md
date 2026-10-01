@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 30/09/2026
+**Corte:** 01/10/2026
 
 ## 1. Caso y objetivo
 
@@ -16,15 +16,13 @@ Su datacenter centralizado concentra portal B2B, pedidos, inventario, despacho, 
 ```text
 Clientes y operadores
         |
-Internet -> seguridad/HTTPS -> AWS ALB -> Vite/Nginx + API escalable -> RDS PostgreSQL privada
+Internet -> seguridad/HTTPS objetivo -> AWS ALB -> Portal B2B + API escalable -> RDS PostgreSQL privada
                                                    |                         |
                                                    +-> S3 documentos          +-> outbox de eventos
                                                                                      |
                                                                           TLS + event_id
                                                                                      v
 Azure Function -> Storage Queue -> WMS/despacho -> Blob privado -> Monitor/Log Analytics
-
-OCI (fase posterior): VCN segmentada + continuidad/backup/recuperación e integración AWS–OCI.
 ```
 
 La solución es **híbrida** mientras datacenter y sedes coexisten con la nube, y **multicloud** porque cada proveedor recibe una responsabilidad empresarial concreta. No se usará una nube privada.
@@ -35,9 +33,8 @@ La solución es **híbrida** mientras datacenter y sedes coexisten con la nube, 
 |---|---|---|
 | AWS | Venta y transacción crítica | VPC, ALB, ASG/EC2, RDS PostgreSQL, S3, IAM/Secrets Manager, CloudWatch y mecanismo outbox/reintento |
 | Azure | Cumplimiento logístico asíncrono | Function, Storage Queue, Blob privado, Managed Identity/RBAC, Key Vault, Log Analytics y Application Insights |
-| OCI | Continuidad y criterio VCN/multicloud | VCN, subredes, NSG, Object Storage/backup, monitoreo y prueba de integración segura con AWS |
 
-Azure es un complemento operativo real. OCI no se sustituye: se implementará antes del cierre final para responder a la exigencia AWS–OCI/VCN de la plantilla y rúbrica.
+Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acordado del Entregable 1 y no se presenta como recurso implementado ni pendiente obligatorio.
 
 ## 4. Reglas de verdad
 
@@ -51,17 +48,16 @@ Azure es un complemento operativo real. OCI no se sustituye: se implementará an
 
 | Área | Estado | Límite de la afirmación |
 |---|---|---|
-| AWS | Plantilla CloudFormation y procedimiento validados; laboratorio finalizado | La credencial AWS Academy denegó describir o eliminar recursos; no se afirma cierre del stack actual sin inventario verificable |
-| Azure | Vertical WMS temporal aplicado en West US | Se crearon 12 recursos; Functions registradas, pero la invocación HTTP devolvió 500 y el cierre está pendiente |
-| OCI | No iniciado | No hay VCN ni integración real |
-| Aplicación | Código y pruebas locales disponibles | No se declara publicación cloud hasta validarla detrás del ALB |
+| AWS | CloudFormation validado y stack temporal creado; ALB con dos targets healthy, RDS privada y portal funcional | La credencial se canceló después de la evidencia; falta renovar sesión, confirmar fin de operación y eliminar recursos |
+| Azure | Vertical WMS temporal aplicado en West US | Health 200; Fulfillment 202; duplicado 200; Blob y Queue verificados. Pendiente Monitor y cierre |
+| Aplicación | Portal B2B publicado temporalmente detrás del ALB | Health 200, pedido 201 y consulta 200 verificados; URL efímera, no se declara servicio permanente |
 
 ## 6. Definición de terminado
 
-El proyecto queda listo para sustentar solo cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, recuperación probada, IaC reproducible, costos/cierre y una integración real entre AWS y OCI. Azure fortalece el caso WMS, pero no reemplaza esa última condición.
+El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La siguiente mejora funcional es conectar el outbox real de AWS con el receptor WMS validado en Azure.
 
-## 7. Actualización de ejecución — 30/09/2026
+## 7. Actualización de ejecución — 01/10/2026
 
-La evidencia AWS se mantiene separada entre el piloto histórico y el preflight vigente. La sesión final de AWS Academy presentó una denegación explícita para describir o borrar recursos de CloudFormation; por tanto, el proyecto no afirma que el stack actual fue desplegado, probado o eliminado en esa sesión sin un inventario verificable.
+AWS validó la plantilla CloudFormation y creó el stack temporal. Antes de que AWS Academy cancelara la credencial local, se verificaron dos targets ALB `healthy`, RDS PostgreSQL privada/cifrada, S3 con bloqueo público, dashboard y alarmas, además de `GET /health` 200, `POST /api/orders` 201 y `GET /api/orders` 200. La evidencia está en [evidence/current/aws](../evidence/current/aws/CUR-AWS-03_despliegue_y_prueba_2026-10-01.md). La cancelación ocurrió después de las pruebas: no se afirma inventario cero hasta renovar la sesión y ejecutar el cierre.
 
-En Azure, Terraform aplicó el vertical WMS temporal en West US y creó 12 recursos. Tras corregir el empaquetado, el host registró `HttpHealth` y `HttpFulfillment`; ambas rutas devolvieron HTTP 500 con clave válida. No se declara la persistencia Blob/Queue ni la integración AWS-Azure como aprobadas. Los registros actuales están en [evidence/current/azure](../evidence/current/azure/README.md); el cierre sigue pendiente de autenticación CLI, destrucción y comprobación de inventario cero.
+En Azure, Terraform validó y aplicó el vertical temporal en West US. Tras corregir el empaquetado remoto Linux y el TTL de Queue, `HttpHealth` devolvió 200, `HttpFulfillment` aceptó el evento con 202, el reenvío devolvió 200 por idempotencia y se verificaron el objeto Blob y el mensaje Queue. Los registros están en [evidence/current/azure](../evidence/current/azure/README.md). Falta evidencia de Monitor y cierre con inventario cero.

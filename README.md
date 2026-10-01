@@ -17,8 +17,8 @@ Antes de ejecutar recursos AWS, consultar el [mapa AWS predespliegue](core/06_aw
 
 | Entorno | Hecho verificable | Estado |
 |---|---|---|
-| AWS Academy | La sesión del laboratorio terminó en `CREATE_FAILED` antes de entregar acceso utilizable; no hay recursos Tangamandapio creados en la sesión actual. | Pendiente recuperar el laboratorio y repetir despliegue/evidencias. |
-| Azure for Students | Vertical WMS temporal creado en West US: Function Linux `Running`, inventario PaaS y Health autenticado HTTP `200`. | Pendiente repetir `Fulfillment` y comprobar Blob privado + Queue. |
+| AWS Academy | CloudFormation validado y stack temporal creado; ALB con dos targets healthy, RDS privada y portal B2B probado (`GET /health` 200, pedido 201, consulta 200). La credencial se canceló después de las pruebas. | Pendiente renovar la sesión, confirmar operación final y eliminar el stack para cerrar costos. |
+| Azure for Students | Vertical WMS temporal creado en West US: Function Linux `Running`, Health 200, Fulfillment 202, duplicado 200, Blob y Queue verificados. | Pendiente capturar Monitor y eliminar el Resource Group con inventario cero. |
 | OCI | Fuera del alcance acordado para este entregable. | No implementar ni presentar como parte de la solución actual. |
 
 ## Estructura

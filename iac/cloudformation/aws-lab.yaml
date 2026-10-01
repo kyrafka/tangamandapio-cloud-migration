@@ -410,7 +410,7 @@ Resources:
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
                 response.headers["Referrer-Policy"] = "no-referrer"
-                response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
+                response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
                 response.headers["Cache-Control"] = "no-store"
                 logger.info(json.dumps({
                     "event": "http_request",
@@ -492,9 +492,7 @@ Resources:
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width,initial-scale=1">
               <title>Tangamandapio S.A.C. | Portal B2B</title>
-              <style>
-                :root{font-family:Arial,sans-serif;color:#14213d;background:#f5f7fb}body{margin:0}.wrap{max-width:900px;margin:48px auto;padding:0 20px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 28px #14213d18;margin:18px 0}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:1px;color:#1769aa}h1{margin:8px 0}form{display:grid;gap:12px;grid-template-columns:1fr 150px auto}input,button{padding:12px;border-radius:8px;border:1px solid #c8d2e1}button{background:#1769aa;color:#fff;border:0;font-weight:bold;cursor:pointer}code{display:block;white-space:pre-wrap;background:#0f172a;color:#dbeafe;padding:16px;border-radius:8px}.ok{color:#137333;font-weight:bold}.bad{color:#b3261e;font-weight:bold}@media(max-width:650px){form{grid-template-columns:1fr}}
-              </style>
+              <link rel="stylesheet" href="/styles.css">
             </head>
             <body><main class="wrap">
               <p class="eyebrow">TANGAMANDAPIO S.A.C. · AWS</p>
@@ -503,12 +501,16 @@ Resources:
               <section class="card"><strong id="health">Verificando plataforma...</strong></section>
               <section class="card"><h2>Registrar pedido de prueba</h2><form id="order-form"><input id="customer" required maxlength="120" placeholder="Cliente de prueba"><input id="total" required type="number" min="0" step="0.01" placeholder="Total"><button>Crear pedido</button></form><p id="message"></p></section>
               <section class="card"><h2>Pedidos recientes</h2><code id="orders">Cargando...</code></section>
-            </main><script>
-              const health=document.getElementById('health'),orders=document.getElementById('orders'),message=document.getElementById('message');
-              async function refresh(){try{const h=await fetch('/health');const data=await h.json();health.textContent='Estado: '+data.status+' | Base de datos: '+data.database+' | Nodo: '+data.instance;health.className=h.ok?'ok':'bad';const r=await fetch('/api/orders');orders.textContent=JSON.stringify(await r.json(),null,2)}catch(error){health.textContent='No se pudo consultar la plataforma';health.className='bad'}}
-              document.getElementById('order-form').addEventListener('submit',async function(event){event.preventDefault();message.textContent='Registrando...';const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:document.getElementById('customer').value,total:Number(document.getElementById('total').value)})});const data=await response.json();message.textContent=response.ok?'Pedido #'+data.id+' creado correctamente':data.error;await refresh()});refresh();
-            </script></body></html>
+            </main><script src="/app.js"></script></body></html>
             HTML
+            cat > /opt/tangamandapio/static/styles.css <<'CSS'
+            :root{font-family:Arial,sans-serif;color:#14213d;background:#f5f7fb}body{margin:0}.wrap{max-width:900px;margin:48px auto;padding:0 20px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 28px #14213d18;margin:18px 0}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:1px;color:#1769aa}h1{margin:8px 0}form{display:grid;gap:12px;grid-template-columns:1fr 150px auto}input,button{padding:12px;border-radius:8px;border:1px solid #c8d2e1}button{background:#1769aa;color:#fff;border:0;font-weight:bold;cursor:pointer}code{display:block;white-space:pre-wrap;background:#0f172a;color:#dbeafe;padding:16px;border-radius:8px}.ok{color:#137333;font-weight:bold}.bad{color:#b3261e;font-weight:bold}@media(max-width:650px){form{grid-template-columns:1fr}}
+            CSS
+            cat > /opt/tangamandapio/static/app.js <<'JS'
+            const health=document.getElementById('health'),orders=document.getElementById('orders'),message=document.getElementById('message');
+            async function refresh(){try{const h=await fetch('/health');const data=await h.json();health.textContent='Estado: '+data.status+' | Base de datos: '+data.database+' | Nodo: '+data.instance;health.className=h.ok?'ok':'bad';const r=await fetch('/api/orders');orders.textContent=JSON.stringify(await r.json(),null,2)}catch(error){health.textContent='No se pudo consultar la plataforma';health.className='bad'}}
+            document.getElementById('order-form').addEventListener('submit',async function(event){event.preventDefault();message.textContent='Registrando...';const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:document.getElementById('customer').value,total:Number(document.getElementById('total').value)})});const data=await response.json();message.textContent=response.ok?'Pedido #'+data.id+' creado correctamente':data.error;await refresh()});refresh();
+            JS
             cat > /etc/systemd/system/tangamandapio.service <<'SERVICE'
             [Unit]
             Description=Tangamandapio demo application
