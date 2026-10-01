@@ -1,0 +1,804 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Laboratorio Tangamandapio: VPC segmentada, ALB, Auto Scaling, RDS PostgreSQL,
+  S3, registros, alarmas y dashboard. Diseñado para AWS Academy Learner Lab.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '[a-z0-9-]+'
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues: [db.t3.micro, db.t4g.micro]
+
+Mappings:
+  Network:
+    Cidrs:
+      Vpc: 10.10.0.0/16
+      PublicA: 10.10.0.0/24
+      PublicB: 10.10.1.0/24
+      AppA: 10.10.10.0/24
+      AppB: 10.10.11.0/24
+      DBA: 10.10.20.0/24
+      DBB: 10.10.21.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap [Network, Cidrs, Vpc]
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-vpc'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-igw'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, PublicA]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-public-a'}
+        - {Key: Tier, Value: public}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, PublicB]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-public-b'}
+        - {Key: Tier, Value: public}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, AppA]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-app-a'}
+        - {Key: Tier, Value: app}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, AppB]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-app-b'}
+        - {Key: Tier, Value: app}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  DBSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, DBA]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-db-a'}
+        - {Key: Tier, Value: db}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  DBSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !FindInMap [Network, Cidrs, DBB]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-db-b'}
+        - {Key: Tier, Value: db}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-rt-public'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicRouteAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PublicSubnetA, RouteTableId: !Ref PublicRouteTable}
+  PublicRouteAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PublicSubnetB, RouteTableId: !Ref PublicRouteTable}
+
+  NatEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-nat-eip'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-nat'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-rt-app'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AppRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  AppRouteAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref AppSubnetA, RouteTableId: !Ref AppRouteTable}
+  AppRouteAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref AppSubnetB, RouteTableId: !Ref AppRouteTable}
+
+  DBRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-rt-db-isolated'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  DBRouteAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref DBSubnetA, RouteTableId: !Ref DBRouteTable}
+  DBRouteAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref DBSubnetB, RouteTableId: !Ref DBRouteTable}
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP access to the demo load balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: Demo HTTP}
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 0.0.0.0/0, Description: Forward traffic to application tier}
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-sg-alb'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application traffic only from ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 8080, ToPort: 8080, SourceSecurityGroupId: !Ref ALBSecurityGroup, Description: ALB to app}
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 0.0.0.0/0, Description: Package installation and AWS APIs}
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-sg-app'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL only from application tier
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref AppSecurityGroup, Description: App to PostgreSQL}
+      SecurityGroupEgress: []
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-sg-db'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AssetBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub '${ProjectName}-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub '${ProjectName}/rds/master'
+      Description: Credenciales temporales de RDS para el laboratorio
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"tangama_admin"}'
+        GenerateStringKey: password
+        PasswordLength: 24
+        ExcludePunctuation: true
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private database subnets
+      SubnetIds: [!Ref DBSubnetA, !Ref DBSubnetB]
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-db-subnets'}
+        - {Key: Project, Value: !Ref ProjectName}
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub '${ProjectName}-postgres'
+      Engine: postgres
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: 20
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: tangamandapio
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups: [!Ref DBSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      DeleteAutomatedBackups: true
+      DeletionProtection: false
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-postgres'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: LabProfile, Value: cost-controlled}
+
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/tangamandapio/${ProjectName}/application'
+      RetentionInDays: 1
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${ProjectName}-app'
+      LaunchTemplateData:
+        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: {Name: LabInstanceProfile}
+        SecurityGroupIds: [!Ref AppSecurityGroup]
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 8
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - {Key: Name, Value: !Sub '${ProjectName}-app'}
+              - {Key: Project, Value: !Ref ProjectName}
+              - {Key: ManagedBy, Value: cloudformation}
+          - ResourceType: volume
+            Tags:
+              - {Key: Project, Value: !Ref ProjectName}
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -euo pipefail
+            dnf install -y python3-pip
+            dnf install -y amazon-cloudwatch-agent || true
+            pip3 install --no-cache-dir flask gunicorn boto3 psycopg2-binary
+            install -d -m 0755 /opt/tangamandapio/static
+            install -d -m 0755 /var/log/tangamandapio
+            cat > /opt/tangamandapio/app.py <<'PYAPP'
+            import json
+            import logging
+            import math
+            import os
+            import socket
+            import time
+            import uuid
+            from pathlib import Path
+            import boto3
+            import psycopg2
+            from flask import Flask, g, jsonify, request, send_from_directory
+
+            static_folder = Path("/opt/tangamandapio/static")
+            app = Flask(__name__, static_folder=str(static_folder), static_url_path="")
+            app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
+            logging.basicConfig(level=logging.INFO, format="%(message)s")
+            logger = logging.getLogger("tangamandapio.aws")
+            secret = json.loads(
+                boto3.client("secretsmanager", region_name=os.environ["AWS_REGION_NAME"])
+                .get_secret_value(SecretId=os.environ["DB_SECRET_ARN"])["SecretString"]
+            )
+
+            def db():
+                return psycopg2.connect(
+                    host=os.environ["DB_HOST"],
+                    dbname="tangamandapio",
+                    user=secret["username"],
+                    password=secret["password"],
+                    connect_timeout=3,
+                )
+
+            def init_db():
+                with db() as connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, customer TEXT NOT NULL, total NUMERIC(10,2) NOT NULL CHECK (total >= 0), created_at TIMESTAMPTZ DEFAULT NOW())")
+
+            init_db()
+
+            @app.before_request
+            def start_request_observation():
+                g.request_started_at = time.perf_counter()
+                g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+            @app.after_request
+            def secure_and_observe(response):
+                response.headers["X-Request-ID"] = g.get("request_id", str(uuid.uuid4()))
+                response.headers["X-Content-Type-Options"] = "nosniff"
+                response.headers["X-Frame-Options"] = "DENY"
+                response.headers["Referrer-Policy"] = "no-referrer"
+                response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
+                response.headers["Cache-Control"] = "no-store"
+                logger.info(json.dumps({
+                    "event": "http_request",
+                    "request_id": response.headers["X-Request-ID"],
+                    "method": request.method,
+                    "path": request.path,
+                    "status": response.status_code,
+                    "duration_ms": round((time.perf_counter() - g.get("request_started_at", time.perf_counter())) * 1000, 2),
+                    "instance": socket.gethostname()
+                }))
+                return response
+
+            @app.get("/api")
+            def api_index():
+                return jsonify(service="Tangamandapio AWS", instance=socket.gethostname(), database="RDS PostgreSQL")
+
+            @app.get("/")
+            def index():
+                if (static_folder / "index.html").is_file():
+                    return send_from_directory(static_folder, "index.html")
+                return api_index()
+
+            @app.get("/health")
+            def health():
+                try:
+                    with db() as connection:
+                        with connection.cursor() as cursor:
+                            cursor.execute("SELECT 1")
+                    return jsonify(status="ok", instance=socket.gethostname(), database="ok")
+                except Exception:
+                    return jsonify(status="degraded", instance=socket.gethostname(), database="error"), 503
+
+            @app.get("/ready")
+            def ready():
+                try:
+                    with db() as connection:
+                        with connection.cursor() as cursor:
+                            cursor.execute("SELECT 1")
+                    return jsonify(status="ready", dependencies={"database": "ok"})
+                except Exception:
+                    return jsonify(status="not_ready", dependencies={"database": "error"}), 503
+
+            @app.get("/api/orders")
+            def list_orders():
+                with db() as connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT id, customer, total::float, created_at::text FROM orders ORDER BY id DESC LIMIT 20")
+                        rows = cursor.fetchall()
+                return jsonify([dict(zip(["id", "customer", "total", "created_at"], row)) for row in rows])
+
+            @app.post("/api/orders")
+            def create_order():
+                payload = request.get_json(silent=True) or {}
+                customer = str(payload.get("customer", "")).strip()
+                try:
+                    total = float(payload.get("total"))
+                except (TypeError, ValueError):
+                    total = -1
+                if not customer or len(customer) > 120 or not math.isfinite(total) or total < 0 or total > 1000000:
+                    return jsonify(error="invalid order"), 400
+                with db() as connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute("INSERT INTO orders(customer,total) VALUES(%s,%s) RETURNING id", (customer,total))
+                        order_id = cursor.fetchone()[0]
+                return jsonify(id=order_id, customer=customer, total=total, instance=socket.gethostname()), 201
+
+            @app.get("/<path:asset_path>")
+            def web_assets(asset_path):
+                if (static_folder / asset_path).is_file():
+                    return send_from_directory(static_folder, asset_path)
+                if (static_folder / "index.html").is_file() and not asset_path.startswith("api/"):
+                    return send_from_directory(static_folder, "index.html")
+                return jsonify(error="not_found"), 404
+            PYAPP
+            cat > /opt/tangamandapio/static/index.html <<'HTML'
+            <!doctype html>
+            <html lang="es">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>Tangamandapio S.A.C. | Portal B2B</title>
+              <style>
+                :root{font-family:Arial,sans-serif;color:#14213d;background:#f5f7fb}body{margin:0}.wrap{max-width:900px;margin:48px auto;padding:0 20px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 28px #14213d18;margin:18px 0}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:1px;color:#1769aa}h1{margin:8px 0}form{display:grid;gap:12px;grid-template-columns:1fr 150px auto}input,button{padding:12px;border-radius:8px;border:1px solid #c8d2e1}button{background:#1769aa;color:#fff;border:0;font-weight:bold;cursor:pointer}code{display:block;white-space:pre-wrap;background:#0f172a;color:#dbeafe;padding:16px;border-radius:8px}.ok{color:#137333;font-weight:bold}.bad{color:#b3261e;font-weight:bold}@media(max-width:650px){form{grid-template-columns:1fr}}
+              </style>
+            </head>
+            <body><main class="wrap">
+              <p class="eyebrow">TANGAMANDAPIO S.A.C. · AWS</p>
+              <h1>Portal B2B de pedidos</h1>
+              <p>Demostración académica con ALB, Auto Scaling y PostgreSQL privada.</p>
+              <section class="card"><strong id="health">Verificando plataforma...</strong></section>
+              <section class="card"><h2>Registrar pedido de prueba</h2><form id="order-form"><input id="customer" required maxlength="120" placeholder="Cliente de prueba"><input id="total" required type="number" min="0" step="0.01" placeholder="Total"><button>Crear pedido</button></form><p id="message"></p></section>
+              <section class="card"><h2>Pedidos recientes</h2><code id="orders">Cargando...</code></section>
+            </main><script>
+              const health=document.getElementById('health'),orders=document.getElementById('orders'),message=document.getElementById('message');
+              async function refresh(){try{const h=await fetch('/health');const data=await h.json();health.textContent='Estado: '+data.status+' | Base de datos: '+data.database+' | Nodo: '+data.instance;health.className=h.ok?'ok':'bad';const r=await fetch('/api/orders');orders.textContent=JSON.stringify(await r.json(),null,2)}catch(error){health.textContent='No se pudo consultar la plataforma';health.className='bad'}}
+              document.getElementById('order-form').addEventListener('submit',async function(event){event.preventDefault();message.textContent='Registrando...';const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:document.getElementById('customer').value,total:Number(document.getElementById('total').value)})});const data=await response.json();message.textContent=response.ok?'Pedido #'+data.id+' creado correctamente':data.error;await refresh()});refresh();
+            </script></body></html>
+            HTML
+            cat > /etc/systemd/system/tangamandapio.service <<'SERVICE'
+            [Unit]
+            Description=Tangamandapio demo application
+            After=network-online.target
+            Wants=network-online.target
+
+            [Service]
+            Type=simple
+            Environment=AWS_REGION_NAME=${AWS::Region}
+            Environment=DB_SECRET_ARN=${DBSecret}
+            Environment=DB_HOST=${Database.Endpoint.Address}
+            WorkingDirectory=/opt/tangamandapio
+            ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
+            Restart=always
+            RestartSec=5
+            User=root
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+            systemctl daemon-reload
+            systemctl enable --now tangamandapio
+            if command -v /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl >/dev/null 2>&1; then
+              cat > /opt/aws/amazon-cloudwatch-agent/etc/tangamandapio.json <<CWA
+            {
+              "agent": {"region": "${AWS::Region}"},
+              "metrics": {
+                "namespace": "Tangamandapio/Host",
+                "metrics_collected": {
+                  "mem": {
+                    "measurement": ["mem_used_percent"],
+                    "metrics_collection_interval": 60
+                  },
+                  "disk": {
+                    "measurement": ["used_percent"],
+                    "resources": ["/"],
+                    "metrics_collection_interval": 60
+                  },
+                  "procstat": [
+                    {
+                      "pattern": "gunicorn",
+                      "measurement": ["pid_count", "cpu_usage", "memory_rss"],
+                      "metrics_collection_interval": 60
+                    }
+                  ]
+                }
+              },
+              "logs": {
+                "logs_collected": {
+                  "files": {
+                    "collect_list": [
+                      {"file_path": "/var/log/tangamandapio/access.log", "log_group_name": "${ApplicationLogGroup}", "log_stream_name": "{instance_id}/access"},
+                      {"file_path": "/var/log/tangamandapio/error.log", "log_group_name": "${ApplicationLogGroup}", "log_stream_name": "{instance_id}/error"}
+                    ]
+                  }
+                }
+              }
+            }
+            CWA
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/tangamandapio.json || true
+            fi
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${ProjectName}-tg'
+      VpcId: !Ref VPC
+      Port: 8080
+      Protocol: HTTP
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher: {HttpCode: '200'}
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+
+  AppLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${ProjectName}-alb'
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups: [!Ref ALBSecurityGroup]
+      Subnets: [!Ref PublicSubnetA, !Ref PublicSubnetB]
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref AppLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: Database
+    Properties:
+      AutoScalingGroupName: !Sub '${ProjectName}-asg'
+      VPCZoneIdentifier: [!Ref AppSubnetA, !Ref AppSubnetB]
+      MinSize: '2'
+      MaxSize: '4'
+      DesiredCapacity: '2'
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 420
+      TargetGroupARNs: [!Ref TargetGroup]
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName, PropagateAtLaunch: true}
+        - {Key: ManagedBy, Value: cloudformation, PropagateAtLaunch: true}
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT7M
+
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60
+        DisableScaleIn: false
+
+  HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-high-cpu'
+      AlarmDescription: CPU promedio alta en la capa de aplicacion
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - {Name: AutoScalingGroupName, Value: !Ref AutoScalingGroup}
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  UnhealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-unhealthy-targets'
+      AlarmDescription: Uno o mas destinos del ALB no estan saludables
+      Namespace: AWS/ApplicationELB
+      MetricName: UnHealthyHostCount
+      Dimensions:
+        - {Name: TargetGroup, Value: !GetAtt TargetGroup.TargetGroupFullName}
+        - {Name: LoadBalancer, Value: !GetAtt AppLoadBalancer.LoadBalancerFullName}
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  Target5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-target-5xx'
+      AlarmDescription: Errores HTTP 5xx generados por la aplicacion
+      Namespace: AWS/ApplicationELB
+      MetricName: HTTPCode_Target_5XX_Count
+      Dimensions:
+        - {Name: TargetGroup, Value: !GetAtt TargetGroup.TargetGroupFullName}
+        - {Name: LoadBalancer, Value: !GetAtt AppLoadBalancer.LoadBalancerFullName}
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  DatabaseCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-rds-high-cpu'
+      AlarmDescription: CPU alta sostenida en RDS PostgreSQL
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions:
+        - {Name: DBInstanceIdentifier, Value: !Ref Database}
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 75
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  OperationsDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${ProjectName}-operations'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "CPU promedio - Auto Scaling Group",
+                "region": "${AWS::Region}",
+                "period": 60,
+                "stat": "Average",
+                "metrics": [["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", "${AutoScalingGroup}"]]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Destinos saludables del ALB",
+                "region": "${AWS::Region}",
+                "period": 60,
+                "stat": "Average",
+                "metrics": [["AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "${TargetGroup.TargetGroupFullName}", "LoadBalancer", "${AppLoadBalancer.LoadBalancerFullName}"]]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Latencia p95 y errores 5xx del ALB",
+                "region": "${AWS::Region}",
+                "period": 60,
+                "metrics": [
+                  ["AWS/ApplicationELB", "TargetResponseTime", "TargetGroup", "${TargetGroup.TargetGroupFullName}", "LoadBalancer", "${AppLoadBalancer.LoadBalancerFullName}", {"stat": "p95", "id": "m0"}],
+                  ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "TargetGroup", "${TargetGroup.TargetGroupFullName}", "LoadBalancer", "${AppLoadBalancer.LoadBalancerFullName}", {"stat": "Sum", "id": "m1"}]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "RDS: CPU y conexiones",
+                "region": "${AWS::Region}",
+                "period": 60,
+                "stat": "Average",
+                "metrics": [
+                  ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${Database}"],
+                  [".", "DatabaseConnections", ".", ".", {"yAxis": "right"}]
+                ]
+              }
+            }
+          ]
+        }
+
+Outputs:
+  ApplicationURL:
+    Description: URL HTTP temporal de la demostracion
+    Value: !Sub 'http://${AppLoadBalancer.DNSName}'
+  LoadBalancerDNS:
+    Value: !GetAtt AppLoadBalancer.DNSName
+  VpcId:
+    Value: !Ref VPC
+  AssetBucketName:
+    Value: !Ref AssetBucket
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DashboardName:
+    Value: !Ref OperationsDashboard
+  ApplicationLogGroupName:
+    Value: !Ref ApplicationLogGroup

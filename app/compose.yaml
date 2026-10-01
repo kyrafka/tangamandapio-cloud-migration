@@ -1,0 +1,38 @@
+services:
+  aws-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_PATH: /data/tangamandapio.db
+      AZURE_FULFILLMENT_URL: http://azure-service:8081
+      AZURE_FUNCTION_KEY: ${DEMO_FUNCTION_KEY:-local-demo-key}
+    ports:
+      - "8080:8080"
+    volumes:
+      - aws-data:/data
+    depends_on:
+      azure-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  azure-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.azure
+    environment:
+      FUNCTION_KEY: ${DEMO_FUNCTION_KEY:-local-demo-key}
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request; key=os.getenv('FUNCTION_KEY',''); request=urllib.request.Request('http://localhost:8081/health', headers={'x-functions-key': key}); urllib.request.urlopen(request)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  aws-data:

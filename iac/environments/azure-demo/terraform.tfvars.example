@@ -1,0 +1,6 @@
+location             = "eastus"
+resource_group_name  = "rg-tangamandapio-ops-demo"
+create_resource_group = false
+storage_account_name = "sttangama260925"
+key_vault_name       = "kv-tangama-260925"
+name_prefix          = "tangama"

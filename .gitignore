@@ -1,0 +1,48 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variables y credenciales locales
+*.auto.tfvars
+terraform.tfvars
+*.pem
+*.key
+*.pfx
+*.p12
+wg-private-*
+.env
+.env.*
+.venv/
+**/.venv/
+**/node_modules/
+.pnpm-store/
+
+# Sistema/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+tools/
+
+# Evidencias temporales o sensibles
+evidence/raw/
+
+# Artefactos locales, dependencias y material histórico no publicable
+build/
+archive/
+export/
+qa/
+.tmp_entregable1_template/
+evidence/legacy/
+andemarket-cloudformation.zip
+tmp_*.py
+**/__pycache__/
+*.pyc

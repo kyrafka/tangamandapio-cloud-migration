@@ -1,0 +1,39 @@
+name: AndeMarket quality gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.16.0'
+      - name: Install validators
+        run: pip install -r app/requirements.txt cfn-lint
+      - name: Unit tests
+        working-directory: app
+        run: python -m unittest discover -s tests -v
+      - name: CloudFormation lint
+        run: cfn-lint iac/cloudformation/aws-lab.yaml
+      - name: Terraform format and validation
+        run: |
+          terraform -chdir=iac/environments/demo fmt -check -recursive
+          terraform -chdir=iac/environments/demo init -backend=false -input=false
+          terraform -chdir=iac/environments/demo validate
+      - name: Shell syntax
+        run: bash -n iac/cloudformation/*.sh tests/aws/*.sh
+      - name: Performance smoke test
+        working-directory: app
+        run: |
+          gunicorn --bind 127.0.0.1:8080 --workers 2 src.app:app >/tmp/andemarket.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID"' EXIT
+          python -c "import time,urllib.request; time.sleep(1); urllib.request.urlopen('http://127.0.0.1:8080/health').read()"
+          python ../tests/performance/load_test.py --url http://127.0.0.1:8080/health --requests 50 --concurrency 5 --max-p95-ms 2000

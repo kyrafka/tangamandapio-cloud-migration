@@ -1,0 +1,9 @@
+aws_region   = "us-east-1"
+aws_vpc_cidr = "10.10.0.0/16"
+owner        = "jose-zuniga"
+
+# Mantener apagado hasta confirmar presupuesto, región y nombre globalmente único.
+enable_azure               = false
+azure_location             = "eastus"
+azure_resource_group_name  = "rg-tangamandapio-demo"
+azure_storage_account_name = ""
