@@ -26,8 +26,9 @@ La secuencia concreta de fotos por tomar se mantiene en [CAPTURAS_PENDIENTES.md]
 | CUR-AZ-05 | Inventario Azure CLI | Function `Running`, recursos PaaS y dos rutas registradas |
 | CUR-AZ-06 | Health WMS autenticado | HTTP 200 y CORS limitado al portal |
 | CUR-AZ-07 | WMS extremo a extremo | Health 200; evento 202; duplicado 200; Blob y Queue privados verificados |
+| CUR-AZ-08 | Cierre Azure | Grupos temporales eliminados; consulta por prefijo sin resultados |
 
-Los registros visuales de Azure se guardan como PNG dentro de `current/azure/screenshots/`. Están rotulados como consultas autenticadas de CLI, por lo que no se confunden con capturas del portal. Sólo queda pendiente el inventario cero de cierre cuando se autorice eliminar los recursos temporales de Azure.
+Los registros visuales de Azure se guardan como PNG dentro de `current/azure/screenshots/`. Están rotulados como consultas autenticadas de CLI, por lo que no se confunden con capturas del portal. El cierre se verificó consultando el inventario tras la eliminación asíncrona de ambos grupos del proyecto.
 
 ## Índice de AWS — 01/10/2026
 

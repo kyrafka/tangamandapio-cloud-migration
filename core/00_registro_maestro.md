@@ -49,7 +49,7 @@ Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acor
 | Área | Estado | Límite de la afirmación |
 |---|---|---|
 | AWS | CloudFormation validado y stack temporal creado; ALB con dos targets healthy, RDS privada y portal funcional | La credencial se canceló después de la evidencia; falta renovar sesión, confirmar fin de operación y eliminar recursos |
-| Azure | Vertical WMS temporal aplicado en West US | Health 200; Fulfillment 202; duplicado 200; Blob y Queue verificados. Pendiente Monitor y cierre |
+| Azure | Vertical WMS temporal validado en West US y luego eliminado | Health 200; Fulfillment 202; duplicado 200; Blob y Queue verificados. Inventario cero confirmado |
 | Aplicación | Portal B2B publicado temporalmente detrás del ALB | Health 200, pedido 201 y consulta 200 verificados; URL efímera, no se declara servicio permanente |
 
 ## 6. Definición de terminado
@@ -60,4 +60,4 @@ El proyecto queda listo para sustentar cuando demuestre: aplicación y persisten
 
 AWS validó la plantilla CloudFormation y creó el stack temporal. Antes de que AWS Academy cancelara la credencial local, se verificaron dos targets ALB `healthy`, RDS PostgreSQL privada/cifrada, S3 con bloqueo público, dashboard y alarmas, además de `GET /health` 200, `POST /api/orders` 201 y `GET /api/orders` 200. La evidencia está en [evidence/current/aws](../evidence/current/aws/CUR-AWS-03_despliegue_y_prueba_2026-10-01.md). La cancelación ocurrió después de las pruebas: no se afirma inventario cero hasta renovar la sesión y ejecutar el cierre.
 
-En Azure, Terraform validó y aplicó el vertical temporal en West US. Tras corregir el empaquetado remoto Linux y el TTL de Queue, `HttpHealth` devolvió 200, `HttpFulfillment` aceptó el evento con 202, el reenvío devolvió 200 por idempotencia y se verificaron el objeto Blob y el mensaje Queue. Los registros están en [evidence/current/azure](../evidence/current/azure/README.md). Falta evidencia de Monitor y cierre con inventario cero.
+En Azure, Terraform validó y aplicó el vertical temporal en West US. Tras corregir el empaquetado remoto Linux y el TTL de Queue, `HttpHealth` devolvió 200, `HttpFulfillment` aceptó el evento con 202, el reenvío devolvió 200 por idempotencia y se verificaron el objeto Blob y el mensaje Queue. Los registros están en [evidence/current/azure](../evidence/current/azure/README.md). Posteriormente se eliminaron los dos Resource Groups de Tangamandapio y la consulta final por prefijo no devolvió recursos.

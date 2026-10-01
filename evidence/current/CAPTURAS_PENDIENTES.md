@@ -34,10 +34,10 @@ Azure no necesita máquinas virtuales. Ya se guardaron tres registros visuales d
 | `CUR-AZ-06_health_cli_2026-10-01.png` | Prueba autenticada de `HttpHealth` y CORS limitado al portal. | Guardada: HTTP `200` y `status=ok`. |
 | `CUR-AZ-07_wms_end_to_end_2026-10-01.png` | Evento WMS aceptado y verificación de Blob privado más mensaje de Queue. | Flujo idempotente exitoso; no imprimir claves de Function. |
 | `CUR-AZ-08_monitor.png` | Application Insights/Azure Monitor después de la prueba. | Invocación correcta, latencia y ausencia de error 5xx en la ejecución corregida. |
-| `CUR-AZ-09_cierre_inventario_cero.png` | Azure CLI o Portal tras eliminar ambos grupos temporales. | Inventario cero y control de costos cerrado. |
+| `CUR-AZ-08_cierre_inventario_cero_2026-10-01.png` | Azure CLI tras eliminar ambos grupos temporales. | Completada: inventario cero y control de costos Azure cerrado. |
 
 ## Estado al 01/10/2026
 
 - AWS: stack vigente desplegado en `us-east-1`; ALB con dos targets saludables, RDS privada y prueba real de pedidos superada. La actualización controlada de la interfaz debe terminar antes del cierre.
-- Azure: `HttpHealth` respondió HTTP 200; `HttpFulfillment` registró un evento, rechazó el duplicado de forma idempotente y se verificaron Blob y Queue. El empaquetado Linux remoto y TTL de Queue se corrigieron.
+- Azure: `HttpHealth` respondió HTTP 200; `HttpFulfillment` registró un evento, rechazó el duplicado de forma idempotente y se verificaron Blob y Queue. El empaquetado Linux remoto y TTL de Queue se corrigieron. Los dos Resource Groups del proyecto fueron eliminados y el inventario por prefijo quedó vacío.
 - Ninguna evidencia debe reemplazarse con material histórico de AndeMarket ni con una imagen presentada como si fuera una captura de portal. Los PNG CLI se rotulan como registros visuales autenticados.
