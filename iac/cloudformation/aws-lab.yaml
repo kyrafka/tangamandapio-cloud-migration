@@ -303,6 +303,7 @@ Resources:
       Name: !Sub '${ProjectName}/portal/session'
       Description: Clave compartida para las sesiones del portal B2B
       GenerateSecretString:
+        SecretStringTemplate: '{}'
         GenerateStringKey: session_secret
         PasswordLength: 48
         ExcludePunctuation: true
