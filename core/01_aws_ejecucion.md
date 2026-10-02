@@ -44,3 +44,18 @@ No se crean VDI, directorio administrado, VM administrativa permanente ni recurs
 ## Cierre de costos
 
 Antes de terminar la ventana se elimina el stack, se confirma su ausencia, se revisan EC2/RDS/ALB/NAT/S3 propios y se finaliza Learner Lab. Nunca se eliminan recursos preexistentes sin identificar y sin autorización explícita.
+
+## Registro del ciclo B2B — 02/10/2026
+
+El portal B2B se empaquetó como artefacto privado y versionado en S3. El Launch Template fue preparado para descargarlo en cada nodo del ASG y para recuperar los secretos operativos desde Secrets Manager mediante el rol del laboratorio. No se incluyeron secretos en el repositorio ni en el `UserData`.
+
+| Hito | Resultado real |
+|---|---|
+| Validación IaC | `aws cloudformation validate-template` aprobó la plantilla corregida. |
+| Primer change set | Reversión automática controlada: el secreto de sesión declaraba `GenerateStringKey` sin `SecretStringTemplate`. No se sustituyeron VPC, ALB ni RDS. |
+| Corrección | Se añadió `SecretStringTemplate: '{}'` y se versionó la corrección como `45274dc`. |
+| Segundo change set | Siete cambios controlados en secretos, Launch Template, ASG, política de escalado, alarma y dashboard. |
+| Resultado | El stack alcanzó `UPDATE_COMPLETE` el 02/10/2026 a las 11:56 a. m. (America/Chicago). |
+| Continuidad | Durante el recambio, `GET /health` devolvió HTTP 200 con `database=ok`; el ALB mantuvo el servicio mientras rotaban los nodos. |
+
+Tras el reinicio posterior del laboratorio, la consola de CloudFormation muestra cero pilas de Tangamandapio y el DNS del ALB de ese ciclo no resuelve. Por tanto, el resultado anterior queda documentado como ejecución temporal comprobada, pero no como infraestructura activa. Para continuar se debe cargar una nueva credencial temporal, reprovisionar el stack y repetir las pruebas de login/roles, rutas protegidas y dos targets saludables. No eliminar ni crear recursos adicionales hasta contar con dicha credencial y ejecutar el ciclo nuevo de manera controlada.

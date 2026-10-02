@@ -13,12 +13,12 @@ El único registro rector es [core/00_registro_maestro.md](core/00_registro_maes
 
 Antes de ejecutar recursos AWS, consultar el [mapa AWS predespliegue](core/06_aws_mapa_pre_despliegue_2026-09-30.md): contiene el inventario vivo, alcance, monitoreo, costos y brechas declaradas.
 
-## Estado operativo al 01/10/2026
+## Estado operativo al 02/10/2026
 
 | Entorno | Hecho verificable | Estado |
 |---|---|---|
-| AWS Academy | CloudFormation validado y stack temporal creado; ALB con dos targets healthy, RDS privada y portal B2B probado (`GET /health` 200, pedido 201, consulta 200). La credencial se canceló después de las pruebas. | Pendiente renovar la sesión, confirmar operación final y eliminar el stack para cerrar costos. |
-| Azure for Students | Vertical WMS temporal validado: Health 200, Fulfillment 202, duplicado 200, Blob y Queue verificados. | Ambos Resource Groups de Tangamandapio fueron eliminados y el inventario por prefijo quedó vacío. |
+| AWS Academy | La ejecución temporal incorporó la versión B2B del portal mediante artefacto versionado en S3, Secrets Manager y actualización gradual del ASG. CloudFormation terminó `UPDATE_COMPLETE` el 02/10; durante el recambio, `/health` devolvió 200 con PostgreSQL disponible. | Tras reiniciar el laboratorio, CloudFormation muestra cero pilas de Tangamandapio y el ALB anterior ya no resuelve. Para continuar se debe reprovisionar con una credencial vigente y luego repetir las pruebas de login/roles. |
+| Azure for Students | El ciclo inicial se cerró; el vertical WMS vigente se encuentra en `rg-tangamandapio-261001r2-wus`, con Function App, Storage, Key Vault, Application Insights, Log Analytics y plan PaaS. El inventario actual contiene siete recursos. | La Function figura en ejecución. Falta repetir la prueba extremo a extremo del ciclo vigente después de cualquier cambio de código y cerrar el grupo cuando se autorice. |
 | OCI | Fuera del alcance acordado para este entregable. | No implementar ni presentar como parte de la solución actual. |
 
 ## Estructura

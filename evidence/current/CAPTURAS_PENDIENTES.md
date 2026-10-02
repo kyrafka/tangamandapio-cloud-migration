@@ -2,9 +2,9 @@
 
 **Regla de integridad:** guardar cada imagen con el identificador indicado dentro de la carpeta de la nube correspondiente. No usar una imagen de `legacy/andemarket-historical` como si fuera evidencia de Tangamandapio. No mostrar cuentas, claves de Function, tokens, URLs firmadas ni credenciales.
 
-## AWS — despliegue vigente 01/10/2026
+## AWS — ciclo temporal cerrado por reinicio de laboratorio
 
-La sesión temporal de AWS Academy ya permitió validar y desplegar la infraestructura vigente. El incidente anterior `CREATE_FAILED` del entorno Vocareum queda separado como antecedente y no se usa como evidencia de Tangamandapio.
+La sesión temporal de AWS Academy permitió validar y desplegar la infraestructura de Tangamandapio. El 02/10/2026, tras reiniciar el laboratorio, CloudFormation mostró `Pilas (0)` al filtrar Tangamandapio y el DNS del ALB temporal dejó de resolver. Por eso, las capturas anteriores son evidencia técnica del ciclo ya finalizado, no del estado actual. El siguiente ciclo debe empezar con una credencial AWS Academy vigente, validación IaC y nuevas capturas completas; no reutilizar imágenes antiguas como si el nuevo stack ya estuviera activo.
 
 | ID y archivo sugerido | Qué debe verse en la captura | Resultado que debe quedar legible |
 |---|---|---|
@@ -14,18 +14,19 @@ La sesión temporal de AWS Academy ya permitió validar y desplegar la infraestr
 | `CUR-AWS-06_stack_operativo_2026-10-01.png` | CloudFormation, ASG, ALB y RDS del stack vigente. | Stack operativo; dos nodos saludables; componentes de la arquitectura presentes. |
 | `CUR-AWS-07_salud_infraestructura.png` | ALB, RDS, S3 Public Access Block y CloudWatch. | Dos targets `healthy`; RDS privada/cifrada; cuatro bloqueos S3 en `true`; alarmas y dashboard disponibles. |
 | `CUR-AWS-08_prueba_funcional_2026-10-01.png` | Portal B2B y prueba `GET /health`, `POST /api/orders`, `GET /api/orders`. | HTTP `200`, `201`, `200`; pedido persistido desde PostgreSQL. |
+| `CUR-AWS-10_portal_b2b_v1_despliegue_2026-10-02.md` | Registro técnico de la publicación B2B, rollback controlado y actualización final. | `UPDATE_COMPLETE`; `/health` 200 durante el recambio. No sustituye las capturas del siguiente ciclo. |
 | `CUR-AWS-09_cierre_y_costo_cero.png` | Tras la autorización de borrado: stack inexistente y laboratorio terminado. | No quedan ALB, NAT, EC2, RDS, S3 ni stack de Tangamandapio ejecutándose. |
 
 ### Orden seguro AWS (vigente)
 
-1. Conservar los registros de preflight y validación efectuados antes de crear el stack.
-2. Capturar `06` a `08` con el stack actualizado y el portal funcional.
-3. Verificar que la actualización CloudFormation termine antes de eliminar.
-4. Después de las evidencias, eliminar el stack temporal y capturar `09` con el inventario cero.
+1. Actualizar la credencial temporal local desde AWS Academy y verificarla con una consulta de identidad.
+2. Validar IaC, publicar el artefacto y crear un nuevo stack; antes de continuar, capturar `03` a `07` para el nuevo ciclo.
+3. Probar Health, login/roles y pedidos contra el ALB nuevo; guardar `08` sin mostrar secretos.
+4. Solo después de una autorización posterior, eliminar el stack temporal y capturar `09` con el inventario cero.
 
-## Azure — vertical WMS actual
+## Azure — vertical WMS activo
 
-Azure no necesita máquinas virtuales. Ya se guardaron tres registros visuales de consultas Azure CLI autenticadas: inventario, Health y flujo WMS extremo a extremo. La prioridad restante es Monitor y cierre de inventario cero.
+Azure no necesita máquinas virtuales. El ciclo inicial de prueba fue cerrado; el grupo vigente `rg-tangamandapio-261001r2-wus` contiene siete recursos PaaS y permanece activo por instrucción del estudiante. No se debe reutilizar ni rotular una composición de CLI como si fuese captura del portal.
 
 | ID y archivo sugerido | Qué debe verse en la captura | Resultado que debe quedar legible |
 |---|---|---|
@@ -33,11 +34,15 @@ Azure no necesita máquinas virtuales. Ya se guardaron tres registros visuales d
 | `CUR-AZ-05_inventario_cli_2026-10-01.png` | Consulta Azure CLI autenticada con Function, Storage, Key Vault, Application Insights y Log Analytics. | Guardada: inventario real actual del vertical Azure. |
 | `CUR-AZ-06_health_cli_2026-10-01.png` | Prueba autenticada de `HttpHealth` y CORS limitado al portal. | Guardada: HTTP `200` y `status=ok`. |
 | `CUR-AZ-07_wms_end_to_end_2026-10-01.png` | Evento WMS aceptado y verificación de Blob privado más mensaje de Queue. | Flujo idempotente exitoso; no imprimir claves de Function. |
-| `CUR-AZ-08_monitor.png` | Application Insights/Azure Monitor después de la prueba. | Invocación correcta, latencia y ausencia de error 5xx en la ejecución corregida. |
 | `CUR-AZ-08_cierre_inventario_cero_2026-10-01.png` | Azure CLI tras eliminar ambos grupos temporales. | Completada: inventario cero y control de costos Azure cerrado. |
+| `AZ-PORTAL-01_inventario_2026-10-01.png` | Grupo de recursos vigente con Storage, Key Vault, Log Analytics, Application Insights, Function App y plan. | Siete recursos, región West US. |
+| `AZ-PORTAL-02_function_operativa_2026-10-01.png` | Function App en ejecución; dos funciones HTTP habilitadas. | Runtime v4, Linux, `HttpHealth` y `HttpFulfillment`. |
+| `AZ-PORTAL-03_health_200_2026-10-01.png` | Panel "Prueba/ejecución" de `HttpHealth`. | HTTP `200 De acuerdo`, `status=ok`. |
+| `AZ-PORTAL-04_fulfillment_202_2026-10-01.png` | Panel "Prueba/ejecución" y registros de `HttpFulfillment`. | HTTP `202 Aceptado`; Blob `201`, Queue `201` y ejecución `Succeeded`. |
+| `CUR-AZ-09_validacion_v5_2026-10-02.md` | Registro técnico del ciclo actual r2 y sus tres respuestas HTTP. | Health `200`, evento `202` y repetición idempotente `200`; tomar también la captura del portal del grupo r2 si se requiere evidencia visual actual. |
 
 ## Estado al 01/10/2026
 
-- AWS: stack vigente desplegado en `us-east-1`; ALB con dos targets saludables, RDS privada y prueba real de pedidos superada. La actualización controlada de la interfaz debe terminar antes del cierre.
-- Azure: `HttpHealth` respondió HTTP 200; `HttpFulfillment` registró un evento, rechazó el duplicado de forma idempotente y se verificaron Blob y Queue. El empaquetado Linux remoto y TTL de Queue se corrigieron. Los dos Resource Groups del proyecto fueron eliminados y el inventario por prefijo quedó vacío.
-- Ninguna evidencia debe reemplazarse con material histórico de AndeMarket ni con una imagen presentada como si fuera una captura de portal. Los PNG CLI se rotulan como registros visuales autenticados.
+- AWS: el stack del ciclo anterior fue probado en `us-east-1`, pero no existe una pila de Tangamandapio tras el reinicio de laboratorio del 02/10. Se debe reprovisionar antes de reclamar disponibilidad actual.
+- Azure: el grupo activo tiene siete recursos PaaS. El 01/10/2026 el portal Azure confirmó `HttpHealth` HTTP 200 y `HttpFulfillment` HTTP 202; sus registros confirmaron Blob 201, Queue 201 y ejecución correcta con identidad administrada. No borrar hasta haber guardado los PNG de portal y recibir autorización expresa.
+- Ninguna evidencia debe reemplazarse con material histórico de AndeMarket ni con una imagen presentada como si fuera una captura de portal. Los PNG CLI se rotulan como registros visuales autenticados y las capturas de portal se guardan por separado.

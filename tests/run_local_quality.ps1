@@ -27,4 +27,4 @@ if ($ValidateTerraform) {
   Write-Host 'TERRAFORM_AZURE=PENDIENTE (ejecute con -ValidateTerraform cuando la dependencia de proveedor este disponible)'
 }
 
-Write-Host 'QUALITY_GATE=APROBADA (15 pruebas unitarias)'
+Write-Host 'QUALITY_GATE=APROBADA (pruebas unitarias completadas)'
