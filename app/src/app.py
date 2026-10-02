@@ -447,7 +447,7 @@ def create_app(test_config=None):
                     connection,
                     """
                     INSERT INTO portal_users(username, password_hash, role, company_id, active, created_at)
-                    VALUES (?, ?, ?, ?, 1, ?)
+                    VALUES (?, ?, ?, ?, TRUE, ?)
                     """,
                     (
                         username,
@@ -726,7 +726,7 @@ def ensure_portal_bootstrap(app, database_path):
             connection.execute(
                 """
                 INSERT INTO portal_users(username, password_hash, role, company_id, active, created_at)
-                VALUES (?, ?, 'admin', ?, 1, ?)
+                VALUES (?, ?, 'admin', ?, TRUE, ?)
                 ON CONFLICT(username) DO NOTHING
                 """,
                 (
