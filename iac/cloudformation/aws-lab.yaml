@@ -21,6 +21,11 @@ Parameters:
     Default: releases/portal-b2b-v1.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
+  ApplicationArtifactRevision:
+    Type: String
+    Default: bootstrap
+    AllowedPattern: '[A-Za-z0-9._-]+'
+    Description: Identificador inmutable de la revisión del artefacto; fuerza una actualización gradual del ASG cuando cambia.
 
 Mappings:
   Network:
@@ -390,6 +395,7 @@ Resources:
           Fn::Base64: !Sub |
             #!/bin/bash
             set -euo pipefail
+            # Revisión inmutable del artefacto: ${ApplicationArtifactRevision}
             dnf install -y python3-pip
             dnf install -y amazon-cloudwatch-agent || true
             pip3 install --no-cache-dir flask gunicorn boto3 psycopg2-binary
