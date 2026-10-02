@@ -4,6 +4,7 @@ set -euo pipefail
 STACK_NAME="${STACK_NAME:-tangamandapio-live-20260930}"
 REGION="${AWS_REGION:-us-east-1}"
 TEMPLATE="${1:-aws-lab.yaml}"
+APPLICATION_ARTIFACT_KEY="${APPLICATION_ARTIFACT_KEY:-releases/portal-b2b-v1.tar.gz}"
 
 aws cloudformation validate-template \
   --region "$REGION" \
@@ -13,7 +14,7 @@ aws cloudformation deploy \
   --region "$REGION" \
   --stack-name "$STACK_NAME" \
   --template-file "$TEMPLATE" \
-  --parameter-overrides ProjectName=tangamandapio InstanceType=t3.micro DBInstanceClass=db.t3.micro \
+  --parameter-overrides ProjectName=tangamandapio InstanceType=t3.micro DBInstanceClass=db.t3.micro ApplicationArtifactKey="$APPLICATION_ARTIFACT_KEY" \
   --tags Project=tangamandapio Environment=demo ManagedBy=cloudformation \
   --no-fail-on-empty-changeset
 

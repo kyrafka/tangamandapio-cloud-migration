@@ -16,6 +16,11 @@ Parameters:
     Type: String
     Default: db.t3.micro
     AllowedValues: [db.t3.micro, db.t4g.micro]
+  ApplicationArtifactKey:
+    Type: String
+    Default: releases/portal-b2b-v1.tar.gz
+    AllowedPattern: '[A-Za-z0-9._/-]+'
+    Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
 
 Mappings:
   Network:
@@ -275,6 +280,35 @@ Resources:
       Tags:
         - {Key: Project, Value: !Ref ProjectName}
 
+  PortalAdminSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub '${ProjectName}/portal/admin'
+      Description: Credenciales iniciales del administrador del portal B2B
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"admin@tangamandapio.local"}'
+        GenerateStringKey: password
+        PasswordLength: 28
+        ExcludePunctuation: true
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+
+  PortalSessionSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub '${ProjectName}/portal/session'
+      Description: Clave compartida para las sesiones del portal B2B
+      GenerateSecretString:
+        GenerateStringKey: session_secret
+        PasswordLength: 48
+        ExcludePunctuation: true
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -511,6 +545,42 @@ Resources:
             async function refresh(){try{const h=await fetch('/health');const data=await h.json();health.textContent='Estado: '+data.status+' | Base de datos: '+data.database+' | Nodo: '+data.instance;health.className=h.ok?'ok':'bad';const r=await fetch('/api/orders');orders.textContent=JSON.stringify(await r.json(),null,2)}catch(error){health.textContent='No se pudo consultar la plataforma';health.className='bad'}}
             document.getElementById('order-form').addEventListener('submit',async function(event){event.preventDefault();message.textContent='Registrando...';const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:document.getElementById('customer').value,total:Number(document.getElementById('total').value)})});const data=await response.json();message.textContent=response.ok?'Pedido #'+data.id+' creado correctamente':data.error;await refresh()});refresh();
             JS
+            # El portal se publica como artefacto privado y versionado; esto reemplaza
+            # la interfaz mínima embebida arriba sin exponer código ni secretos.
+            aws s3 cp "s3://${AssetBucket}/${ApplicationArtifactKey}" /tmp/portal-b2b.tar.gz --region ${AWS::Region}
+            tar -xzf /tmp/portal-b2b.tar.gz -C /opt/tangamandapio
+            pip3 install --no-cache-dir -r /opt/tangamandapio/requirements.txt
+            install -d -m 0700 /etc/tangamandapio
+            export DB_SECRET_JSON="$(aws secretsmanager get-secret-value --secret-id '${DBSecret}' --region ${AWS::Region} --query SecretString --output text)"
+            export PORTAL_ADMIN_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalAdminSecret}' --region ${AWS::Region} --query SecretString --output text)"
+            export PORTAL_SESSION_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalSessionSecret}' --region ${AWS::Region} --query SecretString --output text)"
+            export DATABASE_HOST='${Database.Endpoint.Address}'
+            python3 - <<'PYENV'
+            import json
+            import os
+            from urllib.parse import quote
+
+            database = json.loads(os.environ["DB_SECRET_JSON"])
+            admin = json.loads(os.environ["PORTAL_ADMIN_JSON"])
+            session = json.loads(os.environ["PORTAL_SESSION_JSON"])
+            database_url = "postgresql://{}:{}@{}:5432/tangamandapio".format(
+                quote(database["username"], safe=""),
+                quote(database["password"], safe=""),
+                os.environ["DATABASE_HOST"],
+            )
+            lines = {
+                "DATABASE_URL": database_url,
+                "BOOTSTRAP_ADMIN_USERNAME": admin["username"],
+                "BOOTSTRAP_ADMIN_PASSWORD": admin["password"],
+                "APP_SESSION_SECRET": session["session_secret"],
+                "SESSION_COOKIE_SECURE": "false",
+                "AUTO_DISPATCH_EVENTS": "false",
+            }
+            with open("/etc/tangamandapio/application.env", "w", encoding="utf-8") as target:
+                for key, value in lines.items():
+                    target.write("{}={}\n".format(key, value.replace("\n", "")))
+            os.chmod("/etc/tangamandapio/application.env", 0o600)
+            PYENV
             cat > /etc/systemd/system/tangamandapio.service <<'SERVICE'
             [Unit]
             Description=Tangamandapio demo application
@@ -522,6 +592,7 @@ Resources:
             Environment=AWS_REGION_NAME=${AWS::Region}
             Environment=DB_SECRET_ARN=${DBSecret}
             Environment=DB_HOST=${Database.Endpoint.Address}
+            EnvironmentFile=/etc/tangamandapio/application.env
             WorkingDirectory=/opt/tangamandapio
             ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
             Restart=always
