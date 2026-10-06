@@ -9,7 +9,7 @@
 | Resultado de apply | 12 recursos creados, 0 modificados, 0 destruidos |
 | Componentes | Resource Group, Storage Account, Blob privado, Queue, Key Vault, plan Consumption, Function App, Log Analytics, Application Insights y tres roles RBAC |
 | Protección | TLS 1.2, Blob no público, soft delete, Managed Identity y RBAC |
-| Estado de limpieza | Pendiente de destruir el grupo temporal y verificar inventario cero |
+| Estado de limpieza | Grupo temporal eliminado después de la prueba; ver `CUR-AZ-08` |
 
 ## Límite de esta evidencia
 

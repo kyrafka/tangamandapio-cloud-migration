@@ -37,6 +37,7 @@ evidence/raw/
 
 # Artefactos locales, dependencias y material histórico no publicable
 build/
+artifacts/
 archive/
 export/
 qa/
@@ -46,3 +47,7 @@ andemarket-cloudformation.zip
 tmp_*.py
 **/__pycache__/
 *.pyc
+
+# Estado local de Terraform que no debe publicarse
+iac/environments/azure-demo/.provider-schema.json
+iac/environments/azure-demo/tfplan*

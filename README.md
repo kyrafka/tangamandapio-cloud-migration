@@ -18,7 +18,7 @@ Antes de ejecutar recursos AWS, consultar el [mapa AWS predespliegue](core/06_aw
 | Entorno | Hecho verificable | Estado |
 |---|---|---|
 | AWS Academy | La ejecución temporal incorporó la versión B2B del portal mediante artefacto versionado en S3, Secrets Manager y actualización gradual del ASG. CloudFormation terminó `UPDATE_COMPLETE` el 02/10; durante el recambio, `/health` devolvió 200 con PostgreSQL disponible. | Tras reiniciar el laboratorio, CloudFormation muestra cero pilas de Tangamandapio y el ALB anterior ya no resuelve. Para continuar se debe reprovisionar con una credencial vigente y luego repetir las pruebas de login/roles. |
-| Azure for Students | El ciclo inicial se cerró; el vertical WMS vigente se encuentra en `rg-tangamandapio-261001r2-wus`, con Function App, Storage, Key Vault, Application Insights, Log Analytics y plan PaaS. El inventario actual contiene siete recursos. | La Function figura en ejecución. Falta repetir la prueba extremo a extremo del ciclo vigente después de cualquier cambio de código y cerrar el grupo cuando se autorice. |
+| Azure for Students | El vertical WMS fue desplegado y probado temporalmente con Function App, Storage, Key Vault, Application Insights, Log Analytics y plan PaaS. El grupo `rg-tangamandapio-261001r2-wus` se eliminó al cierre. | No hay Function activa actualmente. Para una demo nueva se debe reprovisionar y repetir Health, Fulfillment, Blob/Queue e integración AWS→Azure. |
 | OCI | Fuera del alcance acordado para este entregable. | No implementar ni presentar como parte de la solución actual. |
 
 ## Estructura

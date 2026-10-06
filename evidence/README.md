@@ -14,7 +14,7 @@
 
 Cada evidencia debe registrar: fecha, región, recurso, configuración, prueba, resultado y estado de limpieza. Nunca incluir credenciales, claves, identificadores de cuenta ni datos personales.
 
-La secuencia concreta de fotos por tomar se mantiene en [CAPTURAS_PENDIENTES.md](current/CAPTURAS_PENDIENTES.md). AWS tiene prioridad hasta terminar su actualización controlada y limpieza posterior. Azure tiene un ciclo vigente, aún activo por instrucción del estudiante, con inventario, Health y flujo completo Blob/Queue verificados desde el portal.
+La secuencia concreta de fotos por tomar se mantiene en [CAPTURAS_PENDIENTES.md](current/CAPTURAS_PENDIENTES.md). Los dos ciclos temporales fueron cerrados; ese archivo y el [plan de reanudación](../core/07_plan_reanudacion_y_mejoras.md) determinan qué se debe reproducir antes de declarar disponibilidad actual.
 
 ## Índice de Azure — 01/10/2026
 
@@ -30,7 +30,7 @@ La secuencia concreta de fotos por tomar se mantiene en [CAPTURAS_PENDIENTES.md]
 | CUR-AZ-09 | Validación actual del WMS r2 | Function actual, Health 200, Fulfillment 202 y reintento idempotente 200 registrados sin claves |
 | AZ-PORTAL-01 a 04 | Capturas reales del ciclo previo de portal Azure | Inventario, Function en ejecución, Health 200 y Fulfillment 202 con Blob/Queue 201; conservar como antecedente, no como foto del r2 |
 
-Los registros visuales de Azure se guardan como PNG dentro de `current/azure/screenshots/`. Están rotulados como consultas autenticadas de CLI, por lo que no se confunden con capturas del portal. El grupo vigente `rg-tangamandapio-261001r2-wus` contiene siete recursos PaaS y no se ha solicitado su eliminación.
+Los registros visuales de Azure se guardan como PNG dentro de `current/azure/screenshots/`. Están rotulados como consultas autenticadas de CLI, por lo que no se confunden con capturas del portal. El grupo `rg-tangamandapio-261001r2-wus` fue eliminado al cierre; las imágenes prueban el ciclo temporal y no un inventario vigente.
 
 ## Índice de AWS — 02/10/2026
 

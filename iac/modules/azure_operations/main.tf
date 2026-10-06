@@ -102,6 +102,7 @@ resource "azurerm_linux_function_app" "wms" {
   service_plan_id            = azurerm_service_plan.function.id
   storage_account_name       = azurerm_storage_account.this.name
   storage_account_access_key = azurerm_storage_account.this.primary_access_key
+  zip_deploy_file            = var.function_package_path
   https_only                 = true
   tags                       = var.tags
 
@@ -131,9 +132,12 @@ resource "azurerm_linux_function_app" "wms" {
     # trigger metadata and leases; it is distinct from the application Blob
     # and Queue clients, which authenticate with managed identity.
     "AzureWebJobsStorage"                   = azurerm_storage_account.this.primary_connection_string
-    "AzureWebJobsFeatureFlags"              = "EnableWorkerIndexing"
-    "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "true"
-    "ENABLE_ORYX_BUILD"                     = "true"
+    "WEBSITE_RUN_FROM_PACKAGE"              = "1"
+    # El proveedor realiza Zip Deploy desde el artefacto generado localmente.
+    # Así no se versionan ZIPs ni SAS con caducidad fija en Terraform.
+    "DEPLOYMENT_PACKAGE_SHA256"             = filesha256(var.function_package_path)
+    "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "false"
+    "ENABLE_ORYX_BUILD"                     = "false"
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.wms.connection_string
     "WMS_QUEUE_NAME"                        = azurerm_storage_queue.fulfillment.name
     "EVIDENCE_CONTAINER"                    = azurerm_storage_container.evidence.name

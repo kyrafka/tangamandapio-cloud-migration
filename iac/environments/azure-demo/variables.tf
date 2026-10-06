@@ -31,3 +31,8 @@ variable "name_prefix" {
   description = "Prefijo corto para recursos Azure."
   default     = "tangama"
 }
+
+variable "function_package_path" {
+  type        = string
+  description = "Ruta al ZIP de Function generado localmente antes del apply."
+}

@@ -26,6 +26,7 @@ def create_azure_app(test_config=None):
         app.config.update(test_config)
 
     received_events = {}
+    app.extensions["metrics"] = {"requests_total": 0, "events_queued_total": 0}
 
     @app.before_request
     def start_request_observation():
@@ -34,6 +35,7 @@ def create_azure_app(test_config=None):
 
     @app.after_request
     def secure_and_observe(response):
+        app.extensions["metrics"]["requests_total"] += 1
         response.headers["X-Request-ID"] = g.get("request_id", str(uuid.uuid4()))
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -60,6 +62,20 @@ def create_azure_app(test_config=None):
             )
         )
         return response
+
+    @app.get("/metrics")
+    def metrics():
+        values = app.extensions["metrics"]
+        return (
+            "# HELP tangamandapio_azure_simulator_requests_total HTTP responses from the local Azure contract simulator.\n"
+            "# TYPE tangamandapio_azure_simulator_requests_total counter\n"
+            f"tangamandapio_azure_simulator_requests_total {values['requests_total']}\n"
+            "# HELP tangamandapio_azure_simulator_events_queued_total Accepted fulfillment events.\n"
+            "# TYPE tangamandapio_azure_simulator_events_queued_total counter\n"
+            f"tangamandapio_azure_simulator_events_queued_total {values['events_queued_total']}\n",
+            200,
+            {"Content-Type": "text/plain; version=0.0.4"},
+        )
 
     def authorized():
         expected_key = app.config["FUNCTION_KEY"]
@@ -99,6 +115,7 @@ def create_azure_app(test_config=None):
             "payload": payload,
         }
         received_events[event_id] = event
+        app.extensions["metrics"]["events_queued_total"] += 1
         return jsonify(status="queued", event=event), 202
 
     @app.get("/ready")

@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 02/10/2026
+**Corte:** 04/10/2026
 
 ## 1. Caso y objetivo
 
@@ -44,17 +44,17 @@ Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acor
 4. Cada ventana de nube tiene: inventario previo -> validación IaC -> despliegue -> pruebas -> evidencia -> eliminación/apagado -> inventario final.
 5. Los antecedentes de `evidence/legacy/` sirven para rescatar procedimientos, no para demostrar este núcleo.
 
-## 5. Estado inicial verificable
+## 5. Estado actual verificable
 
 | Área | Estado | Límite de la afirmación |
 |---|---|---|
-| AWS | Portal B2B versionado publicado temporalmente con CloudFormation; ALB/ASG, RDS privada, S3 y Secrets Manager verificados durante el recambio | La ejecución alcanzó `UPDATE_COMPLETE` el 02/10. Tras el reinicio de laboratorio, no hay una pila activa; falta reprovisionar y ejecutar la prueba posterior de login/roles |
-| Azure | El ciclo inicial fue eliminado; el vertical WMS vigente está en West US con siete recursos PaaS: Function, Storage, Key Vault, Application Insights, Log Analytics, plan y grupo de alertas | La Function aparece en ejecución. Se debe repetir el flujo Health/Fulfillment del ciclo vigente tras cualquier cambio de código y cerrar costos solo con autorización |
-| Aplicación | Portal B2B publicado temporalmente detrás del ALB | Health 200, pedido 201 y consulta 200 verificados; URL efímera, no se declara servicio permanente |
+| AWS | Ciclo temporal cerrado. CloudFormation no muestra pilas de Tangamandapio y EC2 no muestra instancias en `us-east-1`. | Las pruebas del 01-02/10 son evidencia histórica válida del ciclo; no se declara disponibilidad actual. |
+| Azure | Ciclo temporal cerrado. El grupo `rg-tangamandapio-261001r2-wus` fue eliminado y la consulta autenticada devolvió que no existe. | Las pruebas Health/Fulfillment anteriores prueban el ciclo pasado; no se declara Function activa. |
+| Aplicación | Portal B2B, API, roles y contrato WMS existen en el repositorio. | La publicación live fue efímera. Falta repetir login/roles y la integración AWS→Azure en un mismo ciclo si se desea una demo actual. |
 
 ## 6. Definición de terminado
 
-El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La siguiente mejora funcional es conectar el outbox real de AWS con el receptor WMS validado en Azure.
+El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La hoja de ruta controlada está en [07_plan_reanudacion_y_mejoras.md](07_plan_reanudacion_y_mejoras.md); es la referencia para futuros levantamientos.
 
 ## 7. Actualización de ejecución — 01/10/2026
 

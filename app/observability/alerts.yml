@@ -1,0 +1,19 @@
+groups:
+  - name: tangamandapio-availability
+    rules:
+      - alert: TangamandapioServiceUnavailable
+        expr: up{job=~"tangamandapio-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Servicio Tangamandapio no disponible
+          description: El objetivo {{ $labels.instance }} dejó de responder a Prometheus durante un minuto.
+      - alert: TangamandapioOutboxDeliveryFailures
+        expr: increase(tangamandapio_outbox_events_total{result="failed"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Entrega de evento WMS pendiente
+          description: La integración AWS a Azure requiere revisión o reintento.

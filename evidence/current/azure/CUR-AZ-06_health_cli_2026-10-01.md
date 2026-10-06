@@ -8,7 +8,7 @@
 | Prueba | `GET /api/health` con clave de Function mantenida solamente en memoria del cliente de prueba |
 | Resultado | HTTP `200`; cuerpo: `status=ok`, `service=tangamandapio-wms` |
 | Interpretación | Un GET sin clave devuelve HTTP `401` intencionalmente; no es caída del servicio. |
-| Mejora pendiente | Repetir POST de fulfillment y comprobar Blob privado más Queue antes del cierre del Resource Group. |
+| Resultado posterior relacionado | El POST de fulfillment, el Blob privado y la Queue se verificaron antes del cierre; ver `CUR-AZ-07`. |
 | Imagen | `screenshots/CUR-AZ-06_health_cli_2026-10-01.png` |
 
 La imagen es un registro visual de una prueba HTTP real con Azure CLI autenticado. No expone la clave de Function.

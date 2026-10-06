@@ -8,7 +8,7 @@ services:
       AZURE_FULFILLMENT_URL: http://azure-service:8081
       AZURE_FUNCTION_KEY: ${DEMO_FUNCTION_KEY:-local-demo-key}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - aws-data:/data
     depends_on:
@@ -27,12 +27,61 @@ services:
     environment:
       FUNCTION_KEY: ${DEMO_FUNCTION_KEY:-local-demo-key}
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     healthcheck:
       test: ["CMD", "python", "-c", "import os, urllib.request; key=os.getenv('FUNCTION_KEY',''); request=urllib.request.Request('http://localhost:8081/health', headers={'x-functions-key': key}); urllib.request.urlopen(request)"]
       interval: 10s
       timeout: 3s
       retries: 5
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["ops"]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      aws-app:
+        condition: service_healthy
+      azure-service:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana-oss:11.2.0
+    profiles: ["ops"]
+    environment:
+      GF_SECURITY_ADMIN_USER: opsadmin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-demo-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+  portainer:
+    image: portainer/portainer-ce:2.21.5
+    profiles: ["ops"]
+    command: --http-disabled
+    ports:
+      - "127.0.0.1:9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+
 volumes:
   aws-data:
+  prometheus-data:
+  grafana-data:
+  portainer-data:

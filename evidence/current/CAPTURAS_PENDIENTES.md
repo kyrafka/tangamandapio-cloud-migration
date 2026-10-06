@@ -24,9 +24,9 @@ La sesión temporal de AWS Academy permitió validar y desplegar la infraestruct
 3. Probar Health, login/roles y pedidos contra el ALB nuevo; guardar `08` sin mostrar secretos.
 4. Solo después de una autorización posterior, eliminar el stack temporal y capturar `09` con el inventario cero.
 
-## Azure — vertical WMS activo
+## Azure — ciclo WMS cerrado
 
-Azure no necesita máquinas virtuales. El ciclo inicial de prueba fue cerrado; el grupo vigente `rg-tangamandapio-261001r2-wus` contiene siete recursos PaaS y permanece activo por instrucción del estudiante. No se debe reutilizar ni rotular una composición de CLI como si fuese captura del portal.
+Azure no necesita máquinas virtuales. El grupo `rg-tangamandapio-261001r2-wus` fue eliminado tras el ciclo de pruebas; la consulta autenticada confirmó que ya no existe. Las capturas Azure guardadas demuestran ese ciclo temporal, pero no se presentan como inventario activo. Un próximo ciclo debe volver a desplegar el vertical antes de tomar nuevas imágenes de portal.
 
 | ID y archivo sugerido | Qué debe verse en la captura | Resultado que debe quedar legible |
 |---|---|---|
@@ -41,8 +41,8 @@ Azure no necesita máquinas virtuales. El ciclo inicial de prueba fue cerrado; e
 | `AZ-PORTAL-04_fulfillment_202_2026-10-01.png` | Panel "Prueba/ejecución" y registros de `HttpFulfillment`. | HTTP `202 Aceptado`; Blob `201`, Queue `201` y ejecución `Succeeded`. |
 | `CUR-AZ-09_validacion_v5_2026-10-02.md` | Registro técnico del ciclo actual r2 y sus tres respuestas HTTP. | Health `200`, evento `202` y repetición idempotente `200`; tomar también la captura del portal del grupo r2 si se requiere evidencia visual actual. |
 
-## Estado al 01/10/2026
+## Estado de cierre al 04/10/2026
 
 - AWS: el stack del ciclo anterior fue probado en `us-east-1`, pero no existe una pila de Tangamandapio tras el reinicio de laboratorio del 02/10. Se debe reprovisionar antes de reclamar disponibilidad actual.
-- Azure: el grupo activo tiene siete recursos PaaS. El 01/10/2026 el portal Azure confirmó `HttpHealth` HTTP 200 y `HttpFulfillment` HTTP 202; sus registros confirmaron Blob 201, Queue 201 y ejecución correcta con identidad administrada. No borrar hasta haber guardado los PNG de portal y recibir autorización expresa.
+- Azure: el ciclo temporal confirmó `HttpHealth` HTTP 200 y `HttpFulfillment` HTTP 202; sus registros confirmaron Blob 201, Queue 201 y ejecución correcta con identidad administrada. Después de conservar las evidencias, se eliminó el grupo. Un nuevo despliegue requiere nuevas capturas antes de afirmar disponibilidad actual.
 - Ninguna evidencia debe reemplazarse con material histórico de AndeMarket ni con una imagen presentada como si fuera una captura de portal. Los PNG CLI se rotulan como registros visuales autenticados y las capturas de portal se guardan por separado.

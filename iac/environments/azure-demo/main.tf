@@ -18,5 +18,6 @@ module "azure_operations" {
   storage_account_name  = var.storage_account_name
   key_vault_name        = var.key_vault_name
   name_prefix           = var.name_prefix
+  function_package_path = abspath(var.function_package_path)
   tags                  = local.tags
 }
