@@ -34,7 +34,11 @@ pnpm install
 pnpm build
 ```
 
-El build genera `src/static/`. Después de iniciar Flask, `http://localhost:8080/` sirve el portal y `http://localhost:8080/api` mantiene la descripción JSON de la API.
+El build de publicación genera `src/static/`. La puerta de calidad usa
+`pnpm run build:check`, que crea un artefacto aislado en `web/dist/` para no
+reemplazar los archivos servidos por Flask mientras solo se valida el código.
+Después de iniciar Flask, `http://localhost:8080/` sirve el portal y
+`http://localhost:8080/api` mantiene la descripción JSON de la API.
 
 ## Servicios y endpoints
 

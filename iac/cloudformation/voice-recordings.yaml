@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Bucket privado dedicado para grabaciones de voz consentidas del portal Tangamandapio.
+  No forma parte del plan de backups generales y elimina objetos al cumplir 30 días.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '[a-z0-9-]+'
+  ApplicationRoleName:
+    Type: String
+    Default: LabRole
+    AllowedPattern: '[A-Za-z0-9+=,.@_-]+'
+
+Resources:
+  VoiceRecordingsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub '${ProjectName}-voice-${AWS::AccountId}-${AWS::Region}'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireVoiceRecordingsAfter30Days
+            Status: Enabled
+            Prefix: voice-recordings/
+            ExpirationInDays: 30
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 1
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Purpose
+          Value: consented-voice-recordings
+        - Key: ManagedBy
+          Value: cloudformation
+
+  VoiceRecordingsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VoiceRecordingsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt VoiceRecordingsBucket.Arn
+              - !Sub '${VoiceRecordingsBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+          - Sid: AllowPortalInstanceRoleForRecordingsOnly
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ApplicationRoleName}'
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+            Resource: !Sub '${VoiceRecordingsBucket.Arn}/voice-recordings/*'
+
+Outputs:
+  VoiceRecordingsBucketName:
+    Description: Bucket privado de grabaciones con vencimiento de 30 días.
+    Value: !Ref VoiceRecordingsBucket
+  VoiceRecordingsPrefix:
+    Value: voice-recordings/

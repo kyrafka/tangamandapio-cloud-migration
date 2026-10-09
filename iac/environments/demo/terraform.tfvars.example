@@ -7,3 +7,5 @@ enable_azure               = false
 azure_location             = "eastus"
 azure_resource_group_name  = "rg-tangamandapio-demo"
 azure_storage_account_name = ""
+azure_key_vault_name       = ""
+azure_function_package_path = ""

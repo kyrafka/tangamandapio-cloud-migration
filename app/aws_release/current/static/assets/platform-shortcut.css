@@ -1,0 +1,49 @@
+.platform-shortcut {
+  align-items: center;
+  background: var(--portal-soft, #20382c);
+  border: 1px solid var(--portal-line, #344b3d);
+  border-radius: 999px;
+  color: var(--portal-ink, #eef3ee);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 750;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.85rem;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+}
+
+.platform-shortcut:hover {
+  border-color: var(--portal-accent, #287b58);
+  transform: translateY(-1px);
+}
+
+.platform-shortcut:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--portal-accent, #287b58) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.topbar-meta:has(.platform-shortcut) {
+  align-items: end;
+}
+
+@media (max-width: 700px) {
+  .platform-shortcut {
+    font-size: 0;
+    gap: 0;
+    width: 2.35rem;
+    padding: 0;
+  }
+
+  .platform-shortcut::before {
+    content: "⌘";
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .platform-shortcut { transition: none; }
+}

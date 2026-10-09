@@ -1,7 +1,9 @@
-location             = "eastus"
-resource_group_name  = "rg-tangamandapio-ops-demo"
-create_resource_group = false
-storage_account_name = "sttangama260925"
-key_vault_name       = "kv-tangama-260925"
-name_prefix          = "tangama"
+# Ejemplo para un entorno NUEVO y aislado; reemplaza los nombres globales antes de usar.
+# No usar como configuración de actualización del grupo Azure live.
+location              = "westus"
+resource_group_name   = "rg-tangamandapio-sandbox-cambiar"
+create_resource_group = true
+storage_account_name  = "sttangamasandbox001"
+key_vault_name        = "kv-tangama-sandbox-001"
+name_prefix           = "tangama"
 function_package_path = "../../../artifacts/azure_function_package.zip"

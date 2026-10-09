@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Laboratorio Tangamandapio: VPC segmentada, ALB, Auto Scaling, RDS PostgreSQL,
-  S3, registros, alarmas y dashboard. Diseñado para AWS Academy Learner Lab.
+  S3, registros, alarmas y dashboard. Dise??ado para AWS Academy Learner Lab.
 
 Parameters:
   ProjectName:
@@ -25,7 +25,63 @@ Parameters:
     Type: String
     Default: bootstrap
     AllowedPattern: '[A-Za-z0-9._-]+'
-    Description: Identificador inmutable de la revisión del artefacto; fuerza una actualización gradual del ASG cuando cambia.
+    Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
+  DemoVoicePassword:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Contrase??a temporal para las dos cuentas de demostraci??n WebRTC. Vac??o no crea cuentas demo.
+  AzureFulfillmentUrl:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^https://[a-z0-9-]+\.azurewebsites\.net$'
+    Description: URL base de la Function App de Azure que recibe el outbox. Vac??o deja el outbox sin cablear.
+  AzureFunctionKeySecret:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[A-Za-z0-9/_-]+$'
+    Description: Nombre del secreto de Secrets Manager que guarda la function key de Azure. El valor nunca entra en la plantilla.
+  AlarmNotificationEmailPrimary:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    Description: Correo principal para las alarmas CloudWatch. Vacio no crea suscripciones.
+  AlarmNotificationEmailAlternate:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    Description: Correo alternativo para las alarmas CloudWatch. Vacio no crea suscripcion.
+  CertificateArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:aws:acm:[a-z0-9-]+:\d{12}:certificate/[0-9a-f-]{36}$'
+    Description: ARN del certificado ACM (importado o validado) para el listener HTTPS 443. Vacio deja el ALB solo en HTTP.
+  DatabaseMultiAZ:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Activa alta disponibilidad Multi-AZ para RDS. Eleva el costo; usar solo con una ventana y presupuesto aprobados.
+  DatabaseBackupRetentionDays:
+    Type: Number
+    Default: 7
+    MinValue: 1
+    MaxValue: 35
+    Description: D??as de retenci??n de backups autom??ticos de RDS.
+  EnableWaf:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Crea y asocia AWS WAF al ALB. Tiene costo y requiere aprobaci??n expl??cita.
+  ManageWafAssociation:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Permite que este stack cree la asociaci??n WAF-ALB. Mantener false si la asociaci??n preexiste.
+  EnableAwsBackup:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Crea un vault y plan AWS Backup para RDS/S3. Tiene costo y requiere aprobaci??n expl??cita.
 
 Mappings:
   Network:
@@ -37,6 +93,20 @@ Mappings:
       AppB: 10.10.11.0/24
       DBA: 10.10.20.0/24
       DBB: 10.10.21.0/24
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref CertificateArn, '']]
+  HasAlarmEmailPrimary: !Not [!Equals [!Ref AlarmNotificationEmailPrimary, '']]
+  HasAlarmEmailAlternate: !Not [!Equals [!Ref AlarmNotificationEmailAlternate, '']]
+  UseDatabaseMultiAZ: !Equals [!Ref DatabaseMultiAZ, 'true']
+  UseWaf: !Equals [!Ref EnableWaf, 'true']
+  UseManagedWafAssociation: !And
+    - !Condition UseWaf
+    - !Equals [!Ref ManageWafAssociation, 'true']
+  UseAwsBackup: !Equals [!Ref EnableAwsBackup, 'true']
+  HasAlarmEmails: !Or
+    - !Condition HasAlarmEmailPrimary
+    - !Condition HasAlarmEmailAlternate
 
 Resources:
   VPC:
@@ -219,7 +289,11 @@ Resources:
       GroupDescription: Public HTTP access to the demo load balancer
       VpcId: !Ref VPC
       SecurityGroupIngress:
-        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: Demo HTTP}
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: Demo HTTP y redirect a HTTPS}
+        - !If
+          - HasCertificate
+          - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: Demo HTTPS}
+          - !Ref AWS::NoValue
       SecurityGroupEgress:
         - {IpProtocol: '-1', CidrIp: 0.0.0.0/0, Description: Forward traffic to application tier}
       Tags:
@@ -261,6 +335,12 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
       VersioningConfiguration: {Status: Enabled}
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireNoncurrentVersions
+            Status: Enabled
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -341,8 +421,8 @@ Resources:
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups: [!Ref DBSecurityGroup]
       PubliclyAccessible: false
-      MultiAZ: false
-      BackupRetentionPeriod: 1
+      MultiAZ: !If [UseDatabaseMultiAZ, true, false]
+      BackupRetentionPeriod: !Ref DatabaseBackupRetentionDays
       DeleteAutomatedBackups: true
       DeletionProtection: false
       AutoMinorVersionUpgrade: true
@@ -395,173 +475,34 @@ Resources:
           Fn::Base64: !Sub |
             #!/bin/bash
             set -euo pipefail
-            # Revisión inmutable del artefacto: ${ApplicationArtifactRevision}
+            # Revisi??n inmutable del artefacto: ${ApplicationArtifactRevision}
             dnf install -y python3-pip
             dnf install -y amazon-cloudwatch-agent || true
             pip3 install --no-cache-dir flask gunicorn boto3 psycopg2-binary
+            install -d -m 0755 /opt/tangamandapio
             install -d -m 0755 /opt/tangamandapio/static
             install -d -m 0755 /var/log/tangamandapio
-            cat > /opt/tangamandapio/app.py <<'PYAPP'
-            import json
-            import logging
-            import math
-            import os
-            import socket
-            import time
-            import uuid
-            from pathlib import Path
-            import boto3
-            import psycopg2
-            from flask import Flask, g, jsonify, request, send_from_directory
-
-            static_folder = Path("/opt/tangamandapio/static")
-            app = Flask(__name__, static_folder=str(static_folder), static_url_path="")
-            app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
-            logging.basicConfig(level=logging.INFO, format="%(message)s")
-            logger = logging.getLogger("tangamandapio.aws")
-            secret = json.loads(
-                boto3.client("secretsmanager", region_name=os.environ["AWS_REGION_NAME"])
-                .get_secret_value(SecretId=os.environ["DB_SECRET_ARN"])["SecretString"]
-            )
-
-            def db():
-                return psycopg2.connect(
-                    host=os.environ["DB_HOST"],
-                    dbname="tangamandapio",
-                    user=secret["username"],
-                    password=secret["password"],
-                    connect_timeout=3,
-                )
-
-            def init_db():
-                with db() as connection:
-                    with connection.cursor() as cursor:
-                        cursor.execute("CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY, customer TEXT NOT NULL, total NUMERIC(10,2) NOT NULL CHECK (total >= 0), created_at TIMESTAMPTZ DEFAULT NOW())")
-
-            init_db()
-
-            @app.before_request
-            def start_request_observation():
-                g.request_started_at = time.perf_counter()
-                g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
-
-            @app.after_request
-            def secure_and_observe(response):
-                response.headers["X-Request-ID"] = g.get("request_id", str(uuid.uuid4()))
-                response.headers["X-Content-Type-Options"] = "nosniff"
-                response.headers["X-Frame-Options"] = "DENY"
-                response.headers["Referrer-Policy"] = "no-referrer"
-                response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
-                response.headers["Cache-Control"] = "no-store"
-                logger.info(json.dumps({
-                    "event": "http_request",
-                    "request_id": response.headers["X-Request-ID"],
-                    "method": request.method,
-                    "path": request.path,
-                    "status": response.status_code,
-                    "duration_ms": round((time.perf_counter() - g.get("request_started_at", time.perf_counter())) * 1000, 2),
-                    "instance": socket.gethostname()
-                }))
-                return response
-
-            @app.get("/api")
-            def api_index():
-                return jsonify(service="Tangamandapio AWS", instance=socket.gethostname(), database="RDS PostgreSQL")
-
-            @app.get("/")
-            def index():
-                if (static_folder / "index.html").is_file():
-                    return send_from_directory(static_folder, "index.html")
-                return api_index()
-
-            @app.get("/health")
-            def health():
-                try:
-                    with db() as connection:
-                        with connection.cursor() as cursor:
-                            cursor.execute("SELECT 1")
-                    return jsonify(status="ok", instance=socket.gethostname(), database="ok")
-                except Exception:
-                    return jsonify(status="degraded", instance=socket.gethostname(), database="error"), 503
-
-            @app.get("/ready")
-            def ready():
-                try:
-                    with db() as connection:
-                        with connection.cursor() as cursor:
-                            cursor.execute("SELECT 1")
-                    return jsonify(status="ready", dependencies={"database": "ok"})
-                except Exception:
-                    return jsonify(status="not_ready", dependencies={"database": "error"}), 503
-
-            @app.get("/api/orders")
-            def list_orders():
-                with db() as connection:
-                    with connection.cursor() as cursor:
-                        cursor.execute("SELECT id, customer, total::float, created_at::text FROM orders ORDER BY id DESC LIMIT 20")
-                        rows = cursor.fetchall()
-                return jsonify([dict(zip(["id", "customer", "total", "created_at"], row)) for row in rows])
-
-            @app.post("/api/orders")
-            def create_order():
-                payload = request.get_json(silent=True) or {}
-                customer = str(payload.get("customer", "")).strip()
-                try:
-                    total = float(payload.get("total"))
-                except (TypeError, ValueError):
-                    total = -1
-                if not customer or len(customer) > 120 or not math.isfinite(total) or total < 0 or total > 1000000:
-                    return jsonify(error="invalid order"), 400
-                with db() as connection:
-                    with connection.cursor() as cursor:
-                        cursor.execute("INSERT INTO orders(customer,total) VALUES(%s,%s) RETURNING id", (customer,total))
-                        order_id = cursor.fetchone()[0]
-                return jsonify(id=order_id, customer=customer, total=total, instance=socket.gethostname()), 201
-
-            @app.get("/<path:asset_path>")
-            def web_assets(asset_path):
-                if (static_folder / asset_path).is_file():
-                    return send_from_directory(static_folder, asset_path)
-                if (static_folder / "index.html").is_file() and not asset_path.startswith("api/"):
-                    return send_from_directory(static_folder, "index.html")
-                return jsonify(error="not_found"), 404
-            PYAPP
-            cat > /opt/tangamandapio/static/index.html <<'HTML'
-            <!doctype html>
-            <html lang="es">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width,initial-scale=1">
-              <title>Tangamandapio S.A.C. | Portal B2B</title>
-              <link rel="stylesheet" href="/styles.css">
-            </head>
-            <body><main class="wrap">
-              <p class="eyebrow">TANGAMANDAPIO S.A.C. · AWS</p>
-              <h1>Portal B2B de pedidos</h1>
-              <p>Demostración académica con ALB, Auto Scaling y PostgreSQL privada.</p>
-              <section class="card"><strong id="health">Verificando plataforma...</strong></section>
-              <section class="card"><h2>Registrar pedido de prueba</h2><form id="order-form"><input id="customer" required maxlength="120" placeholder="Cliente de prueba"><input id="total" required type="number" min="0" step="0.01" placeholder="Total"><button>Crear pedido</button></form><p id="message"></p></section>
-              <section class="card"><h2>Pedidos recientes</h2><code id="orders">Cargando...</code></section>
-            </main><script src="/app.js"></script></body></html>
-            HTML
-            cat > /opt/tangamandapio/static/styles.css <<'CSS'
-            :root{font-family:Arial,sans-serif;color:#14213d;background:#f5f7fb}body{margin:0}.wrap{max-width:900px;margin:48px auto;padding:0 20px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 10px 28px #14213d18;margin:18px 0}.eyebrow{font-size:12px;font-weight:bold;letter-spacing:1px;color:#1769aa}h1{margin:8px 0}form{display:grid;gap:12px;grid-template-columns:1fr 150px auto}input,button{padding:12px;border-radius:8px;border:1px solid #c8d2e1}button{background:#1769aa;color:#fff;border:0;font-weight:bold;cursor:pointer}code{display:block;white-space:pre-wrap;background:#0f172a;color:#dbeafe;padding:16px;border-radius:8px}.ok{color:#137333;font-weight:bold}.bad{color:#b3261e;font-weight:bold}@media(max-width:650px){form{grid-template-columns:1fr}}
-            CSS
-            cat > /opt/tangamandapio/static/app.js <<'JS'
-            const health=document.getElementById('health'),orders=document.getElementById('orders'),message=document.getElementById('message');
-            async function refresh(){try{const h=await fetch('/health');const data=await h.json();health.textContent='Estado: '+data.status+' | Base de datos: '+data.database+' | Nodo: '+data.instance;health.className=h.ok?'ok':'bad';const r=await fetch('/api/orders');orders.textContent=JSON.stringify(await r.json(),null,2)}catch(error){health.textContent='No se pudo consultar la plataforma';health.className='bad'}}
-            document.getElementById('order-form').addEventListener('submit',async function(event){event.preventDefault();message.textContent='Registrando...';const response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:document.getElementById('customer').value,total:Number(document.getElementById('total').value)})});const data=await response.json();message.textContent=response.ok?'Pedido #'+data.id+' creado correctamente':data.error;await refresh()});refresh();
-            JS
-            # El portal se publica como artefacto privado y versionado; esto reemplaza
-            # la interfaz mínima embebida arriba sin exponer código ni secretos.
+            # La aplicacion completa (API, portal, roles y outbox) se publica como
+            # artefacto privado y versionado en el bucket del proyecto. No se incrusta
+            # codigo ni secretos en la plantilla para evitar divergencia entre lo
+            # desplegado y el repositorio.
+            # El portal y la API se publican como artefacto privado y versionado; esto
+            # reemplaza cualquier interfaz embebida sin exponer c??digo ni secretos.
             aws s3 cp "s3://${AssetBucket}/${ApplicationArtifactKey}" /tmp/portal-b2b.tar.gz --region ${AWS::Region}
             tar -xzf /tmp/portal-b2b.tar.gz -C /opt/tangamandapio
+            test -d /opt/tangamandapio/migrations
             pip3 install --no-cache-dir -r /opt/tangamandapio/requirements.txt
             install -d -m 0700 /etc/tangamandapio
             export DB_SECRET_JSON="$(aws secretsmanager get-secret-value --secret-id '${DBSecret}' --region ${AWS::Region} --query SecretString --output text)"
             export PORTAL_ADMIN_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalAdminSecret}' --region ${AWS::Region} --query SecretString --output text)"
             export PORTAL_SESSION_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalSessionSecret}' --region ${AWS::Region} --query SecretString --output text)"
+            export AZURE_FUNCTION_KEY="$(aws secretsmanager get-secret-value --secret-id '${AzureFunctionKeySecret}' --region ${AWS::Region} --query SecretString --output text 2>/dev/null || true)"
+            export AZURE_FULFILLMENT_URL='${AzureFulfillmentUrl}'
+            export DEMO_VOICE_PASSWORD='${DemoVoicePassword}'
             export DATABASE_HOST='${Database.Endpoint.Address}'
+            # La cookie segura solo tiene sentido cuando hay TLS en el ALB; si el
+            # certificado no esta parametrizado la app debe seguir aceptando http.
+            if [ -n "${CertificateArn}" ]; then export SECURE_COOKIE=true; else export SECURE_COOKIE=false; fi
             python3 - <<'PYENV'
             import json
             import os
@@ -579,15 +520,26 @@ Resources:
                 "DATABASE_URL": database_url,
                 "BOOTSTRAP_ADMIN_USERNAME": admin["username"],
                 "BOOTSTRAP_ADMIN_PASSWORD": admin["password"],
+                "DEMO_VOICE_PASSWORD": os.environ.get("DEMO_VOICE_PASSWORD", ""),
                 "APP_SESSION_SECRET": session["session_secret"],
-                "SESSION_COOKIE_SECURE": "false",
-                "AUTO_DISPATCH_EVENTS": "false",
+                "SESSION_COOKIE_SECURE": os.environ.get("SECURE_COOKIE", "false"),
+                "AUTO_DISPATCH_EVENTS": "true",
+                # Despacho fuera del ciclo HTTP: reintento programado con backoff.
+                "OUTBOX_RETRY_INTERVAL": "60",
             }
+            azure_url = os.environ.get("AZURE_FULFILLMENT_URL", "").strip()
+            if azure_url:
+                lines["AZURE_FULFILLMENT_URL"] = azure_url
+                lines["AZURE_FUNCTION_KEY"] = os.environ.get(
+                    "AZURE_FUNCTION_KEY", ""
+                ).strip()
             with open("/etc/tangamandapio/application.env", "w", encoding="utf-8") as target:
                 for key, value in lines.items():
                     target.write("{}={}\n".format(key, value.replace("\n", "")))
             os.chmod("/etc/tangamandapio/application.env", 0o600)
             PYENV
+            id -u tangamandapio >/dev/null 2>&1 || useradd --system --home-dir /opt/tangamandapio --shell /sbin/nologin tangamandapio
+            chown -R tangamandapio:tangamandapio /opt/tangamandapio /var/log/tangamandapio
             cat > /etc/systemd/system/tangamandapio.service <<'SERVICE'
             [Unit]
             Description=Tangamandapio demo application
@@ -601,10 +553,11 @@ Resources:
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env
             WorkingDirectory=/opt/tangamandapio
-            ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
+            ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --capture-output --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
             Restart=always
             RestartSec=5
-            User=root
+            User=tangamandapio
+            Group=tangamandapio
 
             [Install]
             WantedBy=multi-user.target
@@ -687,6 +640,30 @@ Resources:
       Port: 80
       Protocol: HTTP
       DefaultActions:
+        - !If
+          - HasCertificate
+          - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              Port: '443'
+              Host: '#{host}'
+              Path: '/#{path}'
+              Query: '#{query}'
+              StatusCode: HTTP_301
+          - Type: forward
+            TargetGroupArn: !Ref TargetGroup
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref AppLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
 
@@ -712,7 +689,7 @@ Resources:
       AutoScalingRollingUpdate:
         MinInstancesInService: 1
         MaxBatchSize: 1
-        PauseTime: PT7M
+        PauseTime: PT2M
 
   ScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -724,6 +701,27 @@ Resources:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 60
         DisableScaleIn: false
+
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlarmEmails
+    Properties:
+      TopicName: !Sub '${ProjectName}-alarms'
+      DisplayName: !Sub '${ProjectName} alarmas'
+      Subscription:
+        - !If
+          - HasAlarmEmailPrimary
+          - Protocol: email
+            Endpoint: !Ref AlarmNotificationEmailPrimary
+          - !Ref AWS::NoValue
+        - !If
+          - HasAlarmEmailAlternate
+          - Protocol: email
+            Endpoint: !Ref AlarmNotificationEmailAlternate
+          - !Ref AWS::NoValue
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: LabProfile, Value: cost-controlled}
 
   HighCPUAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -741,6 +739,8 @@ Resources:
       Threshold: 70
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
 
   UnhealthyTargetsAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -759,6 +759,8 @@ Resources:
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
 
   Target5xxAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -777,6 +779,8 @@ Resources:
       Threshold: 5
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
 
   DatabaseCPUAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -794,6 +798,9 @@ Resources:
       Threshold: 75
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+
 
   OperationsDashboard:
     Type: AWS::CloudWatch::Dashboard
@@ -866,10 +873,153 @@ Resources:
           ]
         }
 
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub '${ProjectName}-files-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration: {Status: Enabled}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransicionInteligente
+            Status: Enabled
+            Transitions:
+              - {StorageClass: STANDARD_IA, TransitionInDays: 30}
+            NoncurrentVersionExpiration: {NoncurrentDays: 30}
+            AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-files'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  FilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FilesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${FilesBucket}'
+              - !Sub 'arn:aws:s3:::${FilesBucket}/*'
+            Condition:
+              Bool: {aws:SecureTransport: 'false'}
+
+  WebAcl:
+    Type: AWS::WAFv2::WebACL
+    Condition: UseWaf
+    Properties:
+      Name: !Sub '${ProjectName}-alb'
+      Scope: REGIONAL
+      DefaultAction: {Allow: {}}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub '${ProjectName}-webacl'
+      Rules:
+        - Name: ManagedCommon
+          Priority: 1
+          OverrideAction: {None: {}}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ManagedCommon
+        - Name: ManagedBadInputs
+          Priority: 2
+          OverrideAction: {None: {}}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ManagedBadInputs
+        - Name: RateLimitPorIp
+          Priority: 3
+          Action: {Block: {}}
+          Statement:
+            RateBasedStatement:
+              Limit: 1000
+              AggregateKeyType: IP
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: RateLimitPorIp
+      Tags:
+        - {Key: Project, Value: !Ref ProjectName}
+
+  WebAclAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Condition: UseManagedWafAssociation
+    Properties:
+      ResourceArn: !Ref AppLoadBalancer
+      WebACLArn: !GetAtt WebAcl.Arn
+
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Condition: UseAwsBackup
+    DeletionPolicy: Delete
+    Properties:
+      BackupVaultName: !Sub '${ProjectName}-vault'
+      BackupVaultTags:
+        Project: !Ref ProjectName
+
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Condition: UseAwsBackup
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Sub '${ProjectName}-plan'
+        BackupPlanRule:
+          - RuleName: Diaria0700
+            TargetBackupVault: !Ref BackupVault
+            ScheduleExpression: 'cron(0 12 * * ? *)'
+            StartWindowMinutes: 60
+            CompletionWindowMinutes: 180
+            Lifecycle: {DeleteAfterDays: 7}
+            RecoveryPointTags:
+              Project: !Ref ProjectName
+      BackupPlanTags:
+        Project: !Ref ProjectName
+
+  BackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Condition: UseAwsBackup
+    Properties:
+      BackupPlanId: !Ref BackupPlan
+      BackupSelection:
+        SelectionName: !Sub '${ProjectName}-recursos'
+        IamRoleArn: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup'
+        Resources:
+          - !GetAtt Database.DBInstanceArn
+          - !Sub 'arn:aws:s3:::${AssetBucket}'
+          - !Sub 'arn:aws:s3:::${FilesBucket}'
+
 Outputs:
   ApplicationURL:
-    Description: URL HTTP temporal de la demostracion
-    Value: !Sub 'http://${AppLoadBalancer.DNSName}'
+    Description: URL p??blica de la demostraci??n; HTTPS solo si se proporcion?? CertificateArn.
+    Value: !If
+      - HasCertificate
+      - !Sub 'https://${AppLoadBalancer.DNSName}'
+      - !Sub 'http://${AppLoadBalancer.DNSName}'
   LoadBalancerDNS:
     Value: !GetAtt AppLoadBalancer.DNSName
   VpcId:
@@ -882,3 +1032,14 @@ Outputs:
     Value: !Ref OperationsDashboard
   ApplicationLogGroupName:
     Value: !Ref ApplicationLogGroup
+  FilesBucketName:
+    Description: Bucket de archivos del datacenter migrado
+    Value: !Ref FilesBucket
+  WebAclArn:
+    Condition: UseWaf
+    Description: Perimetro WAF asociado al ALB
+    Value: !GetAtt WebAcl.Arn
+  BackupPlanId:
+    Condition: UseAwsBackup
+    Description: Plan de AWS Backup (RDS y S3)
+    Value: !Ref BackupPlan

@@ -211,6 +211,20 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(audit.status_code, 200)
         self.assertTrue(any(item["action"] == "user.create" for item in audit.get_json()))
 
+    def test_admin_company_list_is_case_insensitive(self):
+        self.login()
+        for name, slug in (("Zeta Logistics", "zeta-logistics"), ("alfa Distribución", "alfa-distribucion")):
+            response = self.client.post(
+                "/api/admin/companies", json={"name": name, "slug": slug}
+            )
+            self.assertEqual(response.status_code, 201)
+
+        response = self.client.get("/api/admin/companies")
+
+        self.assertEqual(response.status_code, 200)
+        names = [company["name"] for company in response.get_json()]
+        self.assertEqual(names, sorted(names, key=str.casefold))
+
     def test_customer_cannot_view_orders_from_another_company(self):
         self.login()
         created = self.client.post(

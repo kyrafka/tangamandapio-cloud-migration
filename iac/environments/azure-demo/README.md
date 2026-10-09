@@ -1,9 +1,17 @@
-# Entorno Azure de demostración
+# Terraform Azure — vertical WMS de demostración
 
-Este entorno es independiente de AWS para que el plan de Azure no requiera una sesión AWS activa. Despliega el vertical WMS y de observabilidad usando el módulo `azure_operations`.
+El grupo Azure que existe ahora es `rg-tangamandapio-261005-wus` en `westus`. En la consulta del 08/10/2026 sus diez recursos de nivel superior reportaron `provisioningState=Succeeded`; `tangama-wms-fn` aparece habilitada, `Running` y `httpsOnly=true`. Esto describe recursos y ejecución técnica, no inventario real: el flujo sigue siendo `demo-inventory-ledger`.
 
-El grupo `rg-tangamandapio-ops-demo` ya existe y el módulo lo trata como dependencia existente (`create_resource_group = false`); esto evita un conflicto de creación. Si se decide usar otro grupo nuevo, cambiar el valor de forma consciente.
+## Estado de Terraform: no aplicar todavía
 
-Antes de aplicar se debe reemplazar los nombres de Storage y Key Vault por nombres globalmente únicos. La ejecución exige una sesión autenticada de Azure CLI o un agente seguro con credenciales de Azure. No se deben guardar credenciales en este directorio.
+El state local `terraform.tfstate` está fechado el 02/10/2026 y apunta al grupo anterior `rg-tangamandapio-261001r2-wus` y a nombres `...261001r2...`; no representa el grupo actual `...261005...`. Además, el `terraform.tfvars` local no define `function_package_path`, por lo que el `plan -refresh-only` probado falla antes de consultar/actualizar el state. No se cambió el state ni Azure.
 
-La destrucción del grupo de recursos se realiza únicamente después de capturar las evidencias y con autorización expresa, porque elimina los objetos, la cola, las trazas y las configuraciones de Azure del piloto.
+Por tanto:
+
+1. No ejecutar `terraform apply`, `terraform destroy` ni un plan de cambios contra este state.
+2. Conservar el state y respaldarlo de forma segura; contiene información sensible.
+3. Inventariar el grupo actual, comparar cada propiedad administrada y sus alertas/Action Groups con `modules/azure_operations`.
+4. Crear un state aislado para el grupo actual y adoptar recursos existentes mediante importación revisada; no intentar recrearlos.
+5. Generar el ZIP actual con `iac/scripts/package_azure_function.ps1`, especificar `function_package_path`, ejecutar plan normal y verificar que no proponga reemplazos/borrados antes de autorizar apply.
+
+`terraform fmt -check` y `terraform validate` pasan. Eso valida el código, pero este entorno Azure aún **no está listo para un apply seguro** hasta completar la reconciliación descrita.

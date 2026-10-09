@@ -56,3 +56,25 @@ variable "azure_storage_account_name" {
     error_message = "Con Azure habilitado, el nombre debe tener 3-24 caracteres alfanuméricos en minúsculas."
   }
 }
+
+variable "azure_key_vault_name" {
+  description = "Nombre globalmente único para Key Vault. Requerido solo con enable_azure=true."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_azure || (can(regex("^[A-Za-z][A-Za-z0-9-]{1,22}[A-Za-z0-9]$", var.azure_key_vault_name)) && !strcontains(var.azure_key_vault_name, "--"))
+    error_message = "Con Azure habilitado, Key Vault requiere 3-24 caracteres, empezar con letra y no tener guiones consecutivos."
+  }
+}
+
+variable "azure_function_package_path" {
+  description = "Ruta local al ZIP de Azure Functions. Requerida solo con enable_azure=true."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_azure || (var.azure_function_package_path != "" && fileexists(var.azure_function_package_path))
+    error_message = "Con Azure habilitado, genere el ZIP de la Function y configure una ruta existente."
+  }
+}

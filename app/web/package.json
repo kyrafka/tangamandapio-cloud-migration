@@ -3,15 +3,17 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.9.1",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:check": "vite build --outDir dist",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

@@ -1,13 +1,17 @@
-# Infraestructura como código
+# Infraestructura como código — corte 08/10/2026
 
-CloudFormation conserva la evidencia histórica del piloto AWS. Terraform define de forma modular la red AWS y el vertical Azure de operaciones para el flujo AWS-Azure.
+La referencia del inventario actual es [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md). Separa recursos comprobados en las nubes del estado de Terraform; no ejecutar un `apply` basándose solo en que `validate` pase.
 
-| Componente | Herramienta | Estado |
+| Dominio | Fuente de verdad actual | Estado de despliegue |
 |---|---|---|
-| VPC y piloto AWS | CloudFormation | Desplegado, probado y eliminado el 24/09/2026 |
-| Red AWS modular | Terraform | Validación local prevista |
-| Azure WMS | Terraform | Código preparado, deshabilitado por defecto |
+| AWS productivo del laboratorio | CloudFormation: `cloudformation/aws-lab.yaml` y stack `tangamandapio-live-20261005` | Plantilla local idéntica a la viva, `UPDATE_COMPLETE`, drift `IN_SYNC`; cambio preparado únicamente mediante change set revisable. |
+| Red AWS de ejemplo | Terraform: `environments/demo` → `modules/aws_network` | Formato y validación correctos; no tiene state y no administra el stack vivo. Un `apply` crearía una VPC adicional. |
+| WMS de demostración Azure | Terraform: `environments/azure-demo` → `modules/azure_operations` | Código valida, pero el state local apunta a un Resource Group anterior y el plan requiere reconciliación/importación. No aplicar ni destruir sobre el grupo vivo. |
 
-El módulo Azure crea Resource Group, Storage Account privada, Blob Container, Queue y Function App Consumption. La Function no contiene todavía la lógica de recepción; esa fase exige una prueba real, evidencia de consola y destrucción posterior.
+## Criterios de operación
 
-El directorio `modules/oci_network` se conserva solo como antecedente archivado y no forma parte del entorno activo ni del alcance AWS-Azure.
+- No administrar un mismo recurso con CloudFormation y Terraform.
+- En AWS, revisar el change set y usar `APPLY_CHANGE_SET=true` más confirmación explícita para ejecutarlo. Por defecto, `deploy.sh` solo prepara el change set y conserva todos los parámetros actuales, incluso los `NoEcho`.
+- En Azure, `terraform validate` es una comprobación de sintaxis, no prueba de que el state represente los recursos actuales. Respaldar y reconciliar el state antes de plan/apply.
+- No subir archivos `terraform.tfstate`, `terraform.tfvars`, claves ni salidas con secretos.
+- El inventario Azure actual es una demostración de despacho/inventario ficticio, no integración con un WMS/ERP real.

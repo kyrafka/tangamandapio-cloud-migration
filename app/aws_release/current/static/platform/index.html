@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Estado operativo, nube y seguridad de Tangamandapio." />
+    <title>Centro de plataforma · Tangamandapio</title>
+    <link rel="stylesheet" href="/assets/index-KzEIokgC.css" />
+    <link rel="stylesheet" href="/assets/platform-console.css" />
+    <script src="/assets/platform-console.js" defer></script>
+  </head>
+  <body class="platform-body">
+    <main class="platform-shell">
+      <header class="platform-header">
+        <div class="platform-brand"><span class="platform-mark" aria-hidden="true">T</span><div><p class="eyebrow">Tangamandapio · Centro de operaciones</p><h1>Nube, seguridad y capacidad</h1></div></div>
+        <div class="platform-header-actions"><span id="platform-identity" class="platform-identity">Validando sesión…</span><a class="platform-back" href="/">Volver al portal</a></div>
+      </header>
+
+      <div id="platform-alert" class="platform-alert" role="status" aria-live="polite" hidden></div>
+
+      <section class="platform-section" aria-labelledby="health-heading">
+        <div class="section-heading"><div><p class="eyebrow">Visibilidad operativa</p><h2 id="health-heading">Servicios y tráfico</h2><p class="section-copy">Métricas agregadas del balanceador y servicios administrados; el detalle por proceso se identifica por separado.</p></div>
+          <div class="section-actions"><div class="range-picker" role="group" aria-label="Periodo de métricas"><button type="button" data-window="60" aria-pressed="true">1 h</button><button type="button" data-window="360" aria-pressed="false">6 h</button><button type="button" data-window="1440" aria-pressed="false">24 h</button></div><button id="platform-refresh" class="platform-button" type="button">Actualizar</button></div>
+        </div>
+        <div id="cloud-source" class="source-state" data-state="loading"><span class="status-dot"></span><span>Consultando CloudWatch…</span></div>
+        <div id="cloud-metrics" class="platform-metrics" aria-live="polite"></div>
+        <div class="platform-charts">
+          <article class="platform-panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Entrada web</p><h3>Solicitudes al balanceador</h3></div><span class="chart-unit">por periodo</span></div><div id="traffic-chart" class="chart-area"></div><p id="traffic-note" class="panel-note">La serie aparecerá cuando CloudWatch tenga datos para el ALB configurado.</p></article>
+          <article class="platform-panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Experiencia</p><h3>Latencia y errores</h3></div><span class="chart-unit">p95 · 5xx</span></div><div id="latency-chart" class="chart-area"></div><p id="latency-note" class="panel-note">La latencia p95 ayuda a detectar lentitud antes de que se convierta en una caída.</p></article>
+        </div>
+        <div class="platform-columns">
+          <article class="platform-panel"><div class="panel-heading"><div><p class="eyebrow">Capacidad</p><h3>Aplicación detrás del ALB</h3></div><span id="capacity-state" class="state-chip">Sin dato</span></div><div id="capacity-details" class="detail-list"></div><p class="panel-note">El balanceador distribuye solicitudes entre destinos saludables. El número de destinos no demuestra por sí solo que Auto Scaling esté activo.</p></article>
+          <article class="platform-panel"><div class="panel-heading"><div><p class="eyebrow">Persistencia</p><h3>Base de datos administrada</h3></div><span id="database-state" class="state-chip">Sin dato</span></div><div id="database-details" class="detail-list"></div><p class="panel-note">CPU y conexiones de RDS permiten anticipar saturación; respaldos y Multi-AZ se validan aparte en la configuración del servicio.</p></article>
+          <article class="platform-panel"><div class="panel-heading"><div><p class="eyebrow">Protección perimetral</p><h3>WAF y aplicación</h3></div><span id="security-state" class="state-chip">Sin dato</span></div><div id="security-details" class="detail-list"></div><p class="panel-note">Los contadores WAF solo se muestran si la ACL y sus métricas están configuradas para esta región.</p></article>
+          <article class="platform-panel"><div class="panel-heading"><div><p class="eyebrow">Integración multicloud</p><h3>WMS en Azure</h3></div><span id="wms-state" class="state-chip">Sin dato</span></div><div id="wms-details" class="detail-list"></div><p class="panel-note">La conectividad y los estados simulados no significan que se actualice inventario de un ERP real.</p></article>
+        </div>
+      </section>
+
+      <section class="platform-section" aria-labelledby="wms-demo-heading">
+        <div class="section-heading"><div><p class="eyebrow">Azure · laboratorio funcional</p><h2 id="wms-demo-heading">Inventario de demostración</h2><p class="section-copy">Genera un pedido con SKU y cantidad. AWS conserva el pedido y el outbox; Azure valida y descuenta el stock ficticio de forma idempotente.</p></div><button id="wms-inventory-refresh" class="platform-button" type="button">Actualizar inventario</button></div>
+        <div class="wms-demo-grid">
+          <form id="wms-demo-form" class="platform-panel wms-demo-form">
+            <p class="eyebrow">Pedido de prueba</p><h3>Generar movimiento</h3>
+            <label for="wms-demo-sku">Producto</label><select id="wms-demo-sku" name="sku" required disabled><option value="">Cargando catálogo…</option></select>
+            <label for="wms-demo-quantity">Cantidad</label><input id="wms-demo-quantity" name="quantity" type="number" min="1" max="10" value="1" step="1" required disabled />
+            <p id="wms-demo-product-note" class="panel-note">El pedido aparecerá en el outbox después de generarlo.</p>
+            <button id="wms-demo-submit" class="platform-button wms-demo-submit" type="submit" disabled>Generar pedido demo</button>
+            <div id="wms-demo-result" class="wms-demo-result" role="status" aria-live="polite" hidden></div>
+          </form>
+          <article class="platform-panel wms-inventory-panel">
+            <div class="panel-heading"><div><p class="eyebrow">Stock por SKU</p><h3>Existencias disponibles</h3></div><span id="wms-inventory-state" class="state-chip" data-state="warning">Consultando</span></div>
+            <div class="table-wrap"><table class="users-table wms-inventory-table"><thead><tr><th>Producto</th><th>SKU</th><th>Disponible</th><th>Precio demo</th></tr></thead><tbody id="wms-inventory-body"></tbody></table></div>
+            <p class="panel-note">Es un ledger de laboratorio persistido en Azure Blob Storage. No se conecta al inventario de un ERP ni afecta operaciones reales.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="platform-section" aria-labelledby="fulfillment-heading">
+        <div class="section-heading"><div><p class="eyebrow">Trazabilidad multicloud</p><h2 id="fulfillment-heading">Entregas al WMS</h2><p class="section-copy">Sigue los eventos durables de AWS y consulta bajo demanda el resultado procesado por Azure. La integración actual puede estar en modo demostración.</p></div><button id="outbox-refresh" class="platform-button" type="button">Actualizar eventos</button></div>
+        <div class="platform-panel">
+          <div class="table-wrap"><table class="users-table fulfillment-table"><thead><tr><th>Evento / pedido</th><th>Entrega desde AWS</th><th>Resultado WMS</th><th>Acciones</th></tr></thead><tbody id="outbox-table-body"></tbody></table></div>
+          <div id="outbox-empty" class="empty-state" hidden>No hay eventos de entrega todavía.</div>
+        </div>
+      </section>
+
+      <section id="users-section" class="platform-section" aria-labelledby="users-heading" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Acceso y mínimo privilegio</p><h2 id="users-heading">Administración segura de usuarios</h2><p class="section-copy">Los cambios invalidan las sesiones previas y quedan en la auditoría. Las contraseñas temporales se revelan una sola vez.</p></div><button id="users-refresh" class="platform-button" type="button">Actualizar usuarios</button></div>
+        <div class="platform-panel">
+          <div class="table-wrap"><table class="users-table"><thead><tr><th>Cuenta</th><th>Rol</th><th>Empresa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="users-table-body"></tbody></table></div>
+          <div id="users-empty" class="empty-state" hidden>No hay usuarios para mostrar.</div>
+          <div id="temporary-password" class="temporary-password" role="status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+
+      <footer class="platform-footer"><span id="updated-at">Sin actualizar</span><span>Centro de lectura · las acciones administrativas requieren confirmación y quedan auditadas.</span></footer>
+    </main>
+  </body>
+</html>

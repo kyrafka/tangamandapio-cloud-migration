@@ -1,13 +1,14 @@
-# Entorno Terraform demo AWS Azure
+# Terraform `demo` — red AWS aislada
 
-Este entorno describe la VPC AWS y el vertical Azure de operaciones. Por seguridad y costo, `enable_azure=false` es el valor predeterminado: un `terraform plan` local no debe crear recursos Azure.
+Este entorno gestiona únicamente una VPC nueva con seis subredes, tablas de rutas e Internet Gateway mediante `modules/aws_network`. No incluye el ALB, Auto Scaling, aplicación, RDS, S3, WAF ni observabilidad del stack actual; esos recursos pertenecen a CloudFormation.
 
-## Antes de aplicar Azure
+La validación y el formato pasan, pero no existe un Terraform state aquí. No ejecutar `terraform apply` sobre la cuenta del laboratorio como método para actualizar el stack: crearía una segunda VPC con CIDR `10.10.0.0/16` y recursos/costos duplicados. CloudFormation sigue siendo la fuente de verdad AWS.
 
-1. Iniciar sesión con `az login` en la suscripción Azure for Students.
-2. Confirmar que `eastus` está disponible o sustituir la región.
-3. Elegir un nombre globalmente único para `azure_storage_account_name`.
-4. Establecer presupuesto y alerta de costos; capturar la pantalla inicial.
-5. Aplicar, probar el evento, tomar capturas y ejecutar `terraform destroy` al terminar.
+Comprobaciones locales seguras:
 
-No guardar credenciales, claves de Storage Account ni archivos `terraform.tfvars` reales en Git.
+```powershell
+terraform fmt -check -recursive
+terraform validate
+```
+
+Antes de cualquier despliegue independiente se necesita un backend/state nuevo y aislado, nombres/tags propios, revisar el plan y presupuesto y acordar cómo limpiar únicamente ese entorno.

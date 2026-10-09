@@ -1,31 +1,37 @@
-# Tangamandapio S.A.C. — Centro de Datos Cloud Empresarial
+# Tangamandapio S.A.C. — proyecto cloud AWS + Azure
 
-Proyecto académico de migración de un datacenter corporativo para **Tangamandapio S.A.C.**, empresa ficticia de distribución mayorista, retail omnicanal y logística regional.
+Proyecto académico de un centro de operaciones para una distribuidora ficticia. El alcance vigente es AWS para portal/transacciones y Azure para el flujo logístico demostrativo; OCI no forma parte del despliegue actual.
 
-## Núcleo vigente
+## Estado vigente
 
-- **AWS:** canal transaccional público: portal B2B, API, balanceo, cómputo escalable, PostgreSQL, objetos y observabilidad.
-- **Azure:** dominio operativo de cumplimiento: recepción idempotente de eventos, cola WMS, evidencia privada y telemetría.
-- **OCI:** fuera del alcance del Entregable 1; la solución se sustenta en AWS y Azure.
-- **Modelo:** híbrido durante la migración de sedes/datacenter y multicloud en el destino.
+El [mapa de estado actual](evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md) es la referencia única para separar lo que existe hoy de los registros históricos.
 
-El único registro rector es [core/00_registro_maestro.md](core/00_registro_maestro.md). Un recurso solo se declara desplegado si existe evidencia real en `evidence/current/`.
+| Área | Estado comprobado |
+|---|---|
+| AWS | CloudFormation `tangamandapio-live-20261005`, `UPDATE_COMPLETE`, 51 recursos, `IN_SYNC`; 2/2 destinos saludables; RDS disponible, privado, cifrado, Multi-AZ y backup de 7 días. `/health` responde correctamente. |
+| Azure | Grupo actual en West US con 10 recursos `Succeeded`; Function `tangama-wms-fn` habilitada y `Running`. El inventario/fulfillment sigue siendo demostrativo, no un WMS conectado a existencias reales. |
+| Terraform AWS | El entorno `demo` valida, pero solo crea una VPC independiente y no administra el stack CloudFormation activo. No aplicar como actualización del stack. |
+| Terraform Azure | El código valida, pero su state local pertenece a un grupo anterior y falta `function_package_path` en la configuración local. No aplicar hasta reconciliar/importar el state. |
+| Portal y roles | La última puerta local documentada aprobó 59 pruebas; la matriz de roles se probó con cuentas sintéticas en entorno aislado. Eso no sustituye pruebas de acceso autenticado en el sitio vivo. |
+| Pendientes no declarados como terminados | WMS real, automatización cloud-to-cloud con pedido vivo tras el último cambio, A/V bidireccional en dos navegadores, HTTPS confiable/dominio y capturas crudas archivadas. La restauración PITR temporal se probó; falta medir formalmente RTO/RPO. |
 
-Antes de ejecutar recursos AWS, consultar el [mapa AWS predespliegue](core/06_aws_mapa_pre_despliegue_2026-09-30.md): contiene el inventario vivo, alcance, monitoreo, costos y brechas declaradas.
+No se aplicaron cambios a AWS ni Azure durante la actualización de este mapa. La plantilla AWS local coincide con la plantilla del stack; `iac/cloudformation/deploy.sh` prepara primero un change set y requiere confirmación explícita para ejecutarlo.
 
-## Estado operativo al 02/10/2026
+## Pruebas locales
 
-| Entorno | Hecho verificable | Estado |
-|---|---|---|
-| AWS Academy | La ejecución temporal incorporó la versión B2B del portal mediante artefacto versionado en S3, Secrets Manager y actualización gradual del ASG. CloudFormation terminó `UPDATE_COMPLETE` el 02/10; durante el recambio, `/health` devolvió 200 con PostgreSQL disponible. | Tras reiniciar el laboratorio, CloudFormation muestra cero pilas de Tangamandapio y el ALB anterior ya no resuelve. Para continuar se debe reprovisionar con una credencial vigente y luego repetir las pruebas de login/roles. |
-| Azure for Students | El vertical WMS fue desplegado y probado temporalmente con Function App, Storage, Key Vault, Application Insights, Log Analytics y plan PaaS. El grupo `rg-tangamandapio-261001r2-wus` se eliminó al cierre. | No hay Function activa actualmente. Para una demo nueva se debe reprovisionar y repetir Health, Fulfillment, Blob/Queue e integración AWS→Azure. |
-| OCI | Fuera del alcance acordado para este entregable. | No implementar ni presentar como parte de la solución actual. |
+```powershell
+.\tests\run_local_quality.ps1
+```
+
+La última ejecución documentada pasó **59/59 pruebas**, build frontend y auditorías de dependencias. `terraform fmt`/`validate`, `cfn-lint` y las validaciones AWS también pasan. Son comprobaciones de código; no certifican un WMS real, las llamadas A/V entre redes ni el plan seguro de Terraform Azure.
 
 ## Estructura
 
-- `core/`: alcance, plan de despliegue y matriz de rúbrica vigentes.
-- `iac/`: CloudFormation y Terraform a revisar/aplicar en ventanas controladas.
-- `app/`: aplicación, API y receptor de eventos.
-- `tests/`: pruebas formales y scripts.
-- `evidence/current/`: única evidencia apta para el proyecto vigente, incluida la evidencia Azure actual.
-- `evidence/legacy/` y `archive/`: antecedentes excluidos de la publicación y de la evaluación vigente.
+- `core/`: registro rector, rúbrica, propuesta y brechas.
+- `app/`: backend, frontend, Function Azure, release AWS y pruebas.
+- `iac/`: CloudFormation activo para AWS y ejemplos Terraform separados.
+- `evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md`: inventario más reciente.
+- `evidence/current/`: bitácoras fechadas; cada una conserva el corte en que se tomó y no reemplaza el mapa actual.
+- `deliverables/`: documentos de entrega y trabajo.
+
+No se eliminó evidencia histórica, state local ni archivos sin seguimiento durante esta limpieza; se conservaron porque pueden contener trabajo o datos de recuperación del proyecto.

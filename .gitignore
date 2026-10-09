@@ -24,6 +24,21 @@ wg-private-*
 **/.venv/
 **/node_modules/
 .pnpm-store/
+app/web/dist/
+
+# Material local sin autorización de redistribución pública
+app/aws_release/current/static/audio/sweet-dove-ambient.mp3
+app/aws_release/current/static/images/walpurgis-*.png
+evidence/current/azure/screenshots/AZ-PORTAL-01_inventario_2026-10-01.png
+
+# Herramientas locales ligadas a identificadores de cuenta/instancias
+app/aws_release/roll-azure-key-ec2.ps1
+app/aws_release/sync-azure-function-key.ps1
+app/aws_release/update-aws-cli-from-clipboard.ps1
+app/aws_release/verify-azure-key-ec2.ps1
+
+# Derivados temporales de revisión visual
+tmp_media_audit/
 
 # Sistema/editor
 .DS_Store

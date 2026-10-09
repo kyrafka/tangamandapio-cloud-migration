@@ -1,17 +1,22 @@
-# Plan de reanudación y mejoras — referencia única
+# Plan histórico de reanudación y mejoras
 
 **Proyecto:** Tangamandapio S.A.C.
 **Corte:** 04/10/2026
 **Regla:** este plan diferencia hechos probados, pendientes y mejoras. No se despliega nada solo para editar documentos; cada levantamiento debe terminar con evidencias y cierre autorizado.
 
-## 1. Estado de cierre confirmado
+El estado de infraestructura descrito abajo es el corte del 04/10/2026 y ya no
+es actual. Consulta [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md)
+antes de cualquier tarea o sustentación. Se conserva el resto como plan y
+registro histórico, no como orden de despliegue vigente.
+
+## 1. Estado de cierre verificado al corte — 04/10/2026
 
 | Proveedor | Comprobación de cierre | Estado actual |
 |---|---|---|
 | AWS `us-east-1` | CloudFormation filtrado por Tangamandapio: 0 pilas. Consola EC2: sin instancias. El stack, ALB, ASG, RDS, VPC/NAT y bucket del ciclo fueron eliminados. | Sin recurso activo del proyecto. El Learner Lab puede estar iniciado sin reprovisionar infraestructura. |
 | Azure West US | `az group exists --name rg-tangamandapio-261001r2-wus` devolvió `false`; el portal muestra el recurso como no encontrado. | Sin recurso activo del proyecto. |
 
-No se infiere que un recurso esté activo por la existencia de código, artefactos, una URL vieja o una captura. El estado actual es **infraestructura de Tangamandapio apagada/eliminada**.
+No se infiere que un recurso esté activo por la existencia de código, artefactos, una URL vieja o una captura. Al corte de este plan, la infraestructura de Tangamandapio estaba **apagada/eliminada**; la verificación del siguiente ciclo debe hacerse nuevamente antes de desplegar.
 
 ## 2. Lo que sí fue probado en ciclos temporales
 
@@ -69,7 +74,12 @@ No se infiere que un recurso esté activo por la existencia de código, artefact
 
 ## 5. Decisiones ya tomadas
 
-- **AWS y Azure** son el alcance multicloud. OCI está fuera del Entregable 1 y no bloquea la sustentación.
+La propuesta técnica detallada de escalabilidad, seguridad, análisis web/tráfico,
+telemetría y CI/CD está en [09_propuesta_cloud_aws_azure.md](09_propuesta_cloud_aws_azure.md).
+Usar ese documento para priorizar herramientas; este plan conserva el orden de
+levantamiento y cierre del laboratorio.
+
+- **AWS y Azure** son el alcance operativo acordado. OCI está fuera del proyecto actual; la descripción/rúbrica escrita aún la menciona, así que documentar la instrucción del docente que reemplaza ese requisito (ver [evaluación](10_evaluacion_rubrica_entregable_final_2026-10-08.md)).
 - **CloudWatch y Azure Monitor** son la observabilidad administrada de referencia. Prometheus, Grafana y Portainer son complementos locales; Zabbix no es requisito ni debe añadir costo al piloto.
 - La telefonía IP se planifica como un dominio de comunicaciones separado; su guía, límites y evidencias están en [08_manual_evolucion_portal_y_telefonia_ip.md](08_manual_evolucion_portal_y_telefonia_ip.md). No se considera implementada hasta completar un piloto aislado.
 - Los recursos se levantan solo durante la ventana de evidencia y se destruyen después. El objetivo es demostrar arquitectura y operación, no mantener un servicio público permanente.

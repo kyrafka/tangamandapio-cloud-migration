@@ -10,6 +10,33 @@ Desde PowerShell, en la raíz:
 .\tests\run_local_quality.ps1
 ```
 
+La puerta ejecuta las suites API base, Azure Functions y release AWS; compila
+Python y, si sus validadores están instalados, audita dependencias
+(`pip-audit`, `pnpm audit`) y valida ambas plantillas CloudFormation. También
+construye el frontend en `app/web/dist` si están instalados pnpm y sus
+dependencias (sin reemplazar los archivos servidos por Flask). Para validar
+formato y esquema Terraform en `demo` y `azure-demo` sin crear recursos, usar
+`.\tests\run_local_quality.ps1 -ValidateTerraform`.
+
+El workflow remoto en `.github/workflows/quality-gate.yml` ejecuta además un
+smoke test de salud/rendimiento local. Python se instala y audita desde
+`app/requirements-ci.lock`, una resolución exacta con hashes que cubre los
+manifiestos de ejecución y las herramientas de validación. Al cambiar un
+manifiesto, hay que regenerar el lock con `pip-tools` y revisar el diff.
+La puerta también comprueba que las versiones bloqueadas satisfagan los rangos
+declarados por cada manifiesto.
+
+Para regenerarlo conscientemente desde `app/`:
+
+```powershell
+.\.venv\Scripts\pip-compile.exe --generate-hashes --allow-unsafe --strip-extras --output-file requirements-ci.lock requirements-ci.txt
+```
+
+Luego ejecutar la puerta local completa y revisar `git diff` antes de aceptar
+la actualización.
+Dependabot propone actualizaciones revisables; no aplica código o infraestructura
+por sí mismo. Ver el [manual de herramientas profesionales](../core/11_herramientas_profesionales_y_calidad.md).
+
 La carga local o contra el ALB se ejecuta con:
 
 ```powershell

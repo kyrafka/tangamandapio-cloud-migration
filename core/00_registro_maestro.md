@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 04/10/2026
+**Corte:** 08/10/2026 — 19:48 CDT
 
 ## 1. Caso y objetivo
 
@@ -34,7 +34,7 @@ La solución es **híbrida** mientras datacenter y sedes coexisten con la nube, 
 | AWS | Venta y transacción crítica | VPC, ALB, ASG/EC2, RDS PostgreSQL, S3, IAM/Secrets Manager, CloudWatch y mecanismo outbox/reintento |
 | Azure | Cumplimiento logístico asíncrono | Function, Storage Queue, Blob privado, Managed Identity/RBAC, Key Vault, Log Analytics y Application Insights |
 
-Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acordado del Entregable 1 y no se presenta como recurso implementado ni pendiente obligatorio.
+Azure es el segundo dominio del alcance operativo acordado AWS–Azure para este proyecto. OCI no se implementa; la descripción escrita del curso todavía menciona AWS–OCI, por lo que la sustitución debe explicarse y, de ser posible, adjuntar la aprobación docente. No presentar OCI como desplegado ni como actividad vigente.
 
 ## 4. Reglas de verdad
 
@@ -44,7 +44,11 @@ Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acor
 4. Cada ventana de nube tiene: inventario previo -> validación IaC -> despliegue -> pruebas -> evidencia -> eliminación/apagado -> inventario final.
 5. Los antecedentes de `evidence/legacy/` sirven para rescatar procedimientos, no para demostrar este núcleo.
 
-## 5. Estado actual verificable
+## 4.1 Estado actual comprobado — 08/10/2026
+
+La referencia única para lo que existe ahora, las pruebas recientes y el nivel de preparación de IaC es [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md). Este corte prevalece sobre inventarios anteriores: AWS está activo; Azure tiene el vertical demo activo; la plantilla CloudFormation coincide con el stack vivo; Terraform Azure todavía no debe aplicarse porque su state pertenece a un grupo anterior.
+
+## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.1)
 
 | Área | Estado | Límite de la afirmación |
 |---|---|---|
@@ -54,7 +58,7 @@ Azure es un dominio operativo real para el WMS. OCI está fuera del alcance acor
 
 ## 6. Definición de terminado
 
-El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La hoja de ruta controlada está en [07_plan_reanudacion_y_mejoras.md](07_plan_reanudacion_y_mejoras.md); es la referencia para futuros levantamientos.
+El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La hoja de ruta controlada está en [07_plan_reanudacion_y_mejoras.md](07_plan_reanudacion_y_mejoras.md); la propuesta de servicios, prácticas y fases AWS + Azure está en [09_propuesta_cloud_aws_azure.md](09_propuesta_cloud_aws_azure.md). Ambas separan hechos verificados de objetivos.
 
 ## 7. Actualización de ejecución — 01/10/2026
 
@@ -69,3 +73,9 @@ Se publicó el artefacto versionado del portal B2B en el bucket privado del stac
 Corregida la plantilla con `SecretStringTemplate: '{}'`, CloudFormation la validó y el segundo change set terminó `UPDATE_COMPLETE` a las **11:56 a. m. (America/Chicago)**. Durante el recambio gradual, `GET /health` respondió HTTP 200 e indicó `database=ok`. El registro técnico completo está en [CUR-AWS-10](../evidence/current/aws/CUR-AWS-10_portal_b2b_v1_despliegue_2026-10-02.md).
 
 Después de reiniciar el laboratorio, la consola de CloudFormation muestra **Pilas (0)** al filtrar Tangamandapio y el nombre DNS del ALB de esa ejecución ya no resuelve. Por ello esta publicación se conserva como evidencia técnica histórica del ciclo, no como infraestructura actualmente activa. La siguiente ejecución debe reprovisionar el stack con una credencial AWS Academy vigente y entonces repetir, con capturas reales, login/roles, rutas protegidas y los dos targets saludables.
+
+## 9. Actualización de ciclo y revisión visual — 08/10/2026
+
+La observación de cierre del punto 8 aplica al ciclo `tangamandapio-live-20261001`, no a ciclos posteriores. La revisión actualizada y la fuente de verdad del inventario están en [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md); sustituyen la observación visual anterior que no pudo cargar CloudFormation.
+
+La primera ejecución de la puerta local aprobó 58 pruebas (22 API base, 14 Azure Functions y 22 del release AWS); una ejecución posterior aprobó 59/59. El [registro de pruebas](../evidence/current/PRUEBAS_LOCALES_2026-10-08.md) conserva ambos cortes. El build de la web y las validaciones locales de Terraform/CloudFormation también pasaron. Esto no equivale a una llamada WebRTC real ni a un WMS/ERP conectado. La restauración PITR temporal sí se probó, pero falta medir formalmente RTO/RPO. Las capturas nuevas de Chrome no pudieron archivarse desde la sesión; el índice señala qué PNG falta y qué imágenes existentes son tarjetas resumidas, no capturas crudas.

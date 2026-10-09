@@ -8,9 +8,9 @@ const opsRoles = new Set(['operations', 'admin', 'auditor', 'warehouse'])
 const writeRoles = new Set(['customer', 'sales', 'admin'])
 
 async function api(path, options = {}) {
-  const response = await fetch(path, { credentials: 'same-origin', headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) }, ...options })
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) }, ...options })
   const body = response.status === 204 ? null : await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body.error || 'No se pudo completar la operación')
+  if (!response.ok) throw Object.assign(new Error(body?.error || `HTTP ${response.status}`), { status: response.status, code: body?.error })
   return body
 }
 function Badge({ children, tone = 'neutral' }) { return <span className={`badge ${tone}`}>{children}</span> }
@@ -66,10 +66,77 @@ function Companies({ companies, onCreated }) {
 }
 function Audit({ entries }) { return <section className="card"><div className="card-title"><div><p className="eyebrow">Trazabilidad</p><h2>Auditoría de operaciones</h2></div><Badge>{entries.length} eventos</Badge></div>{entries.length ? <div className="table-wrap"><table><thead><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Objeto</th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{new Date(entry.created_at).toLocaleString('es-PE')}</td><td>{entry.actor}</td><td><span className="mono">{entry.action}</span></td><td>{entry.subject_type} {entry.subject_id || ''}</td></tr>)}</tbody></table></div> : <Empty text="No se registraron eventos de auditoría aún." />}</section> }
 
-function Portal({ user, onLogout }) {
+function Portal({ user, onLogout, onSessionExpired }) {
   const [view, setView] = React.useState('dashboard'), [health, setHealth] = React.useState({ status: 'consultando' }), [dashboard, setDashboard] = React.useState(null), [orders, setOrders] = React.useState([]), [outbox, setOutbox] = React.useState([]), [azure, setAzure] = React.useState(null), [users, setUsers] = React.useState([]), [companies, setCompanies] = React.useState([]), [audit, setAudit] = React.useState([]), [notice, setNotice] = React.useState(''), [lastRefresh, setLastRefresh] = React.useState('—')
   const isOps = opsRoles.has(user.role), isAdmin = user.role === 'admin', canWrite = writeRoles.has(user.role)
-  const refresh = React.useCallback(async () => { setNotice(''); const publicHealth = fetch('/health').then(r => r.json()); const calls = [api('/api/dashboard'), api('/api/orders')]; if (isOps) calls.push(api('/api/outbox'), api('/api/multicloud')); if (isAdmin) calls.push(api('/api/admin/users'), api('/api/admin/companies')); if (['admin', 'operations', 'auditor'].includes(user.role)) calls.push(api('/api/audit')); const [h, ...results] = await Promise.all([publicHealth, ...calls]); setHealth(h); setDashboard(results[0]); setOrders(results[1]); let i = 2; if (isOps) { setOutbox(results[i++]); setAzure(results[i++]) } if (isAdmin) { setUsers(results[i++]); setCompanies(results[i++]) } if (['admin', 'operations', 'auditor'].includes(user.role)) setAudit(results[i++]); setLastRefresh(new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })) }, [isAdmin, isOps, user.role])
+  const refresh = React.useCallback(async () => {
+    setNotice('')
+    const healthRequest = fetch('/health', { credentials: 'same-origin', cache: 'no-store' }).then(async response => {
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw Object.assign(new Error(body.error || `HTTP ${response.status}`), { status: response.status })
+      return body
+    })
+    const coreSpecs = [['dashboard', '/api/dashboard'], ['orders', '/api/orders']]
+    const coreResults = await Promise.allSettled([
+      healthRequest,
+      ...coreSpecs.map(([, path]) => api(path))
+    ])
+    const [healthResult, ...dataResults] = coreResults
+    const errors = []
+
+    if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
+    else {
+      setHealth({ status: 'unavailable', database: 'sin verificar' })
+      errors.push(`salud: ${healthResult.reason.message}`)
+    }
+
+    dataResults.forEach((result, index) => {
+      const [key] = coreSpecs[index]
+      if (result.status === 'fulfilled') {
+        if (key === 'dashboard') setDashboard(result.value)
+        if (key === 'orders') setOrders(result.value)
+      } else {
+        errors.push(`${key === 'dashboard' ? 'resumen' : 'pedidos'}: ${result.reason.message}`)
+      }
+    })
+
+    const optionalSpecs = []
+    if (isOps) optionalSpecs.push(['outbox', '/api/outbox'], ['azure', '/api/multicloud'])
+    if (isAdmin) optionalSpecs.push(['users', '/api/admin/users'], ['companies', '/api/admin/companies'])
+    if (['admin', 'operations', 'auditor'].includes(user.role)) optionalSpecs.push(['audit', '/api/audit'])
+    const optionalResults = await Promise.allSettled(optionalSpecs.map(([, path]) => api(path)))
+    optionalResults.forEach((result, index) => {
+      const [key] = optionalSpecs[index]
+      if (result.status === 'fulfilled') {
+        if (key === 'outbox') setOutbox(result.value)
+        if (key === 'azure') setAzure(result.value)
+        if (key === 'users') setUsers(result.value)
+        if (key === 'companies') setCompanies(result.value)
+        if (key === 'audit') setAudit(result.value)
+        return
+      }
+      const reason = result.reason
+      if (key === 'azure') setAzure({ status: 'unavailable', error: reason.message })
+      if (key === 'outbox') setOutbox([])
+      if (key === 'users') setUsers([])
+      if (key === 'companies') setCompanies([])
+      if (key === 'audit') setAudit([])
+      errors.push(`${key}: ${reason.message}`)
+    })
+
+    const unauthorized = [...dataResults, ...optionalResults]
+      .find(result => result.status === 'rejected' && result.reason.status === 401)
+    if (unauthorized) {
+      const session = await api('/api/auth/session').catch(() => ({ authenticated: false }))
+      if (!session.authenticated) {
+        onSessionExpired()
+        return
+      }
+    }
+
+    setLastRefresh(new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    if (errors.length) setNotice(`Algunos datos no se pudieron cargar (${errors.join(' · ')}). Revisa la sesión y vuelve a actualizar.`)
+  }, [isAdmin, isOps, onSessionExpired, user.role])
   React.useEffect(() => { refresh().catch(reason => setNotice(reason.message)) }, [refresh])
   async function signOut() { await api('/api/auth/logout', { method: 'POST' }); onLogout() }
   async function retry(eventId) { try { const result = await api(`/api/outbox/${eventId}/retry`, { method: 'POST' }); setNotice(result.status === 'delivered' ? 'Evento entregado al WMS Azure.' : 'El evento continúa pendiente; quedó registrado para reintento.'); await refresh() } catch (reason) { setNotice(reason.message) } }
@@ -77,5 +144,5 @@ function Portal({ user, onLogout }) {
   return <div className="app-shell"><aside className="sidebar"><div className="logo"><span>T</span><div><strong>Tangamandapio</strong><small>Portal B2B</small></div></div><div className="identity"><span className="avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{roleLabels[user.role]} · {user.company}</small></div></div><nav>{navigation.map(([key, label]) => <button key={key} className={view === key ? 'active' : ''} onClick={() => setView(key)}>{label}</button>)}</nav><div className="sidebar-foot"><button onClick={refresh}>Actualizar datos</button><button onClick={signOut}>Cerrar sesión</button></div></aside><main className="workspace"><header className="topbar"><div><p className="eyebrow">Centro de operaciones</p><h1>{view === 'dashboard' ? 'Resumen operativo' : navigation.find(item => item[0] === view)?.[1]}</h1></div><div className="topbar-meta"><Badge tone={health.status === 'ok' ? 'success' : 'danger'}>AWS: {health.status || 'sin dato'}</Badge><span>Actualizado {lastRefresh}</span></div></header>{notice && <p className="alert">{notice}</p>}{view === 'dashboard' && <Dashboard dashboard={dashboard} health={health} azure={azure} isOps={isOps} />}{view === 'orders' && <Orders orders={orders} canWrite={canWrite} onCreated={async message => { setNotice(message); await refresh() }} />}{view === 'operations' && <Operations outbox={outbox} azure={azure} onRetry={retry} />}{view === 'users' && <Users users={users} companies={companies} onCreated={async message => { setNotice(message); await refresh() }} />}{view === 'companies' && <Companies companies={companies} onCreated={async message => { setNotice(message); await refresh() }} />}{view === 'audit' && <Audit entries={audit} />}</main></div>
 }
 
-function App() { const [session, setSession] = React.useState(null), [loading, setLoading] = React.useState(true); const restore = React.useCallback(async () => { try { const data = await api('/api/auth/session'); setSession(data.authenticated ? data.user : null) } finally { setLoading(false) } }, []); React.useEffect(() => { restore() }, [restore]); if (loading) return <main className="loading">Cargando portal protegido…</main>; return session ? <Portal user={session} onLogout={() => setSession(null)} /> : <Login onAuthenticated={restore} /> }
+function App() { const [session, setSession] = React.useState(null), [loading, setLoading] = React.useState(true); const restore = React.useCallback(async () => { try { const data = await api('/api/auth/session'); setSession(data.authenticated ? data.user : null) } finally { setLoading(false) } }, []); const expireSession = React.useCallback(() => setSession(null), []); React.useEffect(() => { restore() }, [restore]); if (loading) return <main className="loading">Cargando portal protegido…</main>; return session ? <Portal user={session} onLogout={expireSession} onSessionExpired={expireSession} /> : <Login onAuthenticated={restore} /> }
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>)

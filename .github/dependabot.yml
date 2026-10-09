@@ -1,0 +1,58 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      action-patches:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /app/web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      frontend-patches:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: pip
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pip
+    directory: /app/azure_function
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pip
+    directory: /app/aws_release/current
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: terraform
+    directory: /iac/environments/demo
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: terraform
+    directory: /iac/environments/azure-demo
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3

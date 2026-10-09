@@ -423,7 +423,7 @@ def create_app(test_config=None):
                 FROM companies AS c
                 LEFT JOIN portal_users AS u ON u.company_id = c.id
                 GROUP BY c.id, c.name, c.slug, c.created_at
-                ORDER BY c.name COLLATE NOCASE
+                ORDER BY LOWER(c.name)
                 """
             ).fetchall()
         return jsonify([dict(row) for row in rows])

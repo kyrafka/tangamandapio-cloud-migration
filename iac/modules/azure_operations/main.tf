@@ -131,8 +131,8 @@ resource "azurerm_linux_function_app" "wms" {
     # Required host storage.  The Function runtime uses it internally for
     # trigger metadata and leases; it is distinct from the application Blob
     # and Queue clients, which authenticate with managed identity.
-    "AzureWebJobsStorage"                   = azurerm_storage_account.this.primary_connection_string
-    "WEBSITE_RUN_FROM_PACKAGE"              = "1"
+    "AzureWebJobsStorage"      = azurerm_storage_account.this.primary_connection_string
+    "WEBSITE_RUN_FROM_PACKAGE" = "1"
     # El proveedor realiza Zip Deploy desde el artefacto generado localmente.
     # Así no se versionan ZIPs ni SAS con caducidad fija en Terraform.
     "DEPLOYMENT_PACKAGE_SHA256"             = filesha256(var.function_package_path)

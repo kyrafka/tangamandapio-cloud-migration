@@ -1,50 +1,27 @@
-# CloudFormation — laboratorio AWS
+# AWS CloudFormation — stack actual del laboratorio
 
-Plantilla ejecutable en AWS Academy sin instalar Terraform. Implementa:
+El stack vigente comprobado es `tangamandapio-live-20261005` en `us-east-1`. La plantilla local `aws-lab.yaml` coincide exactamente con la plantilla almacenada en CloudFormation y `validate-template` pasó el 08/10/2026. La consola reporta `UPDATE_COMPLETE`, drift `IN_SYNC`, 51 recursos, dos destinos saludables y RDS disponible, privado, cifrado, Multi-AZ y con siete días de backup.
 
-- VPC `10.10.0.0/16` y seis subredes en dos zonas.
-- Internet Gateway, NAT Gateway y tablas de rutas separadas.
-- ALB público y dos instancias privadas administradas por Auto Scaling.
-- RDS PostgreSQL privado con secreto generado en Secrets Manager.
-- S3 cifrado, versionado y bloqueado al acceso público.
-- Security Groups por capa.
-- CloudWatch Logs con retención de un día y logs de acceso/error por instancia.
-- CloudWatch Agent con memoria, disco raíz y proceso Gunicorn, además de los logs de aplicación.
-- Dashboard de CPU, salud, latencia p95, 5xx, CPU y conexiones RDS.
-- Cuatro alarmas: CPU de aplicación, targets no saludables, errores 5xx y CPU de RDS.
-- API con readiness, correlación de solicitudes, validación de entrada y headers defensivos.
-- Portal B2B versionado en S3 privado: el Auto Scaling Group descarga exactamente un artefacto, no código pegado en el arranque de EC2.
-- Secretos separados para RDS, bootstrap del administrador y sesión compartida; no se escriben en el repositorio ni en UserData.
+CloudFormation es la única herramienta que administra este stack AWS. `iac/environments/demo` es una red Terraform separada, sin state y no debe aplicarse sobre el entorno vivo.
 
-## Ejecución
+## Preparar un despliegue
 
-La ruta orquestada recomendada está en `../../orchestration/aws/`: valida, genera un change set y exige una confirmación explícita antes de ejecutar recursos facturables.
+La secuencia de `deploy.sh` valida la plantilla, exige que el stack existente esté estable y sin drift, y genera un change set `UPDATE`. Mantiene todos los parámetros actuales con `UsePreviousValue=true`, incluidos los secretos `NoEcho`; no restablece Multi-AZ, WAF, Backup ni certificados a los valores por defecto del template. No ejecuta el change set a menos que se solicite explícitamente.
 
 ```bash
-chmod +x ../../orchestration/aws/*.sh
-../../orchestration/aws/preflight.sh
-../../orchestration/aws/create_change_set.sh
+cd iac/cloudformation
+STACK_NAME=tangamandapio-live-20261005 AWS_REGION=us-east-1 ./deploy.sh
 ```
 
-`deploy.sh` se conserva como alternativa directa solo para una ejecución controlada.
+Revisar cuidadosamente la tabla de cambios. Para ejecutar, repetir con `APPLY_CHANGE_SET=true`, `CONFIRM_STACK_NAME=tangamandapio-live-20261005` y escribir `APPLY` cuando lo solicite. No pasar contraseñas por argumentos ni reemplazar parámetros secretos; el script conserva sus valores previos.
 
-## Publicación del portal versionado
+Solo para publicar un artefacto nuevo, establecer juntos `APPLICATION_ARTIFACT_KEY` y `APPLICATION_ARTIFACT_REVISION` después de correr pruebas y subir el objeto versionado al bucket. El script no empaqueta ni sube código por sí mismo.
 
-Primero ejecutar las pruebas de `app/` y compilar el frontend (`pnpm build` dentro de `app/web`). El artefacto contiene solamente `app.py`, `requirements.txt` y el frontend compilado. Desde CloudShell, con una copia actualizada del repositorio y el bucket que expone el stack:
+## Lo que esta plantilla no demuestra
 
-```bash
-./iac/cloudformation/package_portal_artifact.sh tangamandapio-<cuenta>-us-east-1 releases/portal-b2b-v1.tar.gz
-APPLICATION_ARTIFACT_KEY=releases/portal-b2b-v1.tar.gz ./iac/cloudformation/deploy.sh
-```
+- El endpoint `/health` contestó 200 y `database=ok`; la prueba usó `curl -k`, por lo que no demuestra cadena TLS confiable.
+- No se verificó un dominio propio ni certificados confiables del navegador.
+- La aplicación Azure sigue usando inventario simulado; no es un WMS conectado a stock empresarial.
+- No se ejecutaron cambios de infraestructura en este corte.
 
-El segundo comando inicia un rolling update de una instancia por vez. Antes de aplicarlo debe revisarse el change set y, después, verificar `GET /health`, los dos targets del ALB y el inicio de sesión. El secreto inicial del administrador se consulta solo desde Secrets Manager por un usuario autorizado; no se imprime ni se incorpora a las evidencias.
-
-## Limpieza obligatoria
-
-```bash
-./destroy.sh
-```
-
-La plantilla utiliza `LabInstanceProfile`, provisto habitualmente por AWS Academy. No debe ejecutarse fuera de ese entorno sin revisar el perfil de instancia.
-
-Antes de volver a desplegar, ejecutar localmente `tests/run_local_quality.ps1`. Las pruebas cloud preparadas están explicadas en `tests/README.md` y nunca deben ejecutarse sin revisar costo, región y limpieza.
+`destroy.sh` es una operación destructiva y no es parte del despliegue normal. No ejecutarlo para “actualizar” el stack.
