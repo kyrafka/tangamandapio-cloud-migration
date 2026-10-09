@@ -1,6 +1,6 @@
 -r requirements.txt
 -r azure_function/requirements.txt
 -r aws_release/current/requirements.txt
-cfn-lint==1.56.0
+cfn-lint==1.57.1
 pip-audit==2.10.1
 pip-tools==7.6.2
