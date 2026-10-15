@@ -1,0 +1,32 @@
+{
+  "test_id": "PT-PERF-ALB-HEALTH-01",
+  "captured_at_utc": "2026-10-15T16:43Z",
+  "source_instance_id": "i-0248520ed78a0dad7",
+  "scope": "ALB origin HTTPS health endpoint; direct-to-origin, Cloudflare not included",
+  "host": "tangamandapio.kendellnm.me",
+  "path": "/health",
+  "method": "GET",
+  "tls": {
+    "sni_hostname": "tangamandapio.kendellnm.me",
+    "certificate_validation": "passed",
+    "curl_ssl_verify_result": 0
+  },
+  "requests": 100,
+  "concurrency": 10,
+  "elapsed_seconds": 0.799,
+  "status_counts": {
+    "200": 100
+  },
+  "latency_ms": {
+    "p50": 75.59,
+    "p95": 101.79,
+    "max": 112.29
+  },
+  "errors": 0,
+  "passed": true,
+  "limitations": [
+    "The test connected directly to the ALB origin while preserving the public hostname for TLS SNI and HTTP Host; it did not measure Cloudflare edge latency or filtering.",
+    "Only unauthenticated GET /health requests were generated; no orders, database mutations, or Azure events were created.",
+    "This small probe does not establish transaction throughput, autoscaling behavior, Multi-AZ failover, or capacity for 3000 concurrent users."
+  ]
+}

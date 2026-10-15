@@ -101,10 +101,10 @@ asigna nota: la rúbrica suma 18.5 en pesos aunque declara 20 y no define
 conversión numérica por descriptor.
 
 Los bloques fechados anteriores conservan resultados históricos y no deben
-interpretarse como estado vigente. La revalidación 16:31 UTC precede a la tabla
+interpretarse como estado vigente. La revalidación 16:43 UTC precede a la tabla
 cualitativa siguiente.
 
-## Revalidación vigente — 15/10/2026, 16:12–16:31 UTC
+## Revalidación vigente — 15/10/2026, 16:12–16:43 UTC
 
 AWS STS autenticó; CloudFormation sigue UPDATE_COMPLETE e IN_SYNC, ASG está
 en 2/2/5 y ambas instancias y targets están sanos. ACM está ISSUED; el ALB
@@ -118,12 +118,13 @@ solicitudes y cero fallas en la consulta de seis horas a las 16:12 UTC.
 En Chrome, la portada y el drawer de acceso cargaron; claro/oscuro y cerrar/
 abrir el panel se probaron y restauraron. El /health del dominio mostró
 status=ok. No se ingresaron credenciales, así que las vistas privadas y la
-importación CSV visual siguen pendientes. Una carga loopback 100/100 dio p95
-139.09 ms, pero una carga Python externa recibió 403 de Cloudflare; ninguna
-demuestra el objetivo de 3,000 usuarios. El E2E anterior de loopback pasó,
-pero el intento por hostname ALB falla la validación TLS después de la
-redirección, sin escribir pedidos. Detalle: [revalidación 16:31 UTC]
-(../evidence/current/CLOUD-REVALIDATION-2026-10-15-1631UTC.md).
+importación CSV visual siguen pendientes. La carga loopback anterior dio
+100/100 y p95 139.09 ms; la nueva prueba de origen ALB, con SNI/Host y TLS
+válidos, dio 100/100 GET `/health`, concurrencia 10 y p95 101.79 ms. Una carga
+externa hacia Cloudflare recibió 403; ninguna microcarga demuestra 3,000
+usuarios o transacciones. Detalle: [inventario 16:31 UTC]
+(../evidence/current/CLOUD-REVALIDATION-2026-10-15-1631UTC.md) y [prueba ALB
+16:43 UTC](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643.md).
 
 ## Estado cualitativo por criterio
 
@@ -134,14 +135,14 @@ redirección, sin escribir pedidos. Detalle: [revalidación 16:31 UTC]
 | 3 | Redes VPC/VCN · 2.0 | VPC AWS `10.10.0.0/16`, subredes públicas/privadas/aisladas en dos AZ y SG encadenados ALB:80→app:8080→DB:5432; la revalidación actual conserva sanos los targets. | No hay VNet ni VPN/rutas privadas AWS–Azure. AWS Academy denegó `ec2:CreateCustomerGateway` por SCP y el inventario previo no encontró VNet Azure. HTTPS público no sustituye conectividad privada. Ver [preflight](../evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md). |
 | 4 | Cómputo, almacenamiento y BD · 1.5 | Release v12: dos EC2 `InService`/`Healthy`, dos targets `healthy`, ASG 2/2/5. RDS disponible, cifrada y privada; restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | RDS sigue Single-AZ con backup de un día y no se ha demostrado failover automático; el ledger Azure es sintético. |
 | 5 | Seguridad cloud · 2.5 | E2E anterior verificó Admin y matriz API de Comercial/Operaciones 200/403; EC2/RDS no aceptan conexiones directas desde Internet. ACM está `ISSUED`, HTTPS/443 sirve el dominio y HTTP/80 redirige. | Falta recorrido visual autenticado de Admin, Comercial y Operaciones y verificación de CSV desde la UI. |
-| 6 | Alta disponibilidad y escalabilidad · 1.5 | Target Tracking 2→3 y despliegue gradual históricos; ASG actual 2/2/5 y las dos instancias/targets están sanos. La carga más reciente fue 100 sondas loopback en una EC2, p95 139.09 ms. | Las pruebas no demuestran tráfico transaccional por ALB ni capacidad para 3,000 usuarios; RDS no tiene Multi-AZ. La carga Python externa está bloqueada por Cloudflare 403. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | Target Tracking 2→3 y despliegue gradual históricos; ASG actual 2/2/5 y ambas instancias/targets sanos. Prueba de origen ALB: 100/100 GET `/health`, concurrencia 10, p95 101.79 ms con TLS validado. | La microcarga no demuestra transacciones, comportamiento de autoescalado ni 3,000 usuarios; RDS sigue Single-AZ. La ruta del cliente sintético a través de Cloudflare devolvió 403. |
 | 7 | Monitoreo y observabilidad · 1.0 | Reconsulta 16:31: siete alarmas con acciones habilitadas, seis `OK`, una alarma de scale-in `ALARM` con ASG en mínimo. Azure Function health 200; Application Insights a las 16:12 registró 141 requests/6 h, cero fallas. | Faltan capturas de dashboards/consolas y evidencia visual independiente de entrega de alertas. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation `UPDATE_COMPLETE`, `IN_SYNC` tras detección 16:12. Plan Azure vivo con tfvars local de destinatarios: `No changes`, sin `apply`. | No hay IaC aplicada para la red privada. No versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E previo portal→RDS/outbox→Azure Queue/Function completó venta/recepción sintéticas y ledger 10→10. | No hay conexión privada AWS–Azure; no presentar Azure como OCI ni afirmar inventario comercial. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | Gate local: 176 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías e IaC. Restore RDS medido. Chrome: portada, tema y drawer; dominio `/health` ok. | Falta carga transaccional aprobada por ALB, CSV desde archivo en UI, evidencia visual de alertas y recorrido autenticado. La prueba externa Python obtuvo 403 de Cloudflare; WebRTC sigue pendiente. |
-| 13 | Documentación técnica · 0.5 | Matriz, checklist y corte de evidencia 16:31 actualizados en el árbol de trabajo; el commit publicado previo `e70cee7` tuvo GitHub Actions `success`. | Las actualizaciones documentales de este corte aún requieren commit/push y CI; faltan capturas verificables de consola AWS y monitor Azure. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 176 Python, 14 Node, 40 transacciones aisladas, build, auditorías e IaC; restore RDS medido. Chrome: portada, tema y drawer; health del dominio ok. Desde EC2, origen ALB/TLS: 100/100 health 200, p95 101.79 ms. | Falta carga transaccional y autenticada por ALB, CSV desde archivo en UI, evidencia visual de alertas y recorrido autenticado. Cliente externo vía Cloudflare recibió 403; WebRTC sigue pendiente. |
+| 13 | Documentación técnica · 0.5 | Matriz, checklist, IaC y evidencias cloud están versionadas; el corte 16:31 publicado en `0667ab7` pasó los tres jobs de GitHub Actions. | Faltan capturas verificables de consola AWS y monitor Azure; consultar en Actions el quality gate del commit más reciente. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago

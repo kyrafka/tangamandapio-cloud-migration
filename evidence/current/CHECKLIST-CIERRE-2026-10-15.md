@@ -1,9 +1,9 @@
-# Checklist de cierre — actualizado 15/10/2026, 16:31 UTC
+# Checklist de cierre — actualizado 15/10/2026, 16:43 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
 
-## Revalidación vigente AWS, Azure y Chrome — 16:12–16:31 UTC
+## Revalidación AWS/Azure/Chrome y microcarga ALB — 16:12–16:43 UTC
 
 - [x] AWS STS autenticó; CloudFormation quedó UPDATE_COMPLETE e IN_SYNC,
   ASG 2/2/5, dos EC2 y dos targets sanos. El ALB atiende HTTPS/443 y redirige
@@ -24,17 +24,22 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   credenciales ni se usó localhost.
 - [x] Una microcarga loopback en una EC2 dio 100/100 HTTP 200, concurrencia
   10, p95 139.09 ms; no representa ALB ni 3,000 usuarios.
+- [x] Una prueba directa al origen ALB desde EC2, conservando el dominio en
+  SNI/Host y verificación TLS, dio 100/100 GET `/health` HTTP 200, concurrencia
+  10 y p95 101.79 ms. No atravesó Cloudflare ni escribió datos de negocio.
 - [ ] La carga externa automatizada recibió 403 de Cloudflare y no sirve
-  como medición de capacidad. El intento E2E por hostname directo del ALB
-  encontró mismatch de certificado tras la redirección y no escribió pedidos.
+  como medición de capacidad. La microcarga ALB tampoco prueba transacciones,
+  comportamiento de escala ni 3,000 usuarios.
 
-Detalle: [corte cloud y navegador 16:31 UTC](CLOUD-REVALIDATION-2026-10-15-1631UTC.md).
+Detalle: [inventario AWS/Azure 16:31](CLOUD-REVALIDATION-2026-10-15-1631UTC.md) y
+[prueba ALB 16:43](aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643.md).
 
 Pendientes vigentes: login manual en la pestaña para inspeccionar Admin,
 Comercial, Operaciones y CSV; conexión privada AWS–Azure (bloqueada por SCP
 en AWS y sin VNet Azure); WebRTC real con dos navegadores; prueba de carga
 transaccional aprobada por ALB; capturas de consola; Multi-AZ/failover RDS.
-El último cambio documental debe volver a pasar por CI antes de publicarse.
+El quality gate de GitHub Actions cubre backend/flujo, frontend e
+infraestructura; revisar la ejecución asociada al commit vigente.
 
 ## Revalidación v12 en AWS y Chrome — 15:40–15:58 UTC
 
