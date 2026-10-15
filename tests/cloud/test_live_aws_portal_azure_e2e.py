@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -143,6 +144,26 @@ class PortalRequestHeaderTests(unittest.TestCase):
         self.assertIsNone(request.get_header("Origin"))
         self.assertIsNone(request.get_header("Referer"))
         self.assertIsNone(request.get_header("X-csrf-token"))
+
+
+class ReadOnlyLoadTransportTests(unittest.TestCase):
+    def test_load_probe_reuses_the_target_specific_opener(self) -> None:
+        client = live_e2e.PortalClient("alb-origin-https")
+        client.cookies = [SimpleNamespace(name="session", value="synthetic-session")]
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b"[]"
+
+        with (
+            patch.object(client.opener, "open", return_value=response) as open_request,
+            patch.object(live_e2e, "urlopen", side_effect=AssertionError("wrong transport")),
+        ):
+            result = live_e2e.measure_read_only_database_load(client)
+
+        self.assertEqual(result["requests"], live_e2e.READ_ONLY_LOAD_REQUESTS)
+        self.assertTrue(result["all_http_200"])
+        self.assertEqual(open_request.call_count, live_e2e.READ_ONLY_LOAD_REQUESTS)
 
 
 class RoleTargetPropagationTests(unittest.TestCase):

@@ -348,7 +348,12 @@ def measure_read_only_database_load(client: PortalClient) -> dict:
         )
         started = time.perf_counter()
         try:
-            with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            # Reuse the same target-specific opener used for the authenticated
+            # session. In particular, ``alb-origin-https`` deliberately bypasses
+            # Cloudflare while preserving the portal hostname for TLS/SNI; the
+            # module-level ``urlopen`` would silently use the environment proxy
+            # and send this load probe through Cloudflare instead.
+            with client.opener.open(request, timeout=REQUEST_TIMEOUT) as response:
                 if response.status != 200:
                     raise SmokeFailure(f"Read-only request to {path} returned {response.status}.")
                 json.loads(response.read())

@@ -1,28 +1,33 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 21:34 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 22:21 UTC
 
-## Corte vigente — 15/10/2026, 21:34 UTC
+## Corte vigente — 15/10/2026, 22:17–22:21 UTC
 
-El portal `https://tangamandapio.kendellnm.me` respondió 200 en `/`, `/health`
-y `/ready` con TLS validado. La página carga los bundles v16 con query de
-release; ambos dieron 200. Un recurso estático inexistente devolvió 404 con
-`Cache-Control: no-store` tanto en el origen como a través de Cloudflare.
-Estas pruebas HTTP no sustituyen la inspección visual autenticada del panel.
+La nueva revalidación completó un E2E autenticado desde EC2/RDS/outbox hasta
+Azure: Admin, Comercial y Operaciones obtuvieron los permisos esperados, la
+venta y reposición sintéticas terminaron `completed_demo`/`received_demo`, los
+dos eventos quedaron entregados y el saldo Azure regresó de 10 a 10. Veinticuatro
+lecturas autenticadas por ALB-origen HTTPS dieron 24/24 HTTP 200 (concurrencia
+6, p95 193.71 ms). SNS reportó dos suscripciones confirmadas y cero pendientes.
 
-AWS STS aceptó el token temporal en el perfil local `default` para la cuenta
-841113066612. CloudFormation terminó `UPDATE_COMPLETE` y la detección de drift
-terminó `IN_SYNC`. El ASG quedó en 2/2 instancias deseadas y saludables, ambas
-con `BUILD_REVISION=20261015-edge-cache-safe-landing-v16-python312`; `/health`
-y `/ready` dieron 200 en cada una.
+AWS STS autenticó la cuenta `841113066612`; CloudFormation está
+`UPDATE_COMPLETE` y una detección nueva terminó `IN_SYNC`, con cero recursos
+desviados. El ASG está en 2/2 deseadas/sanas, con máximo 5; el target group
+también 2/2 `healthy`. `https://tangamandapio.kendellnm.me/`, `/health` y
+`/ready` dieron 200; HTTP redirige con 301.
 
-El artefacto v16 tiene SHA-256
-`94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe`, cifra SSE-S3
-y coincide con la clave/digest configurados en CloudFormation. La puerta local
-de este release aprobó 181 pruebas Python, 14 Node, 40 transacciones aisladas,
-build y auditorías frontend/dependencias, `cfn-lint` y Terraform `fmt`,
-`validate` y pruebas con mocks. Esta actualización no modifica RDS ni configura
-una red privada AWS–Azure. Azure y WebRTC no se revalidaron en este corte.
-El detalle está en
-[la revalidación 21:34](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2134UTC.md).
+El release v16 y SHA-256
+`94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe` siguen
+configurados. Azure está `Running`, HTTPS-only y con siete funciones
+habilitadas; `/api/health` dio 200. Application Insights en la última hora
+registró 89 solicitudes/0 fallos y el worker de Queue 8 invocaciones/0 fallos.
+El plan Terraform Azure contra el state vivo terminó `No changes`, sin `apply`.
+La puerta local aprobó 182 pruebas Python, 14 Node, 40 transacciones aisladas,
+build/auditorías, CloudFormation y seis raíces Terraform.
+
+Persisten límites: RDS es Single-AZ con un día de backup; no hay red privada
+AWS–Azure; no se probaron WebRTC entre navegadores, carga de 3,000 usuarios ni
+inspección visual autenticada/CSV en Chrome. El detalle está en
+[la revalidación de las 22:17–22:21](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
 
 ## Conclusión de calificación
 
@@ -40,13 +45,10 @@ evidencia y trabajo pendiente, no puntos.
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-El corte HTTPS/Azure/QA del 15/10, 19:12–19:13 UTC, y la revalidación AWS de
-consola/health a las 19:21–19:23 están en
-[la evidencia vigente](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md).
-El AWS CLI devolvió `ExpiredToken`, pero Chrome aún permitió leer CloudFormation,
-ELB y S3; no se hizo drift detection ni se consultó RDS.
-Los informes v11, inventarios y pruebas previas enlazados en los bloques
-históricos siguientes son antecedentes; no sustituyen este último corte.
+La evidencia vigente de AWS/Azure/E2E es el corte del 15/10 a las 22:17 UTC:
+[revalidación](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
+Los bloques fechados anteriores, incluidos los que reportan `ExpiredToken` o
+v12/v13, son antecedentes y no sustituyen esta revalidación.
 
 ## Corte anterior — 15/10/2026, 14:20–14:30 UTC (supersedido por 16:31 UTC)
 
@@ -173,16 +175,16 @@ y [prueba ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643
 | 1 | Análisis del problema y requerimientos · 1.0 | Caso, restricciones y requisitos están documentados; el crecimiento multisede/internacional está separado de capacidades ya desplegadas. | Mantener la trazabilidad requisito→componente→prueba en el informe final y defender los supuestos ante el docente. |
 | 2 | Diseño de arquitectura cloud · 2.0 | Arquitectura AWS–Azure, diagramas y separación entre estado implementado y objetivo están documentados; AWS atiende el portal y Azure procesa eventos de demostración. | Presentar el diseño y justificar decisiones/capacidad objetivo en la sustentación. |
 | 3 | Redes VPC/VCN · 2.0 | CloudFormation quedó `UPDATE_COMPLETE`/`IN_SYNC`; el ALB HTTPS público y 2/2 destinos saludables se revalidaron. El inventario anterior describe subredes por AZ y SG encadenados ALB→app→DB. | No hay VNet ni VPN/rutas privadas AWS–Azure. AWS Academy denegó `ec2:CreateCustomerGateway` por SCP y el inventario previo no encontró VNet Azure. HTTPS público no sustituye conectividad privada. Ver [preflight](../evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md). |
-| 4 | Cómputo, almacenamiento y BD · 1.5 | Release v16 verificado en las dos instancias actuales del ASG; portal y health checks responden 200. Restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | Esta actualización no alteró RDS; último estado documentado: Single-AZ y un día de backup. No se probó failover y el ledger Azure es sintético. |
-| 5 | Seguridad cloud · 2.5 | HTTPS validado y cabeceras HSTS/CSP/nosniff/deny/referrer-policy confirmadas desde el origen; cookies seguras y matriz API Admin/Comercial/Operaciones fueron probadas en la revalidación anterior. | Falta recorrido visual autenticado de roles y CSV desde UI en esta sesión. WAF sigue desactivado según parámetros vivos; revisión visual y evidencia independiente de alertas pendientes. |
-| 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG final 2/2/5 con ambos nodos saludables; el cambio se aplicó con reemplazo gradual y salud confirmada. Prueba ALB histórica: 100/100 GET `/health`, concurrencia 10, p95 101.79 ms. | La microcarga no demuestra transacciones, comportamiento de autoescalado ni 3,000 usuarios; RDS sigue Single-AZ. El cliente sintético vía Cloudflare devolvió 403 en prueba anterior. |
-| 7 | Monitoreo y observabilidad · 1.0 | La revisión de cambioset y drift confirma la versión de CloudFormation aplicada, incluyendo alarma de CPU, alarma de capacidad y dashboard de operaciones. | No se volvió a probar entrega de alarmas ni telemetría Azure en este corte. WAF permanece desactivado. |
-| 8 | Infrastructure as Code · 1.5 | CloudFormation aplicado, revisión de drift `IN_SYNC`; clave, revisión y SHA-256 del release v16 coinciden entre plantilla/stack/S3. Terraform `fmt`, seis raíces `validate` y pruebas con mocks pasan localmente. | No hay IaC aplicada para la red privada AWS–Azure; no versionar state ni secretos. |
+| 4 | Cómputo, almacenamiento y BD · 1.5 | Release v16, 2/2 EC2 y 2/2 destinos saludables; RDS `available`, privada y cifrada. Restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | RDS sigue Single-AZ y un día de backup; no se probó failover. El ledger Azure es sintético. |
+| 5 | Seguridad cloud · 2.5 | HTTPS y controles de cabecera comprobados; el E2E AWS autenticó Admin/Comercial/Operaciones y verificó los 200/403 esperados. SNS devuelve solo agregados de 2 confirmadas/0 pendientes. | Falta recorrido visual autenticado y CSV en UI. WAF está desactivado; no se hizo prueba de seguridad externa independiente en este corte. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 con ambos nodos saludables; E2E por ALB con 24/24 lecturas 200, concurrencia 6, p95 193.71 ms. | Prueba corta, no demuestra autoescalado ni 3,000 usuarios; RDS sigue Single-AZ. |
+| 7 | Monitoreo y observabilidad · 1.0 | Drift AWS `IN_SYNC`; alarmas con acciones habilitadas. Application Insights: 89 solicitudes/0 fallos en la última hora; worker Queue 8/0. | No se disparó una alarma nueva en este corte ni se capturó visualmente el monitor. WAF continúa desactivado. |
+| 8 | Infrastructure as Code · 1.5 | CloudFormation aplicado, revisión de drift `IN_SYNC`; release v16 en stack/S3. Terraform `fmt`, seis raíces `validate`, mocks y plan Azure vivo `No changes` pasan. | No hay IaC aplicada para la red privada AWS–Azure; no versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
-| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E Azure del 15/10 completó venta/recepción sintéticas y volvió a saldo base; Function activa/health 200. | El productor de ese E2E fue local, no EC2; no hay conexión privada AWS–Azure. No presentar Azure como OCI ni afirmar inventario físico. |
+| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E autenticado desde una EC2 recorrió AWS/RDS/outbox → Azure Queue/Function y compensó el ledger demo. | No hay conexión privada AWS–Azure; la comunicación va por HTTPS público. No presentar Azure como OCI ni afirmar inventario físico. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | Gate local: 181 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. En nube se verificaron ambos nodos, rutas HTTPS, bundles v16 y 404 `no-store` a través de Cloudflare; restore RDS histórico medido en prueba aislada. | Falta recorrido autenticado visual, CSV desde UI, evidencia visual de alertas y revalidación Azure. AWS E2E no revalidado; WebRTC sigue pendiente. |
-| 13 | Documentación técnica · 0.5 | Matriz, guía de release e informe de evidencia reflejan el stack v16, su artefacto y estado `IN_SYNC`. | Sin capturas actuales de consola AWS ni monitor Azure; la documentación técnica no reemplaza la evidencia visual para sustentación. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 182 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. AWS E2E autenticado, Azure Function y telemetría se revalidaron en este corte. | Falta inspección visual/CSV en Chrome, WebRTC con dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
+| 13 | Documentación técnica · 0.5 | Matriz, release v16 y evidencia AWS/Azure actualizados al corte 22:17 UTC. | Faltan capturas actuales de consola AWS/monitor Azure para sustentación; evidencia textual no las sustituye. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago

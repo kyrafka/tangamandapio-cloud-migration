@@ -1,7 +1,35 @@
-# Checklist de cierre — actualizado 15/10/2026, 19:13 UTC
+# Checklist de cierre — actualizado 15/10/2026, 22:21 UTC
 
-Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
-anteriores se conservan como evidencia histórica. No asigna una nota.
+Este corte prevalece sobre los cortes anteriores de hoy; los informes previos se
+conservan como evidencia histórica. No asigna una nota.
+
+## Revalidación vigente — 15/10/2026, 22:17–22:21 UTC
+
+- [x] AWS STS autenticó; CloudFormation `UPDATE_COMPLETE`; detección nueva
+  `IN_SYNC`, cero recursos desviados; ASG 2/2/5 y target group 2/2 `healthy`.
+- [x] Portal HTTPS `/`, `/health` y `/ready` HTTP 200; HTTP redirige a HTTPS
+  301. Se mantiene release v16 y su digest documentado.
+- [x] AWS E2E desde EC2 al ALB-origen autenticó Admin/Comercial/Operaciones y
+  verificó sus permisos 200/403. Venta y reposición sintéticas entregadas a
+  Azure; ledger demo 10→10; 24/24 lecturas por ALB 200, p95 193.71 ms,
+  concurrencia 6. SNS: 2 suscripciones confirmadas, 0 pendientes.
+- [x] Azure Function `tangama-wms-261008` `Running`, HTTPS-only, siete
+  funciones habilitadas y `/api/health` 200. Application Insights: 89
+  solicitudes/0 fallos en una hora; worker Queue 8 invocaciones/0 fallos.
+- [x] Terraform Azure hizo un plan vivo contra Azure: `No changes`; no se guardó
+  el plan y no se ejecutó `apply`.
+- [x] Puerta local: 182 Python, 14 Node, 40 transacciones aisladas, build,
+  auditorías, CloudFormation, seis raíces Terraform y pruebas mock aprobadas.
+- [ ] Recorrido visual autenticado/CSV en Chrome y WebRTC de dos navegadores:
+  no verificados. Computer Use se detuvo porque no pudo determinar con
+  confianza la URL activa; no se sorteó la barrera ni se tocó la contraseña.
+- [ ] Sin conectividad privada AWS–Azure; el preflight anterior fue denegado
+  por SCP. RDS continúa Single-AZ con backup de un día; la carga no representa
+  3,000 usuarios. WMS es ledger sintético.
+- [ ] El arnés E2E corregido y esta evidencia aún requieren commit/push y CI
+  remoto. `gh` no está instalado.
+
+Detalle: [revalidación AWS/Azure 22:17–22:21 UTC](CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
 
 ## Revalidación HTTPS, Azure y acceso AWS — 15/10/2026, 19:12–19:13 UTC
 
