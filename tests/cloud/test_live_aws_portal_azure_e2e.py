@@ -81,6 +81,40 @@ class LiveTargetSelectionTests(unittest.TestCase):
             "https://tangamandapio.kendellnm.me",
         )
 
+    def test_alb_origin_target_uses_domain_for_https(self) -> None:
+        with patch.dict(live_e2e.os.environ, {}, clear=False):
+            live_e2e.os.environ.pop("LIVE_E2E_TARGET", None)
+            client = live_e2e.PortalClient("alb-origin-https")
+        self.assertEqual(client.base_url, "https://tangamandapio.kendellnm.me")
+        self.assertTrue(
+            any(
+                isinstance(handler, live_e2e._ALBOriginHTTPSHandler)
+                for handler in client.opener.handlers
+            )
+        )
+
+    def test_alb_origin_connection_keeps_tls_hostname_and_uses_alb_dns(self) -> None:
+        raw_socket = MagicMock()
+        tls_socket = MagicMock()
+        context = MagicMock()
+        context.wrap_socket.return_value = tls_socket
+        connection = live_e2e._ALBOriginHTTPSConnection(
+            "tangamandapio.kendellnm.me",
+            origin_host=live_e2e.ALB_ORIGIN_DNS,
+            context=context,
+        )
+        with patch.object(
+            live_e2e.socket, "create_connection", return_value=raw_socket
+        ) as create:
+            connection.connect()
+        create.assert_called_once_with(
+            (live_e2e.ALB_ORIGIN_DNS, 443), connection.timeout, connection.source_address
+        )
+        context.wrap_socket.assert_called_once_with(
+            raw_socket, server_hostname="tangamandapio.kendellnm.me"
+        )
+        self.assertIs(connection.sock, tls_socket)
+
     def test_arbitrary_target_fails_closed(self) -> None:
         with self.assertRaisesRegex(live_e2e.SmokeFailure, "Unsupported live E2E target"):
             live_e2e.PortalClient("http://example.invalid")

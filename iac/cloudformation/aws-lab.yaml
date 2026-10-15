@@ -23,17 +23,17 @@ Parameters:
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-b2b-20261015-login-drawer-a11y-v12-python312-c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261015-cloudwatch-wiring-v13-python312-d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261015-login-drawer-a11y-v12-python312
+    Default: 20261015-cloudwatch-wiring-v13-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13
+    Default: d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
@@ -642,6 +642,13 @@ Resources:
             session = json.loads(os.environ["PORTAL_SESSION_JSON"])
             lines = {
                 "DATABASE_NAME": os.environ["DATABASE_NAME"],
+                # CloudWatch dimensions must match the physical resource names
+                # used by AWS/ApplicationELB, AWS/RDS, and AWS/AutoScaling.
+                "CLOUDWATCH_REGION_NAME": "${AWS::Region}",
+                "CLOUDWATCH_LOAD_BALANCER_FULL_NAME": "${AppLoadBalancer.LoadBalancerFullName}",
+                "CLOUDWATCH_TARGET_GROUP_FULL_NAME": "${TargetGroup.TargetGroupFullName}",
+                "CLOUDWATCH_RDS_INSTANCE_ID": "${Database}",
+                "CLOUDWATCH_AUTO_SCALING_GROUP": "${ProjectName}-asg",
                 "ALARM_NOTIFICATION_TOPIC_ARN": os.environ.get(
                     "ALARM_NOTIFICATION_TOPIC_ARN", ""
                 ),
@@ -657,6 +664,9 @@ Resources:
                 # Despacho fuera del ciclo HTTP: reintento programado con backoff.
                 "OUTBOX_RETRY_INTERVAL": "60",
             }
+            if "${EnableWaf}" == "true":
+                lines["CLOUDWATCH_WAF_WEB_ACL_NAME"] = "${ProjectName}-alb"
+                lines["CLOUDWATCH_WAF_REGION"] = "${AWS::Region}"
             azure_url = os.environ.get("AZURE_FULFILLMENT_URL", "").strip()
             if azure_url:
                 lines["AZURE_FULFILLMENT_URL"] = azure_url

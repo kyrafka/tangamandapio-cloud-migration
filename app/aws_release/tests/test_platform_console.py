@@ -450,7 +450,17 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.assertEqual(payload["cloudwatch"]["metrics"]["waf_blocked"]["points"][0]["value"], 2)
         self.assertEqual(self.cloudwatch.calls[0]["MetricDataQueries"][0]["MetricStat"]["Period"], 300)
         self.assertEqual(payload["security"]["database"], "sqlite_demo")
+        self.assertTrue(payload["security"]["waf_enabled"])
         self.assertTrue(payload["security"]["csrf"] == "enabled")
+
+    def test_waf_posture_is_false_when_no_web_acl_metrics_are_configured(self):
+        self.app.config["CLOUDWATCH_WAF_WEB_ACL_NAME"] = ""
+        self.app.config["CLOUDWATCH_WAF_REGION"] = ""
+
+        response = self.admin.get("/api/platform/overview?window=60")
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertFalse(response.get_json()["security"]["waf_enabled"])
 
     def test_missing_metric_identifiers_are_reported_not_fabricated(self):
         app = portal.create_app(

@@ -1,7 +1,31 @@
-# Checklist de cierre — actualizado 15/10/2026, 16:43 UTC
+# Checklist de cierre — actualizado 15/10/2026, 19:13 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
+
+## Revalidación HTTPS, Azure y acceso AWS — 15/10/2026, 19:12–19:13 UTC
+
+- [x] El portal público HTTPS, `/health`, `/ready` y nueve recursos JavaScript/CSS
+  cargaron con HTTP 200; esto no prueba las rutas privadas de los módulos.
+- [x] Azure CLI confirmó `Azure for Students` Enabled, el grupo
+  `rg-tangamandapio-rebuild-wus` `Succeeded` en West US y la Function
+  `tangama-wms-261008` `Running`/HTTPS-only. Su endpoint público `/api/health`
+  también devolvió 200.
+- [x] Puerta local completa: 181 pruebas unitarias, 14 Node, build Vite,
+  auditorías de dependencias y validación CloudFormation; Terraform `fmt`, seis
+  roots `validate` y cinco tests mock aprobados.
+- [ ] AWS no quedó revalidado en este corte: primero recibió una denegación
+  explícita `voc-cancel-cred` para CloudFormation/ELB y después el CLI informó
+  `ExpiredToken`. La última evidencia válida (18:56 UTC) muestra v12 y 2/2
+  targets sanos; no se afirma que siga vigente.
+- [ ] El artefacto v13 (SHA-256
+  `d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57`) existe
+  localmente, pero no se confirmó su publicación ni despliegue en AWS.
+- [ ] El portal en Chrome continúa en inicio de sesión; vistas por rol,
+  pedidos/ERP, importación CSV, auditoría y telefonía no se probaron en sesión
+  autenticada.
+
+Detalle: [revalidación 19:13 UTC](CLOUD-REVALIDATION-2026-10-15-1913UTC.md).
 
 ## Revalidación AWS/Azure/Chrome y microcarga ALB — 16:12–16:43 UTC
 
@@ -40,6 +64,26 @@ en AWS y sin VNet Azure); WebRTC real con dos navegadores; prueba de carga
 transaccional aprobada por ALB; capturas de consola; Multi-AZ/failover RDS.
 El quality gate de GitHub Actions cubre backend/flujo, frontend e
 infraestructura; revisar la ejecución asociada al commit vigente.
+
+## Revalidación Azure E2E y calidad — 15/10/2026, 18:56 UTC
+
+- [x] La prueba viva de Azure recorrió el flujo de venta, outbox, Queue/Function
+  y recepción compensatoria; el ledger sintético regresó a su saldo base. Los
+  eventos QA permanecen en la auditoría Azure. La prueba usa el artefacto local,
+  no las EC2/RDS desplegadas.
+- [x] Gate local completo: 181 pruebas unitarias, 14 pruebas Node, build Vite,
+  auditorías de dependencias, CloudFormation, Terraform `fmt`/`validate` y
+  cinco tests mock; sin `apply` ni escrituras cloud.
+- [x] AWS STS auténtica la cuenta de laboratorio y el grupo de destino mostró
+  2/2 targets sanos. El release en S3 y el stack vivo siguen en v12; no se halló
+  el artefacto v13 local en el prefijo publicado.
+- [ ] E2E desde AWS no ejecutado: SSM rechazó `DescribeInstanceInformation`
+  por una denegación explícita `voc-cancel-cred`, antes de enviar comando o
+  escribir datos.
+- [ ] Pruebas visuales autenticadas de Admin/Comercial/Operaciones y CSV
+  pendientes de inicio manual de sesión en la pestaña Chrome.
+
+Detalle: [revalidación cloud y calidad 18:56 UTC](CLOUD-REVALIDATION-2026-10-15-1856UTC.md).
 
 ## Revalidación v12 en AWS y Chrome — 15:40–15:58 UTC
 

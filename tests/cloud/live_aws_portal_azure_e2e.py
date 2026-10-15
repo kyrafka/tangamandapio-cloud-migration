@@ -5,30 +5,44 @@ Run only through SSM on an authorized Tangamandapio EC2 instance. It reads the
 admin password from that instance's SSM role, creates/reuses a synthetic QA
 partner and SKU, sells one unit, receives one unit, and requires the Azure demo
 ledger to return to its initial balance. The target is restricted to loopback,
-the known public ALB, or the configured HTTPS portal domain. It never prints
+the known public ALB, or the configured HTTPS portal domain (through Cloudflare
+or directly to the ALB with hostname-validated TLS). It never prints
 credentials or API responses containing personal data.
 """
 
 from __future__ import annotations
 
+import http.client
 import http.cookiejar
 import json
 import math
 import os
 import secrets
+import socket
+import ssl
 import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
+from urllib.request import (
+    HTTPCookieProcessor,
+    HTTPSHandler,
+    ProxyHandler,
+    Request,
+    build_opener,
+    urlopen,
+)
 
 
+ALB_ORIGIN_DNS = "tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com"
 LIVE_TARGET_URLS = {
     "loopback": "http://127.0.0.1:8080",
-    "alb": "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
+    "alb": f"http://{ALB_ORIGIN_DNS}",
     "https": "https://tangamandapio.kendellnm.me",
+    "alb-origin-https": "https://tangamandapio.kendellnm.me",
 }
 ADMIN_USERNAME = "admin@tangamandapio.local"
 ADMIN_PARAMETER = "/tangamandapio/portal/admin-login"
@@ -75,13 +89,50 @@ class SmokeFailure(RuntimeError):
     pass
 
 
+class _ALBOriginHTTPSConnection(http.client.HTTPSConnection):
+    """Connect to the ALB directly but verify TLS for the public portal host."""
+
+    def __init__(self, host: str, *, origin_host: str, **kwargs: Any) -> None:
+        super().__init__(host, **kwargs)
+        self.origin_host = origin_host
+
+    def connect(self) -> None:
+        raw_socket = socket.create_connection(
+            (self.origin_host, self.port), self.timeout, self.source_address
+        )
+        try:
+            self.sock = self._context.wrap_socket(
+                raw_socket,
+                server_hostname=self.host,
+            )
+        except Exception:
+            raw_socket.close()
+            raise
+
+
+class _ALBOriginHTTPSHandler(HTTPSHandler):
+    """Direct-to-origin HTTPS with normal CA and hostname validation."""
+
+    def __init__(self) -> None:
+        super().__init__(context=ssl.create_default_context())
+
+    def https_open(self, request: Request):
+        return self.do_open(
+            _ALBOriginHTTPSConnection,
+            request,
+            origin_host=ALB_ORIGIN_DNS,
+            context=self._context,
+            check_hostname=True,
+        )
+
+
 def resolve_live_target(target: str) -> str:
     """Resolve only the explicitly supported, non-arbitrary live test targets."""
     try:
         return LIVE_TARGET_URLS[target]
     except KeyError:
         raise SmokeFailure(
-            "Unsupported live E2E target; use loopback, alb, or https."
+            "Unsupported live E2E target; use loopback, alb, https, or alb-origin-https."
         ) from None
 
 
@@ -126,7 +177,17 @@ class PortalClient:
             secure_protocols=("http", "https", "wss")
         )
         self.cookies = http.cookiejar.CookieJar(policy=policy)
-        self.opener = build_opener(HTTPCookieProcessor(self.cookies))
+        if self.target == "alb-origin-https":
+            # Do not inherit an environment proxy for this explicitly selected
+            # target; connect to the known ALB while preserving the domain Host
+            # and TLS SNI. Certificate verification remains enabled.
+            self.opener = build_opener(
+                ProxyHandler({}),
+                HTTPCookieProcessor(self.cookies),
+                _ALBOriginHTTPSHandler(),
+            )
+        else:
+            self.opener = build_opener(HTTPCookieProcessor(self.cookies))
         self.csrf: str | None = None
 
     def request(

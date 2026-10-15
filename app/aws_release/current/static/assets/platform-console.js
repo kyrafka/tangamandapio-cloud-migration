@@ -194,11 +194,17 @@
     setChip("#database-state", data.security.database === "postgresql" ? "RDS" : "Demo", data.security.database === "postgresql" ? "ok" : "warning");
 
     const security = $("#security-details"); security.replaceChildren();
+    const wafEnabled = Boolean(data.security.waf_enabled);
+    const wafBlocked = latest(cw, "waf_blocked");
+    const wafStatus = !wafEnabled ? "No desplegado"
+      : cw.status === "access_denied" ? "Sin permiso de lectura"
+        : cw.status === "unavailable" ? "No disponible"
+          : wafBlocked === null ? "Sin datos recientes" : formatted(wafBlocked, "", 0);
     security.append(
       detailRow("CSRF y roles", "Activos en backend"),
       detailRow("Cookie HttpOnly", data.security.session_cookie_httponly ? "Sí" : "No"),
       detailRow("Cookie Secure", data.security.session_cookie_secure ? "Sí" : "Pendiente de TLS propio"),
-      detailRow("Solicitudes bloqueadas", latest(cw, "waf_blocked") === null ? "WAF sin métrica conectada" : formatted(latest(cw, "waf_blocked"), "", 0)),
+      detailRow("WAF · solicitudes bloqueadas", wafStatus),
       detailRow("Grabación de audio", data.security.recordings_enabled ? "Consentimiento requerido" : "Deshabilitada"),
     );
     const secure = data.security.session_cookie_secure;

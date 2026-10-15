@@ -1293,6 +1293,10 @@ def create_app(test_config=None):
                 "session_cookie_secure": bool(app.config["SESSION_COOKIE_SECURE"]),
                 "session_cookie_httponly": bool(app.config["SESSION_COOKIE_HTTPONLY"]),
                 "recordings_enabled": bool(app.config["VOICE_RECORDINGS_ENABLED"]),
+                "waf_enabled": bool(
+                    app.config.get("CLOUDWATCH_WAF_WEB_ACL_NAME")
+                    and app.config.get("CLOUDWATCH_WAF_REGION")
+                ),
                 "database": "postgresql" if is_postgresql(configured_database_target(app.config)) else "sqlite_demo",
             },
         )
