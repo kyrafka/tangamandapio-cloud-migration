@@ -72,3 +72,17 @@ capacidad para 3,000 usuarios, entrega de alertas ni una VPN privada AWS–Azure
 - Los tres checks de GitHub Actions del commit `8e49d8e` terminaron
   `completed/success`: backend y flujo, infraestructura AWS/Azure, y frontend.
 - El branch local y el remoto coinciden en `8e49d8e`.
+
+## E2E en vivo — 05:15 UTC
+
+- El smoke autenticado se ejecutó por SSM en una EC2 del portal, con el opt-in
+  explícito de escrituras sintéticas. Admin inició sesión; Comercial y
+  Operaciones respetaron 200/403 según rol, sin acceso admin indebido.
+- Importación de catálogo, venta `completed_demo`, compra/recepción
+  `received_demo`, dos eventos outbox entregados y ledger sintético 10→10.
+- Las dos suscripciones de SNS se leyeron como confirmadas (0 pendientes).
+- Las 24 lecturas de la prueba tuvieron HTTP 200, concurrencia 6, p95 246.02 ms.
+  Es una prueba pequeña de lectura, no una demostración de 3,000 usuarios.
+- Los tres checks de GitHub Actions del commit `9dc9a4b` terminaron
+  `completed/success` antes de esta nueva actualización de evidencia.
+- Evidencia sanitizada: [resultado E2E](aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15-0515UTC.json).

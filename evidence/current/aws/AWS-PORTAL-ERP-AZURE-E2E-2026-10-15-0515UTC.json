@@ -1,0 +1,44 @@
+{
+  "observed_at_utc": "2026-10-15T05:15:46Z",
+  "result": "LIVE_E2E_PASSED",
+  "database_health": "ok",
+  "portal_role": "admin",
+  "azure_mode": "demo-inventory-ledger",
+  "sku": "SKU-QA-V10-20261014",
+  "catalog_import": "passed",
+  "sale_status": "completed_demo",
+  "purchase_status": "received_demo",
+  "outbox_delivered": 2,
+  "synthetic_stock_baseline": 10,
+  "synthetic_stock_final": 10,
+  "read_only_database_load": {
+    "requests": 24,
+    "concurrency": 6,
+    "p95_ms": 246.02,
+    "all_http_200": true
+  },
+  "role_authorization_checks": {
+    "comercial": {
+      "/api/erp/sales/orders": 200,
+      "/api/outbox": 403,
+      "/api/wms/inventory": 403,
+      "/api/admin/users": 403,
+      "/api/admin/alarm-subscriptions": 403
+    },
+    "operaciones": {
+      "/api/erp/sales/orders": 403,
+      "/api/outbox": 200,
+      "/api/wms/inventory": 200,
+      "/api/admin/users": 403,
+      "/api/admin/alarm-subscriptions": 403
+    }
+  },
+  "admin_alarm_subscription_check": {
+    "topic_configured": true,
+    "confirmation_required": true,
+    "subscription_count": 2,
+    "confirmed_count": 2,
+    "pending_confirmation_count": 0
+  },
+  "note": "Live test creates/reuses synthetic ERP QA records; synthetic stock returned to its baseline. No credential or personal data is included."
+}

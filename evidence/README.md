@@ -1,6 +1,6 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 05:13 UTC
+## Revalidación puntual más reciente — 15/10/2026, 05:15 UTC
 
 AWS conserva `UPDATE_COMPLETE`/`IN_SYNC`, 2/2 targets sanos y respuestas HTTP
 200 en portada, health y readiness; el listener sigue solo HTTP/80. Azure
@@ -9,9 +9,12 @@ del recurso en este corte. Se solicitó en ACM el certificado para
 `tangamandapio.kendellnm.me`; falta que Kendell publique el CNAME de validación
 en modo DNS only. Todavía no hay HTTPS en el ALB. La suite local repetida pasó:
 152 pruebas Python, 14 Node, build, cfn-lint, seis validaciones Terraform y
-5/5 pruebas mock. Los tres checks de GitHub Actions del commit `8e49d8e` también
-terminaron en verde; al corte 05:13 UTC el CNAME de ACM aún no resolvía. Detalle:
-[revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md).
+5/5 pruebas mock. Los tres checks de GitHub Actions del commit `9dc9a4b` también
+terminaron en verde. Un E2E autenticado pasó: permisos por rol, venta/compra
+sintéticas, dos eventos a Azure, ledger 10→10, alertas 2/2 confirmadas y 24/24
+lecturas HTTP 200. El CNAME de ACM aún no resolvía al corte. Detalle:
+[revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md) y
+[resultado E2E sanitizado](current/aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15-0515UTC.json).
 
 ## Corte vigente — 15/10/2026, 00:34 UTC
 

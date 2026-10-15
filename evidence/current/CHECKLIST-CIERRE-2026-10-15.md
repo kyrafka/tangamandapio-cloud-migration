@@ -1,4 +1,4 @@
-# Checklist de cierre — actualizado 15/10/2026, 05:13 UTC
+# Checklist de cierre — actualizado 15/10/2026, 05:15 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -13,6 +13,11 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   `functionapp show`/inventario; el estado ARM completo no se volvió a certificar.
 - [x] Suite repetida: 152 pruebas Python (157 subtests), 14 Node, build Vite,
   `cfn-lint`, seis entornos Terraform (`fmt`/`init`/`validate`) y tests mock 5/5.
+- [x] E2E autenticado en la instancia viva: Admin; permisos de Comercial y
+  Operaciones 200/403; importación, venta y compra sintéticas; dos eventos
+  entregados a Azure; ledger demo 10→10; SNS 2/2 confirmadas; lecturas 24/24,
+  concurrencia 6 y p95 246.02 ms. No prueba capacidad de 3,000 usuarios.
+  [Reporte](aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15-0515UTC.json).
 - [x] Se solicitó el certificado ACM de
   `tangamandapio.kendellnm.me`; está `PENDING_VALIDATION` y el CNAME fue
   compartido con Diego para que Kendell lo publique como DNS only; la consulta
