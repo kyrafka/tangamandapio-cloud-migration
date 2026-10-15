@@ -51,11 +51,12 @@ inventario, pagos, compras, ventas, mensajes o configuración cloud.
 
 - La consulta de errores y advertencias de la consola Chrome devolvió una lista
   vacía durante la revisión.
-- Las pruebas locales terminaron con éxito: 17 pruebas API/flujo, 46 pruebas
-  del release AWS y 23 pruebas de preflight cloud. La suite de Azure Function
-  no se pudo ejecutar en este Windows porque falta el módulo `azure.functions`;
-  el CI de GitHub para el commit `8a1fe81` sí terminó verde en sus tres jobs
-  (backend/Azure, frontend y validación de infraestructura).
+- Con Python 3.12 y el lock de CI en un entorno temporal aislado pasaron 17
+  pruebas API/flujo, 31 de Azure Function, 46 del release AWS y 23 de preflight
+  cloud. También pasaron el chequeo del lock, la compilación Python y `cfn-lint`.
+  En frontend pasaron 8 pruebas de navegación por rol, 6 de CSV y
+  `pnpm run build:check`. El CI del commit `8a1fe81` también quedó verde en sus
+  tres jobs (backend/Azure, frontend y validación de infraestructura).
 - A las 19:35 UTC, portal `/health` devolvió HTTP 200 (`status=ok`), `/ready`
   devolvió HTTP 200 (`status=ready`) y Azure Function `/api/health` devolvió
   HTTP 200 (`status=ok`).
