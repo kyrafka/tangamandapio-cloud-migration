@@ -6,4 +6,4 @@ create_resource_group = true
 storage_account_name  = "sttangamasandbox001"
 key_vault_name        = "kv-tangama-sandbox-001"
 name_prefix           = "tangama"
-function_package_path = "../../../artifacts/azure_function_package.zip"
+function_package_path = "../../../artifacts/azure_function_package-6eea3b6ae6122348360bf26232f196f99bb675913a304cb22a99658495382065.zip"

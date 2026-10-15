@@ -1,0 +1,34 @@
+{
+  "result": "LIVE_E2E_PASSED",
+  "database_health": "ok",
+  "portal_role": "admin",
+  "azure_mode": "demo-inventory-ledger",
+  "catalog_import": "passed",
+  "sale_status": "completed_demo",
+  "purchase_status": "received_demo",
+  "outbox_delivered": 2,
+  "synthetic_stock_baseline": 10,
+  "synthetic_stock_final": 10,
+  "read_only_database_load": {
+    "all_http_200": true,
+    "concurrency": 6,
+    "p95_ms": 679.98,
+    "requests": 24
+  },
+  "role_authorization_checks": {
+    "comercial": {
+      "/api/admin/users": 403,
+      "/api/erp/sales/orders": 200,
+      "/api/outbox": 403,
+      "/api/wms/inventory": 403
+    },
+    "operaciones": {
+      "/api/admin/users": 403,
+      "/api/erp/sales/orders": 403,
+      "/api/outbox": 200,
+      "/api/wms/inventory": 200
+    }
+  },
+  "execution_date_utc": "2026-10-15",
+  "scope_note": "Synthetic QA records; demo inventory only; database load ran locally on EC2 and bypassed the ALB."
+}

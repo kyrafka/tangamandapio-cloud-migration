@@ -1,7 +1,11 @@
 import json
+import hashlib
+import hmac
 import logging
 import math
 import os
+import re
+import secrets
 import socket
 import sqlite3
 import tempfile
@@ -11,14 +15,155 @@ from contextlib import closing
 from functools import wraps
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from flask import Flask, current_app, g, jsonify, request, send_from_directory, session
+from flask import Flask, current_app, g, jsonify, redirect, request, send_from_directory, session
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from .erp_service import grant_default_erp_roles, initialize_erp_database, register_erp_routes
 
 
 LOGGER = logging.getLogger("tangamandapio.api")
+
+
+def _alarm_sns_client(config, unsigned=False):
+    """Create an SNS client scoped by the app's AWS region configuration."""
+    factory = config.get("ALARM_SNS_CLIENT_FACTORY")
+    if factory:
+        return factory(unsigned=unsigned)
+    configured_client = config.get("ALARM_SNS_CLIENT")
+    if configured_client is not None:
+        return configured_client
+    import boto3
+
+    client_options = {"region_name": config.get("AWS_REGION_NAME") or None}
+    if unsigned:
+        from botocore import UNSIGNED
+        from botocore.config import Config
+
+        client_options["config"] = Config(signature_version=UNSIGNED)
+    return boto3.client("sns", **client_options)
+
+
+class DatabaseRateLimitStore:
+    """Persist login counters in the shared application database."""
+
+    clock = time.time
+
+    def __init__(self, database_target):
+        self.database_target = database_target
+
+    def get(self, key):
+        with connect(self.database_target) as connection:
+            row = connection.execute(
+                "SELECT failures, locked_until FROM login_attempts WHERE attempt_key = ?",
+                (key,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {"failures": row["failures"], "locked_until": row["locked_until"]}
+
+    def put(self, key, entry, now):
+        with connect(self.database_target) as connection:
+            connection.execute(
+                """
+                INSERT INTO login_attempts (attempt_key, failures, locked_until)
+                VALUES (?, ?, ?)
+                ON CONFLICT (attempt_key) DO UPDATE SET
+                    failures = excluded.failures,
+                    locked_until = excluded.locked_until
+                """,
+                (key, entry["failures"], entry["locked_until"]),
+            )
+            connection.commit()
+
+    def record_failure(self, key, now, max_attempts, lockout_seconds):
+        """Increment atomically so concurrent workers cannot lose failures."""
+        with connect(self.database_target) as connection:
+            connection.execute(
+                """
+                INSERT INTO login_attempts (attempt_key, failures, locked_until)
+                VALUES (?, 1, CASE WHEN ? <= 1 THEN ? + ? ELSE 0 END)
+                ON CONFLICT (attempt_key) DO UPDATE SET
+                    failures = CASE
+                        WHEN login_attempts.locked_until > ? THEN login_attempts.failures
+                        WHEN login_attempts.failures >= ? THEN 1
+                        ELSE login_attempts.failures + 1
+                    END,
+                    locked_until = CASE
+                        WHEN login_attempts.locked_until > ? THEN login_attempts.locked_until
+                        WHEN (
+                            CASE WHEN login_attempts.failures >= ? THEN 1
+                            ELSE login_attempts.failures + 1 END
+                        ) >= ? THEN ? + ?
+                        ELSE 0
+                    END
+                """,
+                (
+                    key,
+                    max_attempts,
+                    now,
+                    lockout_seconds,
+                    now,
+                    max_attempts,
+                    now,
+                    max_attempts,
+                    max_attempts,
+                    now,
+                    lockout_seconds,
+                ),
+            )
+            connection.commit()
+
+    def delete(self, key):
+        with connect(self.database_target) as connection:
+            connection.execute("DELETE FROM login_attempts WHERE attempt_key = ?", (key,))
+            connection.commit()
+
+
+class LoginRateLimiter:
+    """Limit repeated authentication failures across app processes."""
+
+    def __init__(self, store, max_attempts=5, lockout_seconds=300, clock=None):
+        self.store = store
+        self.max_attempts = int(max_attempts)
+        self.lockout_seconds = int(lockout_seconds)
+        self._clock = clock or store.clock
+
+    @property
+    def enabled(self):
+        return self.max_attempts > 0 and self.lockout_seconds > 0
+
+    def retry_after(self, key):
+        if not self.enabled:
+            return 0.0
+        now = self._clock()
+        entry = self.store.get(key)
+        if entry is None or now >= entry["locked_until"]:
+            return 0.0
+        return entry["locked_until"] - now
+
+    def record_failure(self, key):
+        if not self.enabled:
+            return
+        now = self._clock()
+        if hasattr(self.store, "record_failure"):
+            self.store.record_failure(
+                key, now, self.max_attempts, self.lockout_seconds
+            )
+            return
+        entry = self.store.get(key) or {"failures": 0, "locked_until": 0.0}
+        if entry["failures"] >= self.max_attempts and now >= entry["locked_until"]:
+            entry["failures"] = 0
+        entry["failures"] += 1
+        if entry["failures"] >= self.max_attempts:
+            entry["locked_until"] = now + self.lockout_seconds
+        self.store.put(key, entry, now)
+
+    def reset(self, key):
+        self.store.delete(key)
 
 
 def create_app(test_config=None):
@@ -31,6 +176,17 @@ def create_app(test_config=None):
         ),
         AZURE_FULFILLMENT_URL=os.getenv("AZURE_FULFILLMENT_URL", ""),
         AZURE_FUNCTION_KEY=os.getenv("AZURE_FUNCTION_KEY", ""),
+        AWS_REGION_NAME=os.getenv("AWS_REGION_NAME", "").strip(),
+        ALARM_NOTIFICATION_TOPIC_ARN=os.getenv("ALARM_NOTIFICATION_TOPIC_ARN", "").strip(),
+        METRICS_ENABLED=os.getenv("METRICS_ENABLED", "false").lower()
+        in {"1", "true", "yes"},
+        ERP_SMTP_HOST=os.getenv("ERP_SMTP_HOST", "").strip(),
+        ERP_SMTP_PORT=os.getenv("ERP_SMTP_PORT", "587"),
+        ERP_SMTP_SECURITY=os.getenv("ERP_SMTP_SECURITY", "starttls").strip().lower(),
+        ERP_SMTP_USERNAME=os.getenv("ERP_SMTP_USERNAME", ""),
+        ERP_SMTP_PASSWORD=os.getenv("ERP_SMTP_PASSWORD", ""),
+        ERP_SMTP_FROM=os.getenv("ERP_SMTP_FROM", "no-reply@tangamandapio.local").strip(),
+        ERP_SMTP_RECIPIENT_DOMAIN=os.getenv("ERP_SMTP_RECIPIENT_DOMAIN", "").strip().lower(),
         AUTO_DISPATCH_EVENTS=os.getenv("AUTO_DISPATCH_EVENTS", "true").lower()
         in {"1", "true", "yes"},
         SECRET_KEY=os.getenv("APP_SESSION_SECRET", "development-only-change-me"),
@@ -38,10 +194,19 @@ def create_app(test_config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower()
         in {"1", "true", "yes"},
+        CSRF_ENABLED=os.getenv("CSRF_ENABLED", "true").lower() in {"1", "true", "yes"},
         BOOTSTRAP_ADMIN_USERNAME=os.getenv(
             "BOOTSTRAP_ADMIN_USERNAME", "admin@tangamandapio.local"
         ),
         BOOTSTRAP_ADMIN_PASSWORD=os.getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
+        FORCE_BOOTSTRAP_PASSWORD_CHANGE=os.getenv(
+            "FORCE_BOOTSTRAP_PASSWORD_CHANGE", "true"
+        ).lower() in {"1", "true", "yes"},
+        FORCE_INITIAL_PASSWORD_CHANGE=os.getenv(
+            "FORCE_INITIAL_PASSWORD_CHANGE", "true"
+        ).lower() in {"1", "true", "yes"},
+        LOGIN_RATE_LIMIT_MAX=int(os.getenv("LOGIN_RATE_LIMIT_MAX", "5")),
+        LOGIN_RATE_LIMIT_SECONDS=int(os.getenv("LOGIN_RATE_LIMIT_SECONDS", "300")),
         MAX_CONTENT_LENGTH=1024 * 1024,
     )
 
@@ -53,6 +218,11 @@ def create_app(test_config=None):
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
     initialize_database(database_path)
     ensure_portal_bootstrap(app, database_path)
+    app.extensions["login_rate_limiter"] = LoginRateLimiter(
+        store=DatabaseRateLimitStore(database_path),
+        max_attempts=app.config["LOGIN_RATE_LIMIT_MAX"],
+        lockout_seconds=app.config["LOGIN_RATE_LIMIT_SECONDS"],
+    )
     app.extensions["metrics"] = {
         "requests_total": 0,
         "orders_created_total": 0,
@@ -64,6 +234,61 @@ def create_app(test_config=None):
     def start_request_observation():
         g.request_started_at = time.perf_counter()
         g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+    @app.before_request
+    def reject_cross_origin_writes():
+        if not app.config["CSRF_ENABLED"] or request.method in {"GET", "HEAD", "OPTIONS"}:
+            return None
+        source = request.headers.get("Origin") or request.headers.get("Referer")
+        if not source:
+            return None
+        try:
+            parsed = urlsplit(source)
+        except ValueError:
+            parsed = None
+        if (
+            parsed is None
+            or parsed.scheme not in {"http", "https"}
+            or parsed.netloc.casefold() != request.host.casefold()
+        ):
+            LOGGER.warning(json.dumps({
+                "event": "cross_origin_denied",
+                "request_id": g.get("request_id"),
+                "method": request.method,
+                "path": request.path,
+            }))
+            return jsonify(error="cross_origin_denied"), 403
+        return None
+
+    @app.before_request
+    def require_csrf_token():
+        if not app.config["CSRF_ENABLED"] or request.method in {"GET", "HEAD", "OPTIONS"}:
+            return None
+        expected = session.get("csrf_token")
+        provided = request.headers.get("X-CSRF-Token", "")
+        if not expected or not provided or not hmac.compare_digest(expected, provided):
+            LOGGER.warning(json.dumps({
+                "event": "csrf_token_denied",
+                "request_id": g.get("request_id"),
+                "method": request.method,
+                "path": request.path,
+            }))
+            return jsonify(error="csrf_token_required"), 403
+        return None
+
+    @app.before_request
+    def require_temporary_password_change():
+        if not request.path.startswith("/api/") or request.path in {
+            "/api/auth/login",
+            "/api/auth/logout",
+            "/api/auth/session",
+            "/api/auth/password",
+        }:
+            return None
+        user = current_portal_user(database_path)
+        if user and user["must_change_password"]:
+            return jsonify(error="password_change_required"), 428
+        return None
 
     @app.after_request
     def secure_and_observe(response):
@@ -77,7 +302,27 @@ def create_app(test_config=None):
             "frame-ancestors 'none'; form-action 'self'; script-src 'self'; "
             "style-src 'self'"
         )
-        response.headers["Cache-Control"] = "no-store"
+        existing_cache_control = response.headers.get("Cache-Control", "").lower()
+        if "no-store" not in existing_cache_control:
+            asset_name = Path(request.path).name
+            is_static_asset = request.path.startswith(("/assets/", "/images/"))
+            is_content_versioned = bool(
+                re.fullmatch(r"index-[A-Za-z0-9_-]{8,}\.(?:js|css)", asset_name)
+                or re.fullmatch(r".+-[0-9a-f]{12}\.[A-Za-z0-9]+", asset_name)
+                or re.fullmatch(
+                    r".+-v[0-9]+\.(?:png|jpe?g|webp|avif|svg)", asset_name
+                )
+            )
+            if is_static_asset and is_content_versioned:
+                response.headers["Cache-Control"] = (
+                    "public, max-age=31536000, immutable"
+                )
+            elif response.mimetype == "text/html":
+                response.headers["Cache-Control"] = (
+                    "no-cache, max-age=0, must-revalidate"
+                )
+            else:
+                response.headers["Cache-Control"] = "no-store"
         if request.is_secure:
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains"
@@ -103,6 +348,13 @@ def create_app(test_config=None):
 
     @app.get("/metrics")
     def metrics():
+        if not app.config["METRICS_ENABLED"]:
+            return "", 404
+        user = current_portal_user(configured_database_target(app.config))
+        if user is None:
+            return jsonify(error="authentication_required"), 401
+        if user["role"] != "admin":
+            return jsonify(error="insufficient_role"), 403
         values = app.extensions["metrics"]
         lines = [
             "# HELP tangamandapio_http_requests_total Total HTTP responses generated by the API.",
@@ -125,21 +377,41 @@ def create_app(test_config=None):
         password = str(payload.get("password", ""))
         if not username or not password:
             return jsonify(error="credentials_required"), 400
+        limiter = app.extensions["login_rate_limiter"]
+        limiter_key = hmac.new(
+            str(app.config["SECRET_KEY"]).encode("utf-8"),
+            f"{request.remote_addr or 'unknown'}\0{username}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        retry_after = limiter.retry_after(limiter_key)
+        if retry_after > 0:
+            wait_seconds = int(retry_after) + 1
+            LOGGER.warning(json.dumps({"event": "login_rate_limited", "request_id": g.request_id}))
+            return (
+                jsonify(error="too_many_attempts", retry_after=wait_seconds),
+                429,
+                {"Retry-After": str(wait_seconds)},
+            )
         with connect(database_path) as connection:
             row = connection.execute(
                 """
-                SELECT id, username, password_hash, role, company_id, active
+                SELECT id, username, password_hash, role, company_id, active,
+                       auth_version, must_change_password
                 FROM portal_users WHERE username = ?
                 """,
                 (username,),
             ).fetchone()
         if row is None or not row["active"] or not check_password_hash(row["password_hash"], password):
-            LOGGER.warning(json.dumps({"event": "login_denied", "username": username, "request_id": g.request_id}))
+            limiter.record_failure(limiter_key)
+            LOGGER.warning(json.dumps({"event": "login_denied", "request_id": g.request_id}))
             return jsonify(error="invalid_credentials"), 401
+        limiter.reset(limiter_key)
         session.clear()
         session["portal_user_id"] = row["id"]
+        session["portal_user_version"] = row["auth_version"]
+        session["csrf_token"] = secrets.token_urlsafe(32)
         write_audit(database_path, row["id"], "auth.login", "portal_user", row["id"])
-        return jsonify(user=portal_user(database_path, row["id"]))
+        return jsonify(user=portal_user(database_path, row["id"]), csrf_token=session["csrf_token"])
 
     @app.post("/api/auth/logout")
     def logout():
@@ -152,15 +424,57 @@ def create_app(test_config=None):
     @app.get("/api/auth/session")
     def session_status():
         user = current_portal_user(database_path)
+        if not session.get("csrf_token"):
+            session["csrf_token"] = secrets.token_urlsafe(32)
         if user is None:
-            return jsonify(authenticated=False), 200
-        return jsonify(authenticated=True, user=user)
+            return jsonify(authenticated=False, csrf_token=session["csrf_token"]), 200
+        return jsonify(authenticated=True, user=user, csrf_token=session["csrf_token"])
+
+    @app.post("/api/auth/password")
+    def change_own_password():
+        user = current_portal_user(database_path)
+        if user is None:
+            return jsonify(error="authentication_required"), 401
+        payload = request.get_json(silent=True) or {}
+        current_password = str(payload.get("current_password", ""))
+        new_password = str(payload.get("new_password", ""))
+        if len(new_password) < 12 or len(new_password) > 256:
+            return jsonify(error="invalid_new_password"), 400
+
+        with connect(database_path) as connection:
+            row = connection.execute(
+                "SELECT password_hash FROM portal_users WHERE id = ? AND active = TRUE",
+                (user["id"],),
+            ).fetchone()
+            if row is None or not check_password_hash(row["password_hash"], current_password):
+                return jsonify(error="current_password_invalid"), 403
+            if check_password_hash(row["password_hash"], new_password):
+                return jsonify(error="password_reuse_not_allowed"), 400
+            connection.execute(
+                """
+                UPDATE portal_users
+                SET password_hash = ?, must_change_password = FALSE,
+                    auth_version = auth_version + 1
+                WHERE id = ?
+                """,
+                (generate_password_hash(new_password), user["id"]),
+            )
+            insert_audit(
+                connection,
+                user["id"],
+                "auth.password_change",
+                "portal_user",
+                user["id"],
+                {"sessions_revoked": True},
+            )
+            connection.commit()
+        session.clear()
+        return jsonify(password_changed=True, reauthenticate=True)
 
     @app.get("/api")
     def index():
         return jsonify(
             service="Tangamandapio Cloud Demo",
-            instance=socket.gethostname(),
             endpoints=["/health", "/ready", "/api/orders", "/api/multicloud"],
         )
 
@@ -169,6 +483,15 @@ def create_app(test_config=None):
         if (static_folder / "index.html").is_file():
             return send_from_directory(static_folder, "index.html")
         return index()
+
+    @app.get("/administracion")
+    def administration_console():
+        user = current_portal_user(database_path)
+        if user is None:
+            return redirect("/", code=303)
+        if user["role"] != "admin":
+            return "Acceso restringido a Administración.", 403
+        return send_from_directory(static_folder / "admin", "index.html")
 
     @app.get("/health")
     def health():
@@ -183,8 +506,6 @@ def create_app(test_config=None):
         return (
             jsonify(
                 status="ok" if status_code == 200 else "degraded",
-                database=database_status,
-                instance=socket.gethostname(),
                 timestamp=datetime.now(timezone.utc).isoformat(),
             ),
             status_code,
@@ -195,9 +516,9 @@ def create_app(test_config=None):
         try:
             with connect(database_path) as connection:
                 connection.execute("SELECT 1").fetchone()
-            return jsonify(status="ready", dependencies={"database": "ok"})
+            return jsonify(status="ready")
         except Exception:
-            return jsonify(status="not_ready", dependencies={"database": "error"}), 503
+            return jsonify(status="not_ready"), 503
 
     @app.get("/api/orders")
     @require_roles("customer", "sales", "warehouse", "operations", "admin", "auditor")
@@ -365,12 +686,16 @@ def create_app(test_config=None):
         with connect(database_path) as connection:
             rows = connection.execute(
                 """
-                SELECT u.id, u.username, u.role, u.active, u.created_at, c.name AS company
+                SELECT u.id, u.username, u.role, u.active, u.must_change_password,
+                       u.company_id, u.created_at, c.name AS company
                 FROM portal_users AS u JOIN companies AS c ON c.id = u.company_id
                 ORDER BY u.id DESC
                 """
             ).fetchall()
-        return jsonify([dict(row) for row in rows])
+        return jsonify([
+            {**dict(row), "must_change_password": bool(row["must_change_password"])}
+            for row in rows
+        ])
 
     @app.post("/api/admin/companies")
     @require_roles("admin")
@@ -398,19 +723,19 @@ def create_app(test_config=None):
                     "INSERT INTO companies(name, slug, created_at) VALUES (?, ?, ?)",
                     (name, slug, datetime.now(timezone.utc).isoformat()),
                 )
+                insert_audit(
+                    connection,
+                    g.portal_user["id"],
+                    "company.create",
+                    "company",
+                    company_id,
+                    {"slug": slug},
+                )
                 connection.commit()
             except Exception as error:
                 if is_integrity_error(error):
                     return jsonify(error="company_slug_already_exists"), 409
                 raise
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "company.create",
-            "company",
-            company_id,
-            {"slug": slug},
-        )
         return jsonify(id=company_id, name=name, slug=slug), 201
 
     @app.get("/api/admin/companies")
@@ -446,8 +771,11 @@ def create_app(test_config=None):
                 user_id = insert_and_return_id(
                     connection,
                     """
-                    INSERT INTO portal_users(username, password_hash, role, company_id, active, created_at)
-                    VALUES (?, ?, ?, ?, TRUE, ?)
+                    INSERT INTO portal_users(
+                        username, password_hash, role, company_id, active,
+                        created_at, must_change_password
+                    )
+                    VALUES (?, ?, ?, ?, TRUE, ?, ?)
                     """,
                     (
                         username,
@@ -455,22 +783,239 @@ def create_app(test_config=None):
                         role,
                         company_id,
                         datetime.now(timezone.utc).isoformat(),
+                        bool(app.config["FORCE_INITIAL_PASSWORD_CHANGE"]),
                     ),
+                )
+                grant_default_erp_roles(connection, user_id, role, g.portal_user["id"])
+                insert_audit(
+                    connection,
+                    g.portal_user["id"],
+                    "user.create",
+                    "portal_user",
+                    user_id,
+                    {"role": role, "company_id": company_id},
                 )
                 connection.commit()
             except Exception as error:
                 if is_integrity_error(error):
                     return jsonify(error="username_already_exists"), 409
                 raise
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "user.create",
-            "portal_user",
-            user_id,
-            {"role": role, "company_id": company_id},
-        )
         return jsonify(user=portal_user(database_path, user_id)), 201
+
+    @app.post("/api/admin/users/<int:user_id>/reset-password")
+    @require_roles("admin")
+    def reset_user_password(user_id):
+        if user_id == g.portal_user["id"]:
+            return jsonify(error="use_self_service_password_change"), 409
+        temporary_password = secrets.token_urlsafe(18)
+        with connect(database_path) as connection:
+            target = connection.execute(
+                "SELECT id, username FROM portal_users WHERE id = ? AND active = TRUE",
+                (user_id,),
+            ).fetchone()
+            if target is None:
+                return jsonify(error="user_not_found"), 404
+            connection.execute(
+                """
+                UPDATE portal_users
+                SET password_hash = ?, must_change_password = TRUE,
+                    auth_version = auth_version + 1
+                WHERE id = ?
+                """,
+                (generate_password_hash(temporary_password), user_id),
+            )
+            insert_audit(
+                connection,
+                g.portal_user["id"],
+                "user.password_reset",
+                "portal_user",
+                user_id,
+                {"temporary_password_issued": True, "sessions_revoked": True},
+            )
+            connection.commit()
+        return jsonify(
+            user_id=user_id,
+            username=target["username"],
+            temporary_password=temporary_password,
+            must_change_password=True,
+        )
+
+    @app.patch("/api/admin/users/<int:user_id>")
+    @require_roles("admin")
+    def update_user(user_id):
+        payload = request.get_json(silent=True) or {}
+        allowed_fields = {"role", "company_id", "active"}
+        if not payload or set(payload) - allowed_fields:
+            return jsonify(error="invalid_user_update"), 400
+
+        with connect(database_path) as connection:
+            current = connection.execute(
+                "SELECT id, role, company_id, active FROM portal_users WHERE id = ?",
+                (user_id,),
+            ).fetchone()
+            if current is None:
+                return jsonify(error="user_not_found"), 404
+
+            role = str(payload.get("role", current["role"])).strip().lower()
+            company_id = payload.get("company_id", current["company_id"])
+            active = payload.get("active", bool(current["active"]))
+            if role not in PORTAL_ROLES or type(active) is not bool:
+                return jsonify(error="invalid_user_update"), 400
+            try:
+                company_id = int(company_id)
+            except (TypeError, ValueError):
+                return jsonify(error="invalid_user_update"), 400
+            company = connection.execute(
+                "SELECT id FROM companies WHERE id = ?", (company_id,)
+            ).fetchone()
+            if company is None:
+                return jsonify(error="company_not_found"), 400
+
+            if user_id == g.portal_user["id"] and (not active or role != "admin"):
+                return jsonify(error="cannot_remove_own_admin_access"), 409
+            removing_admin = bool(current["active"]) and current["role"] == "admin" and (
+                not active or role != "admin"
+            )
+            if removing_admin:
+                other_admin = connection.execute(
+                    """
+                    SELECT id FROM portal_users
+                    WHERE role = 'admin' AND active = TRUE AND id != ?
+                    LIMIT 1
+                    """,
+                    (user_id,),
+                ).fetchone()
+                if other_admin is None:
+                    return jsonify(error="cannot_remove_last_admin"), 409
+
+            connection.execute(
+                """
+                UPDATE portal_users
+                SET role = ?, company_id = ?, active = ?, auth_version = auth_version + 1
+                WHERE id = ?
+                """,
+                (role, company_id, active, user_id),
+            )
+            insert_audit(
+                connection,
+                g.portal_user["id"],
+                "user.update",
+                "portal_user",
+                user_id,
+                {"role": role, "company_id": company_id, "active": active, "sessions_revoked": True},
+            )
+            connection.commit()
+        return jsonify(user=portal_user(database_path, user_id))
+
+    def alarm_notification_topic_arn():
+        return app.config.get("ALARM_NOTIFICATION_TOPIC_ARN", "").strip()
+
+    def list_alarm_email_subscriptions(client, topic_arn):
+        subscriptions = []
+        next_token = None
+        while True:
+            parameters = {"TopicArn": topic_arn}
+            if next_token:
+                parameters["NextToken"] = next_token
+            page = client.list_subscriptions_by_topic(**parameters)
+            for item in page.get("Subscriptions", []):
+                if item.get("Protocol") != "email":
+                    continue
+                subscription_arn = item.get("SubscriptionArn", "")
+                subscriptions.append({
+                    "protocol": "email",
+                    "endpoint": item.get("Endpoint", ""),
+                    "subscription_arn": subscription_arn,
+                    "status": "confirmed" if subscription_arn.startswith(topic_arn + ":") else "pending_confirmation",
+                })
+            next_token = page.get("NextToken")
+            if not next_token:
+                break
+        return sorted(subscriptions, key=lambda item: item["endpoint"].casefold())
+
+    def alarm_sns_error(error, operation):
+        error_code = "unknown"
+        if isinstance(getattr(error, "response", None), dict):
+            error_code = error.response.get("Error", {}).get("Code", error_code)
+        LOGGER.warning(json.dumps({
+            "event": "alarm_subscription_operation_failed",
+            "operation": operation,
+            "error_code": error_code,
+            "actor_id": g.portal_user["id"],
+        }))
+        if error_code in {"AccessDenied", "AuthorizationError", "NotAuthorized"}:
+            return jsonify(error="alarm_service_access_denied"), 503
+        if error_code in {"InvalidParameter", "InvalidParameterValue"}:
+            return jsonify(error="alarm_subscription_invalid"), 400
+        return jsonify(error="alarm_service_unavailable"), 503
+
+    @app.get("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def get_alarm_subscriptions():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        try:
+            subscriptions = list_alarm_email_subscriptions(_alarm_sns_client(app.config), topic_arn)
+        except Exception as error:
+            return alarm_sns_error(error, "list")
+        return jsonify(topic_configured=True, subscriptions=subscriptions, confirmation_required=True)
+
+    @app.post("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def add_alarm_subscription():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        payload = request.get_json(silent=True) or {}
+        email = str(payload.get("email", "")).strip().lower()
+        if len(email) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            return jsonify(error="invalid_alarm_email"), 400
+        try:
+            client = _alarm_sns_client(app.config)
+            existing = next((item for item in list_alarm_email_subscriptions(client, topic_arn)
+                             if item["endpoint"].casefold() == email.casefold()), None)
+            if existing:
+                return jsonify(subscription=existing, already_exists=True), 200
+            result = client.subscribe(TopicArn=topic_arn, Protocol="email", Endpoint=email, ReturnSubscriptionArn=True)
+            subscription_arn = result.get("SubscriptionArn", "PendingConfirmation")
+            status = "confirmed" if subscription_arn.startswith(topic_arn + ":") else "pending_confirmation"
+            subject_id = hashlib.sha256(email.casefold().encode("utf-8")).hexdigest()[:20]
+            write_audit(database_path, g.portal_user["id"], "alarm_subscription.create", "sns_email_subscription",
+                        subject_id, {"protocol": "email", "status": status})
+        except Exception as error:
+            return alarm_sns_error(error, "subscribe")
+        return jsonify(subscription={"protocol": "email", "endpoint": email,
+                                     "subscription_arn": subscription_arn, "status": status},
+                       already_exists=False), 201
+
+    @app.delete("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def remove_alarm_subscription():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        payload = request.get_json(silent=True) or {}
+        subscription_arn = str(payload.get("subscription_arn", "")).strip()
+        if not subscription_arn or not subscription_arn.startswith(topic_arn + ":"):
+            return jsonify(error="alarm_subscription_not_found"), 404
+        try:
+            signed_client = _alarm_sns_client(app.config)
+            current = next((item for item in list_alarm_email_subscriptions(signed_client, topic_arn)
+                            if item["subscription_arn"] == subscription_arn), None)
+            if current is None:
+                return jsonify(error="alarm_subscription_not_found"), 404
+            if current["status"] != "confirmed":
+                return jsonify(error="alarm_subscription_pending_confirmation"), 409
+            # SNS permits this operation without signing by default; the route first verifies
+            # the exact confirmed email ARN against this one configured topic and admin session.
+            _alarm_sns_client(app.config, unsigned=True).unsubscribe(SubscriptionArn=subscription_arn)
+            write_audit(database_path, g.portal_user["id"], "alarm_subscription.remove", "sns_email_subscription",
+                        hashlib.sha256(subscription_arn.encode("utf-8")).hexdigest()[:20],
+                        {"protocol": "email", "status": "removed"})
+        except Exception as error:
+            return alarm_sns_error(error, "unsubscribe")
+        return jsonify(status="removed"), 200
 
     @app.get("/api/audit")
     @require_roles("admin", "operations", "auditor")
@@ -545,6 +1090,16 @@ def create_app(test_config=None):
             return send_from_directory(static_folder, "index.html")
         return jsonify(error="not_found"), 404
 
+    register_erp_routes(
+        app,
+        database_path,
+        connect=connect,
+        insert_and_return_id=insert_and_return_id,
+        write_audit=write_audit,
+        require_roles=require_roles,
+        dispatch_outbox_event=dispatch_outbox_event,
+    )
+
     return app
 
 
@@ -615,13 +1170,14 @@ def is_integrity_error(error):
 PORTAL_ROLES = {"customer", "sales", "warehouse", "operations", "admin", "auditor"}
 
 
-def portal_user(database_path, user_id):
+def portal_user(database_path, user_id, include_auth_version=False):
     if not user_id:
         return None
     with connect(database_path) as connection:
         row = connection.execute(
             """
-            SELECT u.id, u.username, u.role, u.company_id, u.active, c.name AS company
+            SELECT u.id, u.username, u.role, u.company_id, u.active,
+                   u.must_change_password, u.auth_version, c.name AS company
             FROM portal_users AS u
             LEFT JOIN companies AS c ON c.id = u.company_id
             WHERE u.id = ?
@@ -630,11 +1186,24 @@ def portal_user(database_path, user_id):
         ).fetchone()
     if row is None or not row["active"]:
         return None
-    return dict(row)
+    user = dict(row)
+    user["must_change_password"] = bool(user["must_change_password"])
+    if not include_auth_version:
+        user.pop("auth_version", None)
+    return user
 
 
 def current_portal_user(database_path):
-    return portal_user(database_path, session.get("portal_user_id"))
+    user = portal_user(
+        database_path, session.get("portal_user_id"), include_auth_version=True
+    )
+    if user is None:
+        return None
+    session_version = session.get("portal_user_version")
+    if session_version is None or int(session_version) != int(user["auth_version"]):
+        return None
+    user.pop("auth_version", None)
+    return user
 
 
 def require_roles(*roles):
@@ -656,22 +1225,27 @@ def require_roles(*roles):
     return decorator
 
 
+def insert_audit(connection, user_id, action, subject_type, subject_id=None, detail=None):
+    """Append an audit row to the caller's transaction."""
+    connection.execute(
+        """
+        INSERT INTO audit_log(user_id, action, subject_type, subject_id, detail, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            action,
+            subject_type,
+            str(subject_id) if subject_id is not None else None,
+            json.dumps(detail, separators=(",", ":")) if detail else None,
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+
+
 def write_audit(database_path, user_id, action, subject_type, subject_id=None, detail=None):
     with connect(database_path) as connection:
-        connection.execute(
-            """
-            INSERT INTO audit_log(user_id, action, subject_type, subject_id, detail, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                action,
-                subject_type,
-                str(subject_id) if subject_id is not None else None,
-                json.dumps(detail, separators=(",", ":")) if detail else None,
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
+        insert_audit(connection, user_id, action, subject_type, subject_id, detail)
         connection.commit()
 
 
@@ -725,8 +1299,11 @@ def ensure_portal_bootstrap(app, database_path):
         if password:
             connection.execute(
                 """
-                INSERT INTO portal_users(username, password_hash, role, company_id, active, created_at)
-                VALUES (?, ?, 'admin', ?, TRUE, ?)
+                INSERT INTO portal_users(
+                    username, password_hash, role, company_id, active,
+                    created_at, must_change_password
+                )
+                VALUES (?, ?, 'admin', ?, TRUE, ?, ?)
                 ON CONFLICT(username) DO NOTHING
                 """,
                 (
@@ -734,8 +1311,11 @@ def ensure_portal_bootstrap(app, database_path):
                     generate_password_hash(password),
                     company_id,
                     datetime.now(timezone.utc).isoformat(),
+                    bool(app.config["FORCE_BOOTSTRAP_PASSWORD_CHANGE"]),
                 ),
             )
+        for user in connection.execute("SELECT id, role FROM portal_users WHERE active = TRUE").fetchall():
+            grant_default_erp_roles(connection, user["id"], user["role"])
         connection.commit()
 
 
@@ -802,10 +1382,22 @@ def initialize_database(database_path):
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS login_attempts (
+                    attempt_key TEXT PRIMARY KEY,
+                    failures INTEGER NOT NULL DEFAULT 0,
+                    locked_until DOUBLE PRECISION NOT NULL DEFAULT 0
+                )
+                """
+            )
+            ensure_column(connection, "portal_users", "auth_version", "BIGINT NOT NULL DEFAULT 1")
+            ensure_column(connection, "portal_users", "must_change_password", "BOOLEAN NOT NULL DEFAULT FALSE")
             ensure_column(connection, "orders", "company_id", "BIGINT")
             ensure_column(connection, "orders", "created_by", "BIGINT")
             ensure_column(connection, "orders", "reference", "TEXT")
             ensure_column(connection, "orders", "status", "TEXT NOT NULL DEFAULT 'created'")
+            initialize_erp_database(connection, postgres=True)
             connection.commit()
             return
 
@@ -871,10 +1463,22 @@ def initialize_database(database_path):
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                attempt_key TEXT PRIMARY KEY,
+                failures INTEGER NOT NULL DEFAULT 0,
+                locked_until REAL NOT NULL DEFAULT 0
+            )
+            """
+        )
+        ensure_column(connection, "portal_users", "auth_version", "INTEGER NOT NULL DEFAULT 1")
+        ensure_column(connection, "portal_users", "must_change_password", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "orders", "company_id", "INTEGER")
         ensure_column(connection, "orders", "created_by", "INTEGER")
         ensure_column(connection, "orders", "reference", "TEXT")
         ensure_column(connection, "orders", "status", "TEXT NOT NULL DEFAULT 'created'")
+        initialize_erp_database(connection, postgres=False)
         connection.commit()
 
 
@@ -918,7 +1522,7 @@ def dispatch_outbox_event(app, database_path, event_id):
         with urlopen(upstream_request, timeout=5) as response:
             upstream_body = json.loads(response.read().decode("utf-8"))
         status = upstream_body.get("status", "accepted")
-        if status not in {"queued", "duplicate", "accepted"}:
+        if status not in {"queued", "queued_duplicate", "duplicate", "accepted"}:
             raise ValueError("unexpected_upstream_status")
         with connect(database_path) as connection:
             connection.execute(

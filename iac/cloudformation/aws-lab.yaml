@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Laboratorio Tangamandapio: VPC segmentada, ALB, Auto Scaling, RDS PostgreSQL,
-  S3, registros, alarmas y dashboard. Dise??ado para AWS Academy Learner Lab.
+  ERP corporativo, correo interno, S3, registros, alarmas y dashboard.
+  Dise??ado para AWS Academy Learner Lab.
 
 Parameters:
   ProjectName:
@@ -12,25 +13,39 @@ Parameters:
     Type: String
     Default: t3.micro
     AllowedValues: [t3.micro, t3.small]
+  AmazonLinuxAmiId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-097855b862d5b1eb2
+    Description: AMI Amazon Linux 2023 validada en us-east-1; actualizar explícitamente tras probar una nueva versión.
   DBInstanceClass:
     Type: String
     Default: db.t3.micro
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/portal-b2b-v1.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261014-landing-loading-v11-python312-ef3ffe5c7ff3a20e63084ea350e060dfc11bd3bf4dd44024e4d1f0d1ad557ba3.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: bootstrap
+    Default: 20261014-landing-loading-v11-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
+  ApplicationArtifactSha256:
+    Type: String
+    Default: ef3ffe5c7ff3a20e63084ea350e060dfc11bd3bf4dd44024e4d1f0d1ad557ba3
+    AllowedPattern: '^$|^[a-f0-9]{64}$'
+    Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
     Type: String
     Default: ''
     NoEcho: true
     Description: Contrase??a temporal para las dos cuentas de demostraci??n WebRTC. Vac??o no crea cuentas demo.
+  InternalErpEnabled:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Habilita ERP interno y mensajer??a privada en el portal usando el RDS existente; no crea correo SMTP ni recursos adicionales.
   AzureFulfillmentUrl:
     Type: String
     Default: ''
@@ -56,6 +71,12 @@ Parameters:
     Default: ''
     AllowedPattern: '^$|^arn:aws:acm:[a-z0-9-]+:\d{12}:certificate/[0-9a-f-]{36}$'
     Description: ARN del certificado ACM (importado o validado) para el listener HTTPS 443. Vacio deja el ALB solo en HTTP.
+  PortalDomainName:
+    Type: String
+    Default: ''
+    MaxLength: 253
+    AllowedPattern: '^$|^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$'
+    Description: Nombre DNS público cubierto por CertificateArn; el registro debe apuntar al ALB.
   DatabaseMultiAZ:
     Type: String
     Default: 'false'
@@ -63,10 +84,42 @@ Parameters:
     Description: Activa alta disponibilidad Multi-AZ para RDS. Eleva el costo; usar solo con una ventana y presupuesto aprobados.
   DatabaseBackupRetentionDays:
     Type: Number
-    Default: 7
+    Default: 1
     MinValue: 1
     MaxValue: 35
     Description: D??as de retenci??n de backups autom??ticos de RDS.
+  DatabaseSnapshotIdentifier:
+    Type: String
+    Default: ''
+    Description: Snapshot PostgreSQL cifrado opcional para reconstruir la base sin crear una base vac??a.
+  DatabaseName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '^[A-Za-z][A-Za-z0-9_]{0,62}$'
+    Description: Nombre PostgreSQL de la base de datos que usa el portal.
+  ExistingDatabaseSecretArn:
+    Type: String
+    Default: ''
+    Description: ARN/nombre del secreto RDS maestro existente. En una restauración, se puede adjuntar después del arranque aislado.
+  ManageDatabaseMasterPassword:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Refleja en CloudFormation el secreto maestro administrado por RDS; requiere configurar primero el ARN existente.
+  ExistingPortalAdminSecretArn:
+    Type: String
+    Default: ''
+    Description: ARN/nombre del secreto admin retenido. En una restauración, debe coincidir con las cuentas del snapshot salvo que se active el restablecimiento explícito.
+  ResetAdministratorPassword:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: En una restauración, reemplaza una sola vez la contraseña admin por la versión actual del secreto. Exige snapshot y deja cambio obligatorio al iniciar sesión.
+  BootstrapMode:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: En true crea el stack sin EC2; permite publicar el artefacto antes de habilitar capacidad.
   EnableWaf:
     Type: String
     Default: 'false'
@@ -104,9 +157,51 @@ Conditions:
     - !Condition UseWaf
     - !Equals [!Ref ManageWafAssociation, 'true']
   UseAwsBackup: !Equals [!Ref EnableAwsBackup, 'true']
-  HasAlarmEmails: !Or
-    - !Condition HasAlarmEmailPrimary
-    - !Condition HasAlarmEmailAlternate
+  BootstrapModeEnabled: !Equals [!Ref BootstrapMode, 'true']
+  ProductionServingMode: !Not [!Condition BootstrapModeEnabled]
+  RestoreFromDatabaseSnapshot: !Not [!Equals [!Ref DatabaseSnapshotIdentifier, '']]
+  UseRdsManagedMasterPassword: !Equals [!Ref ManageDatabaseMasterPassword, 'true']
+  HasExistingDatabaseSecret: !Not [!Equals [!Ref ExistingDatabaseSecretArn, '']]
+  CreateDatabaseSecret: !And
+    - !Equals [!Ref ExistingDatabaseSecretArn, '']
+    - !Not [!Condition RestoreFromDatabaseSnapshot]
+    - !Not [!Condition UseRdsManagedMasterPassword]
+  CreatePortalAdminSecret: !Equals [!Ref ExistingPortalAdminSecretArn, '']
+
+Rules:
+  HttpsCertificateRequiresPortalDomain:
+    RuleCondition: !Not [!Equals [!Ref CertificateArn, '']]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref PortalDomainName, '']]
+        AssertDescription: Defina PortalDomainName cuando se habilite un certificado HTTPS.
+  SnapshotRestoreRequiresCredentialsOrBootstrap:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref DatabaseSnapshotIdentifier, '']
+          - !Equals [!Ref BootstrapMode, 'true']
+          - !Not [!Equals [!Ref ExistingDatabaseSecretArn, '']]
+        AssertDescription: Una restauración sin secreto requiere BootstrapMode=true; adjunte el secreto RDS antes de habilitar instancias.
+  ManagedPasswordRequiresSecretArn:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref ManageDatabaseMasterPassword, 'false']
+          - !Not [!Equals [!Ref ExistingDatabaseSecretArn, '']]
+          - !Equals [!Ref BootstrapMode, 'true']
+        AssertDescription: ManageDatabaseMasterPassword requiere el ARN creado/administrado por RDS después de habilitar el secreto.
+  SnapshotRestoreRequiresAdministratorRecovery:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref DatabaseSnapshotIdentifier, '']
+          - !Or
+            - !Not [!Equals [!Ref ExistingPortalAdminSecretArn, '']]
+            - !Equals [!Ref ResetAdministratorPassword, 'true']
+        AssertDescription: DatabaseSnapshotIdentifier requiere el secreto admin original o ResetAdministratorPassword=true para recuperar el acceso sin sobrescribirlo silenciosamente.
+  AdministratorResetRequiresSnapshot:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref ResetAdministratorPassword, 'false']
+          - !Not [!Equals [!Ref DatabaseSnapshotIdentifier, '']]
+        AssertDescription: ResetAdministratorPassword solo está permitido al restaurar un snapshot.
 
 Resources:
   VPC:
@@ -352,10 +447,11 @@ Resources:
 
   DBSecret:
     Type: AWS::SecretsManager::Secret
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    Condition: CreateDatabaseSecret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
-      Name: !Sub '${ProjectName}/rds/master'
+      Name: !Sub '${ProjectName}/rds/master-${AWS::StackName}'
       Description: Credenciales temporales de RDS para el laboratorio
       GenerateSecretString:
         SecretStringTemplate: '{"username":"tangama_admin"}'
@@ -367,8 +463,9 @@ Resources:
 
   PortalAdminSecret:
     Type: AWS::SecretsManager::Secret
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    Condition: CreatePortalAdminSecret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Name: !Sub '${ProjectName}/portal/admin'
       Description: Credenciales iniciales del administrador del portal B2B
@@ -406,18 +503,38 @@ Resources:
 
   Database:
     Type: AWS::RDS::DBInstance
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
     Properties:
       DBInstanceIdentifier: !Sub '${ProjectName}-postgres'
       Engine: postgres
       DBInstanceClass: !Ref DBInstanceClass
-      AllocatedStorage: 20
-      StorageType: gp3
-      StorageEncrypted: true
-      DBName: tangamandapio
-      MasterUsername: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:username}}'
-      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:password}}'
+      AllocatedStorage: !If [RestoreFromDatabaseSnapshot, !Ref AWS::NoValue, 20]
+      StorageType: !If [RestoreFromDatabaseSnapshot, !Ref AWS::NoValue, gp3]
+      StorageEncrypted: !If [RestoreFromDatabaseSnapshot, !Ref AWS::NoValue, true]
+      DBSnapshotIdentifier: !If [RestoreFromDatabaseSnapshot, !Ref DatabaseSnapshotIdentifier, !Ref AWS::NoValue]
+      DBName: !If [RestoreFromDatabaseSnapshot, !Ref AWS::NoValue, !Ref DatabaseName]
+      ManageMasterUserPassword: !If [UseRdsManagedMasterPassword, true, !Ref AWS::NoValue]
+      MasterUsername: !If
+        - RestoreFromDatabaseSnapshot
+        - !Ref AWS::NoValue
+        - !If
+          - UseRdsManagedMasterPassword
+          - !Ref AWS::NoValue
+          - !If
+            - CreateDatabaseSecret
+            - !Sub '{{resolve:secretsmanager:${ProjectName}/rds/master-${AWS::StackName}:SecretString:username}}'
+            - !Sub '{{resolve:secretsmanager:${ExistingDatabaseSecretArn}:SecretString:username}}'
+      MasterUserPassword: !If
+        - RestoreFromDatabaseSnapshot
+        - !Ref AWS::NoValue
+        - !If
+          - UseRdsManagedMasterPassword
+          - !Ref AWS::NoValue
+          - !If
+            - CreateDatabaseSecret
+            - !Sub '{{resolve:secretsmanager:${ProjectName}/rds/master-${AWS::StackName}:SecretString:password}}'
+            - !Sub '{{resolve:secretsmanager:${ExistingDatabaseSecretArn}:SecretString:password}}'
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups: [!Ref DBSecurityGroup]
       PubliclyAccessible: false
@@ -447,7 +564,7 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub '${ProjectName}-app'
       LaunchTemplateData:
-        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        ImageId: !Ref AmazonLinuxAmiId
         InstanceType: !Ref InstanceType
         IamInstanceProfile: {Name: LabInstanceProfile}
         SecurityGroupIds: [!Ref AppSecurityGroup]
@@ -476,9 +593,10 @@ Resources:
             #!/bin/bash
             set -euo pipefail
             # Revisi??n inmutable del artefacto: ${ApplicationArtifactRevision}
-            dnf install -y python3-pip
+            # AL2023 keeps system python3 at 3.9; keep the app isolated on the
+            # explicitly supported 3.12 runtime used to build requirements.lock.
+            dnf install -y python3.12 python3.12-pip
             dnf install -y amazon-cloudwatch-agent || true
-            pip3 install --no-cache-dir flask gunicorn boto3 psycopg2-binary
             install -d -m 0755 /opt/tangamandapio
             install -d -m 0755 /opt/tangamandapio/static
             install -d -m 0755 /var/log/tangamandapio
@@ -489,41 +607,53 @@ Resources:
             # El portal y la API se publican como artefacto privado y versionado; esto
             # reemplaza cualquier interfaz embebida sin exponer c??digo ni secretos.
             aws s3 cp "s3://${AssetBucket}/${ApplicationArtifactKey}" /tmp/portal-b2b.tar.gz --region ${AWS::Region}
+            ARTIFACT_SHA256_ACTUAL="$(sha256sum /tmp/portal-b2b.tar.gz | awk '{print $1}')"
+            if [ -n '${ApplicationArtifactSha256}' ] && [ "$ARTIFACT_SHA256_ACTUAL" != '${ApplicationArtifactSha256}' ]; then
+              echo "SHA-256 del artefacto del portal no coincide; se cancela el arranque." >&2
+              exit 1
+            fi
             tar -xzf /tmp/portal-b2b.tar.gz -C /opt/tangamandapio
             test -d /opt/tangamandapio/migrations
-            pip3 install --no-cache-dir -r /opt/tangamandapio/requirements.txt
+            test -s /opt/tangamandapio/requirements.lock
+            python3.12 -m venv /opt/tangamandapio/venv
+            /opt/tangamandapio/venv/bin/python -m pip install --no-cache-dir --require-hashes -r /opt/tangamandapio/requirements.lock
             install -d -m 0700 /etc/tangamandapio
-            export DB_SECRET_JSON="$(aws secretsmanager get-secret-value --secret-id '${DBSecret}' --region ${AWS::Region} --query SecretString --output text)"
-            export PORTAL_ADMIN_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalAdminSecret}' --region ${AWS::Region} --query SecretString --output text)"
+            DB_SECRET_REF='${ExistingDatabaseSecretArn}'
+            if [ -z "$DB_SECRET_REF" ]; then DB_SECRET_REF='${ProjectName}/rds/master-${AWS::StackName}'; fi
+            PORTAL_ADMIN_SECRET_REF='${ExistingPortalAdminSecretArn}'
+            if [ -z "$PORTAL_ADMIN_SECRET_REF" ]; then PORTAL_ADMIN_SECRET_REF='${ProjectName}/portal/admin'; fi
+            export PORTAL_ADMIN_JSON="$(aws secretsmanager get-secret-value --secret-id "$PORTAL_ADMIN_SECRET_REF" --region ${AWS::Region} --query SecretString --output text)"
+            export PORTAL_ADMIN_SECRET_VERSION="$(aws secretsmanager get-secret-value --secret-id "$PORTAL_ADMIN_SECRET_REF" --region ${AWS::Region} --query VersionId --output text)"
+            export RESET_BOOTSTRAP_ADMIN_PASSWORD='${ResetAdministratorPassword}'
             export PORTAL_SESSION_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalSessionSecret}' --region ${AWS::Region} --query SecretString --output text)"
             export AZURE_FUNCTION_KEY="$(aws secretsmanager get-secret-value --secret-id '${AzureFunctionKeySecret}' --region ${AWS::Region} --query SecretString --output text 2>/dev/null || true)"
             export AZURE_FULFILLMENT_URL='${AzureFulfillmentUrl}'
+            export ALARM_NOTIFICATION_TOPIC_ARN='arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-alarms'
+            export INTERNAL_ERP_ENABLED='${InternalErpEnabled}'
             export DEMO_VOICE_PASSWORD='${DemoVoicePassword}'
-            export DATABASE_HOST='${Database.Endpoint.Address}'
+            export DATABASE_NAME='${DatabaseName}'
             # La cookie segura solo tiene sentido cuando hay TLS en el ALB; si el
             # certificado no esta parametrizado la app debe seguir aceptando http.
             if [ -n "${CertificateArn}" ]; then export SECURE_COOKIE=true; else export SECURE_COOKIE=false; fi
             python3 - <<'PYENV'
             import json
             import os
-            from urllib.parse import quote
-
-            database = json.loads(os.environ["DB_SECRET_JSON"])
             admin = json.loads(os.environ["PORTAL_ADMIN_JSON"])
             session = json.loads(os.environ["PORTAL_SESSION_JSON"])
-            database_url = "postgresql://{}:{}@{}:5432/tangamandapio".format(
-                quote(database["username"], safe=""),
-                quote(database["password"], safe=""),
-                os.environ["DATABASE_HOST"],
-            )
             lines = {
-                "DATABASE_URL": database_url,
+                "DATABASE_NAME": os.environ["DATABASE_NAME"],
+                "ALARM_NOTIFICATION_TOPIC_ARN": os.environ.get(
+                    "ALARM_NOTIFICATION_TOPIC_ARN", ""
+                ),
                 "BOOTSTRAP_ADMIN_USERNAME": admin["username"],
                 "BOOTSTRAP_ADMIN_PASSWORD": admin["password"],
+                "RESET_BOOTSTRAP_ADMIN_PASSWORD": os.environ.get("RESET_BOOTSTRAP_ADMIN_PASSWORD", "false"),
+                "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION": os.environ.get("PORTAL_ADMIN_SECRET_VERSION", ""),
                 "DEMO_VOICE_PASSWORD": os.environ.get("DEMO_VOICE_PASSWORD", ""),
                 "APP_SESSION_SECRET": session["session_secret"],
                 "SESSION_COOKIE_SECURE": os.environ.get("SECURE_COOKIE", "false"),
                 "AUTO_DISPATCH_EVENTS": "true",
+                "INTERNAL_ERP_ENABLED": os.environ.get("INTERNAL_ERP_ENABLED", "true"),
                 # Despacho fuera del ciclo HTTP: reintento programado con backoff.
                 "OUTBOX_RETRY_INTERVAL": "60",
             }
@@ -540,7 +670,7 @@ Resources:
             PYENV
             id -u tangamandapio >/dev/null 2>&1 || useradd --system --home-dir /opt/tangamandapio --shell /sbin/nologin tangamandapio
             chown -R tangamandapio:tangamandapio /opt/tangamandapio /var/log/tangamandapio
-            cat > /etc/systemd/system/tangamandapio.service <<'SERVICE'
+            cat > /etc/systemd/system/tangamandapio.service <<SERVICE
             [Unit]
             Description=Tangamandapio demo application
             After=network-online.target
@@ -549,11 +679,11 @@ Resources:
             [Service]
             Type=simple
             Environment=AWS_REGION_NAME=${AWS::Region}
-            Environment=DB_SECRET_ARN=${DBSecret}
+            Environment=DB_SECRET_ARN=$DB_SECRET_REF
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env
             WorkingDirectory=/opt/tangamandapio
-            ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --capture-output --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
+            ExecStart=/opt/tangamandapio/venv/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --capture-output --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
             Restart=always
             RestartSec=5
             User=tangamandapio
@@ -673,12 +803,19 @@ Resources:
     Properties:
       AutoScalingGroupName: !Sub '${ProjectName}-asg'
       VPCZoneIdentifier: [!Ref AppSubnetA, !Ref AppSubnetB]
-      MinSize: '2'
-      MaxSize: '4'
-      DesiredCapacity: '2'
+      MinSize: !If [BootstrapModeEnabled, '0', '2']
+      # Una ranura adicional permite reemplazo sin bajar la capacidad sana.
+      MaxSize: '5'
+      DesiredCapacity: !If [BootstrapModeEnabled, '0', '2']
       HealthCheckType: ELB
       HealthCheckGracePeriod: 420
+      DefaultInstanceWarmup: 420
       TargetGroupARNs: [!Ref TargetGroup]
+      MetricsCollection:
+        - Granularity: 1Minute
+          Metrics:
+            - GroupDesiredCapacity
+            - GroupInServiceInstances
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
@@ -687,9 +824,12 @@ Resources:
         - {Key: ManagedBy, Value: cloudformation, PropagateAtLaunch: true}
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: 1
+        # La SCP de AWS Academy deniega StartInstanceRefresh. El mecanismo
+        # nativo de CloudFormation conserva las dos instancias en servicio y
+        # reemplaza una por lote, con tiempo para superar el health check ELB.
+        MinInstancesInService: 2
         MaxBatchSize: 1
-        PauseTime: PT2M
+        PauseTime: PT7M
 
   ScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -704,7 +844,6 @@ Resources:
 
   AlarmNotificationTopic:
     Type: AWS::SNS::Topic
-    Condition: HasAlarmEmails
     Properties:
       TopicName: !Sub '${ProjectName}-alarms'
       DisplayName: !Sub '${ProjectName} alarmas'
@@ -727,20 +866,21 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub '${ProjectName}-high-cpu'
-      AlarmDescription: CPU promedio alta en la capa de aplicacion
+      AlarmDescription: CPU promedio mayor a 70 por ciento durante dos periodos de cinco minutos; los datos ausentes se muestran como indeterminados
       Namespace: AWS/EC2
       MetricName: CPUUtilization
       Dimensions:
         - {Name: AutoScalingGroupName, Value: !Ref AutoScalingGroup}
       Statistic: Average
-      Period: 60
+      # EC2 usa monitoreo basico: publica CPU cada cinco minutos.
+      Period: 300
       EvaluationPeriods: 2
       DatapointsToAlarm: 2
       Threshold: 70
       ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
-      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      TreatMissingData: missing
+      AlarmActions: [!Ref AlarmNotificationTopic]
+      OKActions: [!Ref AlarmNotificationTopic]
 
   UnhealthyTargetsAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -758,9 +898,29 @@ Resources:
       DatapointsToAlarm: 2
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
-      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
-      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      TreatMissingData: missing
+      AlarmActions: [!Ref AlarmNotificationTopic]
+      OKActions: [!Ref AlarmNotificationTopic]
+
+  InServiceCapacityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: ProductionServingMode
+    Properties:
+      AlarmName: !Sub '${ProjectName}-in-service-capacity'
+      AlarmDescription: Menos de dos instancias InService o faltan métricas de capacidad del Auto Scaling Group.
+      Namespace: AWS/AutoScaling
+      MetricName: GroupInServiceInstances
+      Dimensions:
+        - {Name: AutoScalingGroupName, Value: !Ref AutoScalingGroup}
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 2
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: missing
+      AlarmActions: [!Ref AlarmNotificationTopic]
+      OKActions: [!Ref AlarmNotificationTopic]
 
   Target5xxAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -779,8 +939,8 @@ Resources:
       Threshold: 5
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
-      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
-      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      AlarmActions: [!Ref AlarmNotificationTopic]
+      OKActions: [!Ref AlarmNotificationTopic]
 
   DatabaseCPUAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -798,8 +958,8 @@ Resources:
       Threshold: 75
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
-      AlarmActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
-      OKActions: !If [HasAlarmEmails, [!Ref AlarmNotificationTopic], !Ref 'AWS::NoValue']
+      AlarmActions: [!Ref AlarmNotificationTopic]
+      OKActions: [!Ref AlarmNotificationTopic]
 
 
   OperationsDashboard:
@@ -867,6 +1027,23 @@ Resources:
                 "metrics": [
                   ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${Database}"],
                   [".", "DatabaseConnections", ".", ".", {"yAxis": "right"}]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Capacidad ASG: deseada frente a disponible",
+                "region": "${AWS::Region}",
+                "period": 60,
+                "stat": "Minimum",
+                "metrics": [
+                  ["AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", "${AutoScalingGroup}"],
+                  [".", "GroupInServiceInstances", ".", "."]
                 ]
               }
             }
@@ -1015,19 +1192,37 @@ Resources:
 
 Outputs:
   ApplicationURL:
-    Description: URL p??blica de la demostraci??n; HTTPS solo si se proporcion?? CertificateArn.
+    Description: URL pública del portal; el DNS de PortalDomainName debe apuntar al balanceador.
     Value: !If
       - HasCertificate
-      - !Sub 'https://${AppLoadBalancer.DNSName}'
+      - !Sub 'https://${PortalDomainName}'
       - !Sub 'http://${AppLoadBalancer.DNSName}'
   LoadBalancerDNS:
     Value: !GetAtt AppLoadBalancer.DNSName
   VpcId:
     Value: !Ref VPC
+  VpcCidr:
+    Description: Prefijo de la VPC que se anuncia por BGP hacia Azure.
+    Value: !GetAtt VPC.CidrBlock
+  AppRouteTableId:
+    Description: Tabla de rutas privada de las subredes de aplicación; no incluye las subredes aisladas de RDS.
+    Value: !Ref AppRouteTable
   AssetBucketName:
     Value: !Ref AssetBucket
   DatabaseEndpoint:
     Value: !GetAtt Database.Endpoint.Address
+  DatabaseSecretArn:
+    Description: Secreto maestro retenido para reconexi??n y restauraci??n RDS.
+    Value: !If
+      - CreateDatabaseSecret
+      - !Ref DBSecret
+      - !If
+        - HasExistingDatabaseSecret
+        - !Ref ExistingDatabaseSecretArn
+        - !If [UseRdsManagedMasterPassword, !GetAtt Database.MasterUserSecret.SecretArn, '']
+  PortalAdminSecretArn:
+    Description: Secreto admin retenido; se reutiliza o se restablece una sola vez al recuperar un snapshot.
+    Value: !If [CreatePortalAdminSecret, !Ref PortalAdminSecret, !Ref ExistingPortalAdminSecretArn]
   DashboardName:
     Value: !Ref OperationsDashboard
   ApplicationLogGroupName:

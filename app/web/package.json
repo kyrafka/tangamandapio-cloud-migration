@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:check": "vite build --outDir dist",
+    "test:access": "node --test test/accessPolicy.test.js",
+    "test:csv": "node --test test/catalogCsv.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

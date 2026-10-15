@@ -1,0 +1,9 @@
+# Ejemplo aislado para reconstruir; validar disponibilidad global de los nombres
+# antes de aplicar. No contiene claves ni contraseñas.
+resource_group_name  = "rg-tangamandapio-rebuild-wus"
+storage_account_name = "sttangama261008r"
+key_vault_name       = "kv-tangama-261008r"
+function_app_name    = "tangama-wms-261008"
+name_prefix          = "tangama"
+function_package_path = "../../../artifacts/azure_function_package-364cf88c934a236eb72ef929f96faabc4ea4cbd08844d7cae8ab286dbc379d1d.zip"
+alert_email_receivers = []

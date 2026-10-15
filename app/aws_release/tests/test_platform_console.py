@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -66,6 +67,52 @@ class FakeJsonResponse:
         return self.body
 
 
+class FakeSNS:
+    def __init__(self):
+        self.topic = "arn:aws:sns:us-east-1:841113066612:tangamandapio-test-alarms"
+        self.subscriptions = [
+            {
+                "Protocol": "email",
+                "Endpoint": "confirmed@example.test",
+                "SubscriptionArn": self.topic + ":confirmed-id",
+            },
+            {
+                "Protocol": "email",
+                "Endpoint": "pending@example.test",
+                "SubscriptionArn": "PendingConfirmation",
+            },
+            {
+                "Protocol": "https",
+                "Endpoint": "https://receiver.example.test/hook",
+                "SubscriptionArn": self.topic + ":https-id",
+            },
+        ]
+        self.calls = []
+
+    def list_subscriptions_by_topic(self, **kwargs):
+        self.calls.append(("list", kwargs))
+        return {"Subscriptions": list(self.subscriptions)}
+
+    def subscribe(self, **kwargs):
+        self.calls.append(("subscribe", kwargs))
+        self.subscriptions.append(
+            {
+                "Protocol": "email",
+                "Endpoint": kwargs["Endpoint"],
+                "SubscriptionArn": "PendingConfirmation",
+            }
+        )
+        return {"SubscriptionArn": "PendingConfirmation"}
+
+    def unsubscribe(self, **kwargs):
+        self.calls.append(("unsubscribe", kwargs))
+        self.subscriptions = [
+            item
+            for item in self.subscriptions
+            if item["SubscriptionArn"] != kwargs["SubscriptionArn"]
+        ]
+
+
 class PlatformConsoleTestCase(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory(prefix="portal-platform-test-")
@@ -73,6 +120,7 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.app = portal.create_app(
             {
                 "TESTING": True,
+                "METRICS_ENABLED": False,
                 "DATABASE_URL": "",
                 "DATABASE_PATH": str(Path(self.tempdir.name) / "portal.sqlite3"),
                 "SECRET_KEY": "test-session-secret-for-platform",
@@ -80,6 +128,8 @@ class PlatformConsoleTestCase(unittest.TestCase):
                 "BOOTSTRAP_ADMIN_PASSWORD": "Admin-Password-For-Tests-2026",
                 "VOICE_RECORDINGS_ENABLED": False,
                 "AUTO_DISPATCH_EVENTS": False,
+                "LOGIN_RATE_LIMIT_MAX": 2,
+                "LOGIN_RATE_LIMIT_SECONDS": 300,
                 "CLOUDWATCH_CLIENT": self.cloudwatch,
                 "CLOUDWATCH_REGION_NAME": "us-east-1",
                 "CLOUDWATCH_LOAD_BALANCER_FULL_NAME": "app/tangamandapio-test/abc123",
@@ -109,6 +159,34 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_json())
         return client, client.get("/api/auth/session").get_json()["csrf_token"]
 
+    def test_login_failures_are_throttled_and_success_resets_counter(self):
+        client = self.app.test_client()
+
+        def authenticate(password):
+            csrf = client.get("/api/auth/session").get_json()["csrf_token"]
+            return client.post(
+                "/api/auth/login",
+                json={"username": "admin@example.test", "password": password},
+                headers={"X-CSRF-Token": csrf},
+            )
+
+        self.assertEqual(authenticate("incorrecta").status_code, 401)
+        self.assertEqual(authenticate("Admin-Password-For-Tests-2026").status_code, 200)
+        self.assertEqual(authenticate("incorrecta").status_code, 401)
+        self.assertEqual(authenticate("incorrecta").status_code, 401)
+
+        limited = authenticate("incorrecta")
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(limited.get_json()["error"], "too_many_attempts")
+        self.assertGreaterEqual(int(limited.headers["Retry-After"]), 1)
+
+        with portal.connect(self.app.config["DATABASE_PATH"]) as connection:
+            attempt_keys = connection.execute(
+                "SELECT attempt_key FROM login_attempts"
+            ).fetchall()
+        self.assertEqual(len(attempt_keys), 1)
+        self.assertNotIn("admin@example.test", attempt_keys[0]["attempt_key"])
+
     def create_user(self, username, role):
         response = self.admin.post(
             "/api/admin/users",
@@ -136,6 +214,59 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.assertEqual(sales.get("/platform").status_code, 403)
         self.assertEqual(sales.get("/api/platform/overview").status_code, 403)
 
+    def test_release_api_authorization_matrix_for_portal_roles(self):
+        warehouse_id = self.create_user("warehouse@example.test", "warehouse")
+        auditor_id = self.create_user("auditor@example.test", "auditor")
+        customer_id = self.create_user("customer@example.test", "customer")
+        self.assertTrue(warehouse_id and auditor_id and customer_id)
+
+        clients = {
+            "admin": (self.admin, self.admin_csrf),
+            "operations": self.login("operations@example.test", "Temporary-Password-2026"),
+            "sales": self.login("sales@example.test", "Temporary-Password-2026"),
+            "warehouse": self.login("warehouse@example.test", "Temporary-Password-2026"),
+            "auditor": self.login("auditor@example.test", "Temporary-Password-2026"),
+            "customer": self.login("customer@example.test", "Temporary-Password-2026"),
+        }
+        all_roles = {"admin", "operations", "sales", "warehouse", "auditor", "customer"}
+        allowed = {
+            "/api/orders": all_roles,
+            "/api/outbox": {"admin", "operations", "warehouse", "auditor"},
+            "/api/audit": {"admin", "operations", "auditor"},
+            "/api/admin/users": {"admin"},
+            "/api/platform/overview": {"admin", "operations"},
+            "/api/voice/directory": {"admin", "operations", "sales"},
+            "/api/erp/access": {"admin", "operations", "sales", "warehouse", "auditor"},
+            "/api/erp/partners": {"admin", "sales", "auditor"},
+            "/api/erp/finance/documents": {"admin", "auditor"},
+            "/api/multicloud": {"admin", "operations", "warehouse", "auditor"},
+        }
+
+        self.app.config["AZURE_FULFILLMENT_URL"] = "https://wms.azurewebsites.net"
+        with patch.object(portal, "urlopen", return_value=FakeJsonResponse({"status": "ok"})):
+            for path, allowed_roles in allowed.items():
+                for role, (client, _csrf) in clients.items():
+                    with self.subTest(path=path, role=role):
+                        response = client.get(path)
+                        self.assertEqual(response.status_code, 200 if role in allowed_roles else 403)
+
+        for role, (client, csrf) in clients.items():
+            with self.subTest(action="create_order", role=role):
+                response = client.post(
+                    "/api/orders",
+                    json={"customer": f"RBAC {role}", "total": 1},
+                    headers={"X-CSRF-Token": csrf},
+                )
+                self.assertEqual(response.status_code, 201 if role in {"admin", "sales", "customer"} else 403)
+
+            with self.subTest(action="create_expense", role=role):
+                response = client.post(
+                    "/api/erp/finance/expenses",
+                    json={"description": "Prueba de permisos", "amount": 1},
+                    headers={"X-CSRF-Token": csrf},
+                )
+                self.assertEqual(response.status_code, 201 if role == "admin" else 403)
+
     def test_console_assets_are_served_from_the_same_origin(self):
         for path in (
             "/assets/platform-console.js",
@@ -147,10 +278,62 @@ class PlatformConsoleTestCase(unittest.TestCase):
             self.assertGreater(len(response.get_data()), 100, path)
             response.close()
 
+    def test_release_homepage_references_assets_served_by_flask(self):
+        page = self.admin.get("/")
+        try:
+            self.assertEqual(page.status_code, 200)
+            assets = set(re.findall(rb'(?:src|href)="(/assets/[^\"]+)"', page.get_data()))
+            self.assertTrue(assets, "el HTML del release debe declarar sus bundles")
+        finally:
+            page.close()
+
+        for asset_path in assets:
+            with self.subTest(asset=asset_path.decode("ascii")):
+                asset = self.admin.get(asset_path.decode("ascii"))
+                try:
+                    self.assertEqual(asset.status_code, 200)
+                    self.assertGreater(len(asset.get_data()), 100)
+                finally:
+                    asset.close()
+
     def test_anonymous_user_is_redirected_and_api_requires_login(self):
         anonymous = self.app.test_client()
         self.assertEqual(anonymous.get("/platform").status_code, 303)
         self.assertEqual(anonymous.get("/api/platform/overview").status_code, 401)
+
+    def test_public_diagnostics_do_not_expose_internal_hostnames(self):
+        anonymous = self.app.test_client()
+        for path in ("/api", "/health", "/ready"):
+            with self.subTest(path=path):
+                response = anonymous.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("instance", response.get_json())
+                if path == "/health":
+                    self.assertEqual(response.get_json()["status"], "ok")
+                    self.assertNotIn("database", response.get_json())
+
+    def test_health_failure_does_not_identify_the_dependency(self):
+        with patch.object(portal, "connect", side_effect=RuntimeError("postgres.internal:5432")):
+            response = self.app.test_client().get("/health")
+        self.assertEqual(response.status_code, 503)
+        payload = response.get_json()
+        self.assertEqual(payload["status"], "degraded")
+        self.assertNotIn("database", payload)
+        self.assertNotIn("postgres.internal", json.dumps(payload))
+
+    def test_metrics_are_disabled_by_default_and_can_be_enabled_explicitly(self):
+        anonymous = self.app.test_client()
+        disabled = anonymous.get("/metrics")
+        self.assertEqual(disabled.status_code, 404)
+        self.assertEqual(disabled.get_data(), b"")
+
+        self.app.config["METRICS_ENABLED"] = True
+        self.assertEqual(anonymous.get("/metrics").status_code, 401)
+        enabled = self.admin.get("/metrics")
+        self.assertEqual(enabled.status_code, 200)
+        self.assertIn(b"tangamandapio_http_requests_total", enabled.get_data())
+        sales, _ = self.login("sales@example.test", "Temporary-Password-2026")
+        self.assertEqual(sales.get("/metrics").status_code, 403)
 
     def test_outbox_is_visible_to_operations_but_not_sales(self):
         operations, _ = self.login("operations@example.test", "Temporary-Password-2026")
@@ -312,6 +495,106 @@ class PlatformConsoleTestCase(unittest.TestCase):
 
     def test_unsupported_metrics_window_is_rejected(self):
         self.assertEqual(self.admin.get("/api/platform/overview?window=5").status_code, 400)
+
+    def test_administration_console_is_an_admin_only_full_view(self):
+        admin_response = self.admin.get("/administracion")
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertIn(b"Administraci\xc3\xb3n general", admin_response.data)
+        self.assertIn(b"Destinatarios de alarmas", admin_response.data)
+        operations, _ = self.login("operations@example.test", "Temporary-Password-2026")
+        self.assertEqual(operations.get("/administracion").status_code, 403)
+        self.assertEqual(operations.get("/api/admin/alarm-subscriptions").status_code, 403)
+        self.assertEqual(self.app.test_client().get("/api/admin/alarm-subscriptions").status_code, 401)
+
+    def test_alarm_subscriptions_are_admin_only_and_email_only(self):
+        self.app.config["ALARM_NOTIFICATION_TOPIC_ARN"] = FakeSNS().topic
+        sns = FakeSNS()
+        with patch.object(portal, "_alarm_sns_client", return_value=sns):
+            result = self.admin.get("/api/admin/alarm-subscriptions")
+        self.assertEqual(result.status_code, 200, result.get_json())
+        payload = result.get_json()
+        self.assertEqual(payload["topic_configured"], True)
+        self.assertEqual([item["endpoint"] for item in payload["subscriptions"]], [
+            "confirmed@example.test", "pending@example.test"
+        ])
+        self.assertEqual(
+            [item["status"] for item in payload["subscriptions"]],
+            ["confirmed", "pending_confirmation"],
+        )
+        self.assertNotIn("https://receiver.example.test/hook", str(payload))
+        operations, _ = self.login("operations@example.test", "Temporary-Password-2026")
+        self.assertEqual(operations.get("/api/admin/alarm-subscriptions").status_code, 403)
+
+    def test_alarm_subscription_add_requires_valid_email_and_confirmation(self):
+        self.app.config["ALARM_NOTIFICATION_TOPIC_ARN"] = FakeSNS().topic
+        sns = FakeSNS()
+        with patch.object(portal, "_alarm_sns_client", return_value=sns):
+            invalid = self.admin.post(
+                "/api/admin/alarm-subscriptions",
+                json={"email": "not-an-email"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            self.assertEqual(invalid.status_code, 400)
+            self.assertEqual(sns.calls, [])
+            duplicate = self.admin.post(
+                "/api/admin/alarm-subscriptions",
+                json={"email": "CONFIRMED@example.test"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            self.assertEqual(duplicate.status_code, 200)
+            self.assertTrue(duplicate.get_json()["already_exists"])
+            created = self.admin.post(
+                "/api/admin/alarm-subscriptions",
+                json={"email": "alerts@example.test"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+        self.assertEqual(created.status_code, 201, created.get_json())
+        self.assertEqual(created.get_json()["subscription"]["status"], "pending_confirmation")
+        self.assertEqual(created.get_json()["subscription"]["endpoint"], "alerts@example.test")
+        audit = self.admin.get("/api/audit").get_json()
+        entry = next(item for item in audit if item["action"] == "alarm_subscription.create")
+        self.assertNotIn("alerts@example.test", str(entry))
+
+    def test_alarm_unsubscribe_requires_exact_confirmed_subscription_and_uses_unsigned_sns(self):
+        self.app.config["ALARM_NOTIFICATION_TOPIC_ARN"] = FakeSNS().topic
+        sns = FakeSNS()
+        clients = []
+
+        def sns_client(_config, unsigned=False):
+            clients.append(unsigned)
+            return sns
+
+        with patch.object(portal, "_alarm_sns_client", side_effect=sns_client):
+            foreign = self.admin.delete(
+                "/api/admin/alarm-subscriptions",
+                json={"subscription_arn": "arn:aws:sns:us-east-1:999999999999:other-topic:foreign"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            pending = self.admin.delete(
+                "/api/admin/alarm-subscriptions",
+                json={"subscription_arn": "PendingConfirmation"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            removed = self.admin.delete(
+                "/api/admin/alarm-subscriptions",
+                json={"subscription_arn": sns.topic + ":confirmed-id"},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+        self.assertEqual(foreign.status_code, 404)
+        self.assertEqual(pending.status_code, 404)
+        self.assertEqual(removed.status_code, 200, removed.get_json())
+        self.assertEqual(clients, [False, True])
+        self.assertIn(("unsubscribe", {"SubscriptionArn": sns.topic + ":confirmed-id"}), sns.calls)
+        audit = self.admin.get("/api/audit").get_json()
+        self.assertTrue(any(item["action"] == "alarm_subscription.remove" for item in audit))
+
+    def test_alarm_routes_report_missing_topic_without_calling_aws(self):
+        self.app.config["ALARM_NOTIFICATION_TOPIC_ARN"] = ""
+        with patch.object(portal, "_alarm_sns_client") as sns_factory:
+            response = self.admin.get("/api/admin/alarm-subscriptions")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json(), {"error": "alarm_notifications_not_configured"})
+        sns_factory.assert_not_called()
 
 
 if __name__ == "__main__":

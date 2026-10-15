@@ -1,0 +1,28 @@
+{
+  "test_id": "PT-PERF-01",
+  "observed_at": "2026-10-14T04:45 America/Chicago",
+  "url": "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com/health",
+  "method": "GET",
+  "scope": "Health endpoint behind public ALB; no business writes or request payloads.",
+  "requests": 100,
+  "concurrency": 10,
+  "elapsed_seconds": 3.043,
+  "latency_ms": {
+    "min": 219.75,
+    "mean": 299.05,
+    "p95": 851.9,
+    "max": 884.68
+  },
+  "errors": 0,
+  "error_rate": 0.0,
+  "thresholds": {
+    "max_p95_ms": 2000.0,
+    "max_error_rate": 0.01
+  },
+  "passed": true,
+  "limitations": [
+    "Measures only the health endpoint; not transactional throughput.",
+    "Does not prove current ASG desired capacity, target health, or autoscaling behavior.",
+    "Does not support a 3000-user capacity claim."
+  ]
+}

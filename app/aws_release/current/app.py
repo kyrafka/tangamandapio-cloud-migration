@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import os
+import re
 import secrets
 import socket
 import sqlite3
@@ -13,12 +14,12 @@ import threading
 import time
 import uuid
 from io import BytesIO
-from contextlib import closing
+from contextlib import closing, contextmanager
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
 from flask import (
@@ -37,14 +38,41 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from cloud_observability import collect_cloudwatch_metrics
+from erp_service import (
+    grant_default_erp_roles,
+    initialize_erp_database,
+    register_erp_routes,
+)
 
 
 LOGGER = logging.getLogger("tangamandapio.api")
+RDS_SECRET_CACHE_TTL_SECONDS = 300
+_RDS_SECRET_CACHE = {}
+_RDS_SECRET_CACHE_LOCK = threading.RLock()
 WMS_DEMO_CATALOG = {
     "SKU-ARROZ-001": {"name": "Arroz premium · saco 50 kg", "unit_price": 42.50},
     "SKU-AZUCAR-001": {"name": "Azúcar rubia · saco 50 kg", "unit_price": 37.50},
     "SKU-ACEITE-001": {"name": "Aceite vegetal · caja x 12", "unit_price": 86.00},
 }
+
+
+def _alarm_sns_client(config, unsigned=False):
+    """Create the SNS client for this app's one configured alarm topic."""
+    factory = config.get("ALARM_SNS_CLIENT_FACTORY")
+    if factory:
+        return factory(unsigned=unsigned)
+    configured_client = config.get("ALARM_SNS_CLIENT")
+    if configured_client is not None:
+        return configured_client
+    import boto3
+
+    client_options = {"region_name": config.get("AWS_REGION_NAME") or None}
+    if unsigned:
+        from botocore import UNSIGNED
+        from botocore.config import Config
+
+        client_options["config"] = Config(signature_version=UNSIGNED)
+    return boto3.client("sns", **client_options)
 
 
 def env_int(name, default):
@@ -162,6 +190,44 @@ class DatabaseRateLimitStore:
             )
             connection.commit()
 
+    def record_failure(self, key, now, max_attempts, lockout_seconds):
+        """Increment atomically so concurrent workers cannot lose failures."""
+        with connect(self.database_target) as connection:
+            connection.execute(
+                """
+                INSERT INTO login_attempts (attempt_key, failures, locked_until)
+                VALUES (?, 1, CASE WHEN ? <= 1 THEN ? + ? ELSE 0 END)
+                ON CONFLICT (attempt_key) DO UPDATE SET
+                    failures = CASE
+                        WHEN login_attempts.locked_until > ? THEN login_attempts.failures
+                        WHEN login_attempts.failures >= ? THEN 1
+                        ELSE login_attempts.failures + 1
+                    END,
+                    locked_until = CASE
+                        WHEN login_attempts.locked_until > ? THEN login_attempts.locked_until
+                        WHEN (
+                            CASE WHEN login_attempts.failures >= ? THEN 1
+                            ELSE login_attempts.failures + 1 END
+                        ) >= ? THEN ? + ?
+                        ELSE 0
+                    END
+                """,
+                (
+                    key,
+                    max_attempts,
+                    now,
+                    lockout_seconds,
+                    now,
+                    max_attempts,
+                    now,
+                    max_attempts,
+                    max_attempts,
+                    now,
+                    lockout_seconds,
+                ),
+            )
+            connection.commit()
+
     def delete(self, key):
         with connect(self.database_target) as connection:
             connection.execute("DELETE FROM login_attempts WHERE attempt_key = ?", (key,))
@@ -209,6 +275,11 @@ class LoginRateLimiter:
         if not self.enabled:
             return
         now = self._clock() if now is None else now
+        if hasattr(self.store, "record_failure"):
+            self.store.record_failure(
+                key, now, self.max_attempts, self.lockout_seconds
+            )
+            return
         entry = self.store.get(key)
         if entry is None:
             entry = {"failures": 0, "locked_until": 0.0}
@@ -235,11 +306,19 @@ def create_app(test_config=None):
     app = Flask(__name__, static_folder=str(static_folder), static_url_path="")
     app.config.from_mapping(
         DATABASE_URL=os.getenv("DATABASE_URL", "").strip(),
+        DATABASE_NAME=os.getenv("DATABASE_NAME", "tangamandapio").strip(),
         DATABASE_PATH=os.getenv(
             "DATABASE_PATH", str(local_data_root / "tangamandapio.db")
         ),
         AZURE_FULFILLMENT_URL=os.getenv("AZURE_FULFILLMENT_URL", ""),
         AZURE_FUNCTION_KEY=os.getenv("AZURE_FUNCTION_KEY", ""),
+        ERP_SMTP_HOST=os.getenv("ERP_SMTP_HOST", "").strip(),
+        ERP_SMTP_PORT=os.getenv("ERP_SMTP_PORT", "587"),
+        ERP_SMTP_SECURITY=os.getenv("ERP_SMTP_SECURITY", "starttls").strip().lower(),
+        ERP_SMTP_USERNAME=os.getenv("ERP_SMTP_USERNAME", ""),
+        ERP_SMTP_PASSWORD=os.getenv("ERP_SMTP_PASSWORD", ""),
+        ERP_SMTP_FROM=os.getenv("ERP_SMTP_FROM", "no-reply@tangamandapio.local").strip(),
+        ERP_SMTP_RECIPIENT_DOMAIN=os.getenv("ERP_SMTP_RECIPIENT_DOMAIN", "").strip().lower(),
         AUTO_DISPATCH_EVENTS=os.getenv("AUTO_DISPATCH_EVENTS", "true").lower()
         in {"1", "true", "yes"},
         # 0 (por defecto) mantiene el reintento apagado: solo se enciende cuando
@@ -257,6 +336,12 @@ def create_app(test_config=None):
             "BOOTSTRAP_ADMIN_USERNAME", "admin@tangamandapio.local"
         ),
         BOOTSTRAP_ADMIN_PASSWORD=os.getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
+        RESET_BOOTSTRAP_ADMIN_PASSWORD=os.getenv(
+            "RESET_BOOTSTRAP_ADMIN_PASSWORD", "false"
+        ).lower() in {"1", "true", "yes"},
+        BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION=os.getenv(
+            "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION", ""
+        ).strip(),
         # Solo para una demostración académica controlada. Si no se declara,
         # no se crean cuentas de telefonía con credenciales conocidas.
         DEMO_VOICE_PASSWORD=os.getenv("DEMO_VOICE_PASSWORD", ""),
@@ -264,6 +349,11 @@ def create_app(test_config=None):
         # SQLite conserva el almacén local para pruebas aisladas.
         DB_SECRET_ARN=os.getenv("DB_SECRET_ARN", "").strip(),
         AWS_REGION_NAME=os.getenv("AWS_REGION_NAME", "").strip(),
+        ALARM_NOTIFICATION_TOPIC_ARN=os.getenv(
+            "ALARM_NOTIFICATION_TOPIC_ARN", ""
+        ).strip(),
+        METRICS_ENABLED=os.getenv("METRICS_ENABLED", "false").lower()
+        in {"1", "true", "yes"},
         CLOUDWATCH_REGION_NAME=os.getenv("CLOUDWATCH_REGION_NAME", os.getenv("AWS_REGION_NAME", "")).strip(),
         CLOUDWATCH_LOAD_BALANCER_FULL_NAME=os.getenv("CLOUDWATCH_LOAD_BALANCER_FULL_NAME", "").strip(),
         CLOUDWATCH_TARGET_GROUP_FULL_NAME=os.getenv("CLOUDWATCH_TARGET_GROUP_FULL_NAME", "").strip(),
@@ -288,6 +378,8 @@ def create_app(test_config=None):
         ).lower()
         in {"1", "true", "yes"},
         VOICE_RECORDINGS_DIR=os.getenv("VOICE_RECORDINGS_DIR", "").strip(),
+        INTERNAL_ERP_ENABLED=os.getenv("INTERNAL_ERP_ENABLED", "true").lower()
+        in {"1", "true", "yes"},
         VOICE_RECORDING_RETENTION_DAYS=env_int("VOICE_RECORDING_RETENTION_DAYS", 30),
         VOICE_RECORDING_MAX_BYTES=env_int("VOICE_RECORDING_MAX_BYTES", 15 * 1024 * 1024),
         WEBRTC_TURN_URLS=tuple(
@@ -348,6 +440,16 @@ def create_app(test_config=None):
 
     maybe_purge_expired_recordings()
     ensure_portal_bootstrap(app, database_path)
+    if app.config["INTERNAL_ERP_ENABLED"]:
+        with connect(database_path) as connection:
+            initialize_erp_database(
+                connection, postgres=isinstance(connection, PostgreSQLConnection)
+            )
+            for user in connection.execute(
+                "SELECT id, role FROM portal_users WHERE active = TRUE"
+            ).fetchall():
+                grant_default_erp_roles(connection, user["id"], user["role"])
+            connection.commit()
     app.extensions["metrics"] = {
         "requests_total": 0,
         "orders_created_total": 0,
@@ -460,8 +562,27 @@ def create_app(test_config=None):
         # acción explícita del usuario. No pedimos cámara ni concedemos otros
         # dispositivos al portal.
         response.headers["Permissions-Policy"] = "microphone=(self), camera=(self)"
-        if "no-store" not in response.headers.get("Cache-Control", "").lower():
-            response.headers["Cache-Control"] = "no-store"
+        existing_cache_control = response.headers.get("Cache-Control", "").lower()
+        if "no-store" not in existing_cache_control:
+            asset_name = Path(request.path).name
+            is_static_asset = request.path.startswith(("/assets/", "/images/"))
+            is_content_versioned = bool(
+                re.fullmatch(r"index-[A-Za-z0-9_-]{8,}\.(?:js|css)", asset_name)
+                or re.fullmatch(r".+-[0-9a-f]{12}\.[A-Za-z0-9]+", asset_name)
+                or re.fullmatch(
+                    r".+-v[0-9]+\.(?:png|jpe?g|webp|avif|svg)", asset_name
+                )
+            )
+            if is_static_asset and is_content_versioned:
+                response.headers["Cache-Control"] = (
+                    "public, max-age=31536000, immutable"
+                )
+            elif response.mimetype == "text/html":
+                response.headers["Cache-Control"] = (
+                    "no-cache, max-age=0, must-revalidate"
+                )
+            else:
+                response.headers["Cache-Control"] = "no-store"
         if request.is_secure:
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains"
@@ -488,6 +609,13 @@ def create_app(test_config=None):
 
     @app.get("/metrics")
     def metrics():
+        if not app.config["METRICS_ENABLED"]:
+            return "", 404
+        user = current_portal_user(database_path)
+        if user is None:
+            return jsonify(error="authentication_required"), 401
+        if user["role"] != "admin":
+            return jsonify(error="insufficient_role"), 403
         values = app.extensions["metrics"]
         lines = [
             "# HELP tangamandapio_http_requests_total Total HTTP responses generated by the API.",
@@ -511,7 +639,11 @@ def create_app(test_config=None):
         if not username or not password:
             return jsonify(error="credentials_required"), 400
         limiter = app.extensions["login_rate_limiter"]
-        limiter_key = "{}|{}".format(request.remote_addr or "unknown", username)
+        limiter_key = hmac.new(
+            str(app.config["SECRET_KEY"]).encode("utf-8"),
+            f"{request.remote_addr or 'unknown'}\0{username}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
         retry_after = limiter.retry_after(limiter_key)
         if retry_after > 0:
             LOGGER.warning(
@@ -519,7 +651,7 @@ def create_app(test_config=None):
                     {
                         "event": "login_rate_limited",
                         "request_id": g.request_id,
-                        "username": username,
+                        "principal_fingerprint": limiter_key,
                         "retry_after": int(retry_after) + 1,
                     }
                 )
@@ -540,7 +672,11 @@ def create_app(test_config=None):
             ).fetchone()
         if row is None or not row["active"] or not check_password_hash(row["password_hash"], password):
             limiter.record_failure(limiter_key)
-            LOGGER.warning(json.dumps({"event": "login_denied", "username": username, "request_id": g.request_id}))
+            LOGGER.warning(json.dumps({
+                "event": "login_denied",
+                "request_id": g.request_id,
+                "principal_fingerprint": limiter_key,
+            }))
             return jsonify(error="invalid_credentials"), 401
         limiter.reset(limiter_key)
         # Rotación: el cookie de sesión anterior se descarta por completo; el
@@ -606,7 +742,6 @@ def create_app(test_config=None):
     def index():
         return jsonify(
             service="Tangamandapio Cloud Demo",
-            instance=socket.gethostname(),
             endpoints=[
                 "/health",
                 "/ready",
@@ -618,8 +753,21 @@ def create_app(test_config=None):
 
     @app.get("/")
     def web_index():
-        if (static_folder / "index.html").is_file():
-            return send_from_directory(static_folder, "index.html")
+        index_path = static_folder / "index.html"
+        if index_path.is_file():
+            page = index_path.read_bytes()
+            try:
+                anonymous = current_portal_user(database_path) is None
+            except Exception:
+                anonymous = True
+            if anonymous:
+                landing_preload = (
+                    b'<link rel="preload" as="image" '
+                    b'href="/images/walpurgis-rising-pixel-diffused-v1.png" '
+                    b'type="image/png" fetchpriority="high" data-landing-art />'
+                )
+                page = page.replace(b"</head>", landing_preload + b"</head>", 1)
+            return app.response_class(page, mimetype="text/html")
         return index()
 
     @app.get("/health")
@@ -635,8 +783,6 @@ def create_app(test_config=None):
         return (
             jsonify(
                 status="ok" if status_code == 200 else "degraded",
-                database=database_status,
-                instance=socket.gethostname(),
                 timestamp=datetime.now(timezone.utc).isoformat(),
             ),
             status_code,
@@ -647,9 +793,9 @@ def create_app(test_config=None):
         try:
             with connect(database_path) as connection:
                 connection.execute("SELECT 1").fetchone()
-            return jsonify(status="ready", dependencies={"database": "ok"})
+            return jsonify(status="ready")
         except Exception:
-            return jsonify(status="not_ready", dependencies={"database": "error"}), 503
+            return jsonify(status="not_ready"), 503
 
     @app.get("/api/orders")
     @require_roles("customer", "sales", "warehouse", "operations", "admin", "auditor")
@@ -1116,6 +1262,15 @@ def create_app(test_config=None):
             return "Acceso restringido a Administración y Operaciones TI.", 403
         return send_from_directory(static_folder / "platform", "index.html")
 
+    @app.get("/administracion")
+    def administration_console():
+        user = current_portal_user(database_path)
+        if user is None:
+            return redirect("/", code=303)
+        if user["role"] != "admin":
+            return "Acceso restringido a Administración.", 403
+        return send_from_directory(static_folder / "admin", "index.html")
+
     @app.get("/api/platform/overview")
     @require_roles("admin", "operations")
     def platform_overview():
@@ -1182,19 +1337,19 @@ def create_app(test_config=None):
                     "INSERT INTO companies(name, slug, created_at) VALUES (?, ?, ?)",
                     (name, slug, datetime.now(timezone.utc).isoformat()),
                 )
+                insert_audit(
+                    connection,
+                    g.portal_user["id"],
+                    "company.create",
+                    "company",
+                    company_id,
+                    {"slug": slug},
+                )
                 connection.commit()
             except Exception as error:
                 if is_integrity_error(error):
                     return jsonify(error="company_slug_already_exists"), 409
                 raise
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "company.create",
-            "company",
-            company_id,
-            {"slug": slug},
-        )
         return jsonify(id=company_id, name=name, slug=slug), 201
 
     @app.get("/api/admin/companies")
@@ -1241,19 +1396,21 @@ def create_app(test_config=None):
                         datetime.now(timezone.utc).isoformat(),
                     ),
                 )
+                if app.config["INTERNAL_ERP_ENABLED"]:
+                    grant_default_erp_roles(connection, user_id, role, g.portal_user["id"])
+                insert_audit(
+                    connection,
+                    g.portal_user["id"],
+                    "user.create",
+                    "portal_user",
+                    user_id,
+                    {"role": role, "company_id": company_id},
+                )
                 connection.commit()
             except Exception as error:
                 if is_integrity_error(error):
                     return jsonify(error="username_already_exists"), 409
                 raise
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "user.create",
-            "portal_user",
-            user_id,
-            {"role": role, "company_id": company_id},
-        )
         return jsonify(user=portal_user(database_path, user_id)), 201
 
     @app.patch("/api/admin/users/<int:user_id>")
@@ -1312,16 +1469,16 @@ def create_app(test_config=None):
                 """,
                 (role, company_id, active, user_id),
             )
+            insert_audit(
+                connection,
+                g.portal_user["id"],
+                "user.update",
+                "portal_user",
+                user_id,
+                {"role": role, "company_id": company_id, "active": active, "sessions_revoked": True},
+            )
             connection.commit()
 
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "user.update",
-            "portal_user",
-            user_id,
-            {"role": role, "company_id": company_id, "active": active, "sessions_revoked": True},
-        )
         return jsonify(user=portal_user(database_path, user_id))
 
     @app.post("/api/admin/users/<int:user_id>/reset-password")
@@ -1345,20 +1502,193 @@ def create_app(test_config=None):
                 """,
                 (generate_password_hash(temporary_password), user_id),
             )
+            insert_audit(
+                connection,
+                g.portal_user["id"],
+                "user.password_reset",
+                "portal_user",
+                user_id,
+                {"temporary_password_issued": True, "sessions_revoked": True},
+            )
             connection.commit()
-        write_audit(
-            database_path,
-            g.portal_user["id"],
-            "user.password_reset",
-            "portal_user",
-            user_id,
-            {"temporary_password_issued": True, "sessions_revoked": True},
-        )
         return jsonify(
             user=portal_user(database_path, user_id),
             temporary_password=temporary_password,
             reveal_once=True,
         )
+
+    def alarm_notification_topic_arn():
+        return app.config.get("ALARM_NOTIFICATION_TOPIC_ARN", "").strip()
+
+    def list_alarm_email_subscriptions(client, topic_arn):
+        subscriptions = []
+        next_token = None
+        while True:
+            parameters = {"TopicArn": topic_arn}
+            if next_token:
+                parameters["NextToken"] = next_token
+            page = client.list_subscriptions_by_topic(**parameters)
+            for item in page.get("Subscriptions", []):
+                if item.get("Protocol") != "email":
+                    continue
+                subscription_arn = item.get("SubscriptionArn", "")
+                subscriptions.append(
+                    {
+                        "protocol": "email",
+                        "endpoint": item.get("Endpoint", ""),
+                        "subscription_arn": subscription_arn,
+                        "status": (
+                            "confirmed"
+                            if subscription_arn.startswith(topic_arn + ":")
+                            else "pending_confirmation"
+                        ),
+                    }
+                )
+            next_token = page.get("NextToken")
+            if not next_token:
+                break
+        return sorted(subscriptions, key=lambda item: item["endpoint"].casefold())
+
+    def alarm_sns_error(error, operation):
+        error_code = "unknown"
+        if isinstance(getattr(error, "response", None), dict):
+            error_code = error.response.get("Error", {}).get("Code", error_code)
+        LOGGER.warning(
+            json.dumps(
+                {
+                    "event": "alarm_subscription_operation_failed",
+                    "operation": operation,
+                    "error_code": error_code,
+                    "actor_id": g.portal_user["id"],
+                }
+            )
+        )
+        if error_code in {"AccessDenied", "AuthorizationError", "NotAuthorized"}:
+            return jsonify(error="alarm_service_access_denied"), 503
+        if error_code in {"InvalidParameter", "InvalidParameterValue"}:
+            return jsonify(error="alarm_subscription_invalid"), 400
+        return jsonify(error="alarm_service_unavailable"), 503
+
+    @app.get("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def get_alarm_subscriptions():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        try:
+            subscriptions = list_alarm_email_subscriptions(
+                _alarm_sns_client(app.config), topic_arn
+            )
+        except Exception as error:
+            return alarm_sns_error(error, "list")
+        return jsonify(
+            topic_configured=True,
+            subscriptions=subscriptions,
+            confirmation_required=True,
+        )
+
+    @app.post("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def add_alarm_subscription():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        payload = request.get_json(silent=True) or {}
+        email = str(payload.get("email", "")).strip().lower()
+        if (
+            len(email) > 254
+            or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+        ):
+            return jsonify(error="invalid_alarm_email"), 400
+        try:
+            client = _alarm_sns_client(app.config)
+            existing = next(
+                (
+                    item
+                    for item in list_alarm_email_subscriptions(client, topic_arn)
+                    if item["endpoint"].casefold() == email.casefold()
+                ),
+                None,
+            )
+            if existing:
+                return jsonify(subscription=existing, already_exists=True), 200
+            result = client.subscribe(
+                TopicArn=topic_arn,
+                Protocol="email",
+                Endpoint=email,
+                ReturnSubscriptionArn=True,
+            )
+            subscription_arn = result.get("SubscriptionArn", "PendingConfirmation")
+            status = (
+                "confirmed"
+                if subscription_arn.startswith(topic_arn + ":")
+                else "pending_confirmation"
+            )
+            subject_id = hashlib.sha256(email.casefold().encode("utf-8")).hexdigest()[:20]
+            write_audit(
+                database_path,
+                g.portal_user["id"],
+                "alarm_subscription.create",
+                "sns_email_subscription",
+                subject_id,
+                {"protocol": "email", "status": status},
+            )
+        except Exception as error:
+            return alarm_sns_error(error, "subscribe")
+        return (
+            jsonify(
+                subscription={
+                    "protocol": "email",
+                    "endpoint": email,
+                    "subscription_arn": subscription_arn,
+                    "status": status,
+                },
+                already_exists=False,
+            ),
+            201,
+        )
+
+    @app.delete("/api/admin/alarm-subscriptions")
+    @require_roles("admin")
+    def remove_alarm_subscription():
+        topic_arn = alarm_notification_topic_arn()
+        if not topic_arn:
+            return jsonify(error="alarm_notifications_not_configured"), 503
+        payload = request.get_json(silent=True) or {}
+        subscription_arn = str(payload.get("subscription_arn", "")).strip()
+        if not subscription_arn or not subscription_arn.startswith(topic_arn + ":"):
+            return jsonify(error="alarm_subscription_not_found"), 404
+        try:
+            signed_client = _alarm_sns_client(app.config)
+            current = next(
+                (
+                    item
+                    for item in list_alarm_email_subscriptions(signed_client, topic_arn)
+                    if item["subscription_arn"] == subscription_arn
+                ),
+                None,
+            )
+            if current is None:
+                return jsonify(error="alarm_subscription_not_found"), 404
+            if current["status"] != "confirmed":
+                return jsonify(error="alarm_subscription_pending_confirmation"), 409
+            # SNS intentionally supports Unsubscribe without AWS authentication by
+            # default. The admin-only portal verifies the exact ARN is a confirmed
+            # email subscription to this single topic before making that request.
+            _alarm_sns_client(app.config, unsigned=True).unsubscribe(
+                SubscriptionArn=subscription_arn
+            )
+            write_audit(
+                database_path,
+                g.portal_user["id"],
+                "alarm_subscription.remove",
+                "sns_email_subscription",
+                hashlib.sha256(subscription_arn.encode("utf-8")).hexdigest()[:20],
+                {"protocol": "email", "status": "removed"},
+            )
+        except Exception as error:
+            return alarm_sns_error(error, "unsubscribe")
+        return jsonify(status="removed"), 200
 
     @app.get("/api/audit")
     @require_roles("admin", "operations", "auditor")
@@ -2117,16 +2447,42 @@ def create_app(test_config=None):
             return send_from_directory(static_folder, "index.html")
         return jsonify(error="not_found"), 404
 
+    @app.get("/erp")
+    def erp_page():
+        if not app.config["INTERNAL_ERP_ENABLED"]:
+            return jsonify(error="internal_erp_disabled"), 404
+        return send_from_directory(static_folder, "erp.html")
+
+    if app.config["INTERNAL_ERP_ENABLED"]:
+        register_erp_routes(
+            app,
+            database_path,
+            connect=connect,
+            insert_and_return_id=insert_and_return_id,
+            write_audit=write_audit,
+            require_roles=require_roles,
+            dispatch_outbox_event=dispatch_outbox_event,
+        )
+
     return app
 
 
 def configured_database_target(config):
-    """Prefer a managed PostgreSQL URL when the environment supplies one."""
-    return config.get("DATABASE_URL") or config["DATABASE_PATH"]
+    """Prefer a URL, then a runtime Secrets Manager reference, then local SQLite."""
+    database_url = config.get("DATABASE_URL")
+    if database_url:
+        return database_url
+    secret_arn = config.get("DATABASE_SECRET_ARN") or config.get("DB_SECRET_ARN")
+    if secret_arn:
+        database_name = config.get("DATABASE_NAME") or "tangamandapio"
+        return "rds-secret://{}/{}".format(
+            quote(str(secret_arn), safe=""), quote(str(database_name), safe="")
+        )
+    return config["DATABASE_PATH"]
 
 
 def is_postgresql(database_target):
-    return str(database_target).startswith(("postgresql://", "postgres://"))
+    return str(database_target).startswith(("postgresql://", "postgres://", "rds-secret://"))
 
 
 class PostgreSQLConnection:
@@ -2160,10 +2516,85 @@ def connect(database_target):
             import psycopg2
         except ImportError as error:
             raise RuntimeError("PostgreSQL requires psycopg2-binary in the application image") from error
+        if str(database_target).startswith("rds-secret://"):
+            return connect_rds_secret(database_target, psycopg2)
         return closing(PostgreSQLConnection(psycopg2.connect(database_target, connect_timeout=5)))
     connection = sqlite3.connect(database_target)
     connection.row_factory = sqlite3.Row
     return closing(connection)
+
+
+def load_rds_secret(secret_arn, force_refresh=False):
+    """Fetch an RDS-managed credential at runtime with a short in-memory TTL.
+
+    The secret is never logged or written to the application environment. This
+    avoids pinning a password that RDS may rotate every seven days.
+    """
+    now = time.monotonic()
+    with _RDS_SECRET_CACHE_LOCK:
+        cached = _RDS_SECRET_CACHE.get(secret_arn)
+        if not force_refresh and cached and cached[0] > now:
+            return dict(cached[1])
+
+    try:
+        import boto3
+    except ImportError as error:
+        raise RuntimeError("RDS Secrets Manager access requires boto3") from error
+
+    arn_parts = str(secret_arn).split(":", 5)
+    region = arn_parts[3] if len(arn_parts) == 6 and arn_parts[0] == "arn" else None
+    client = boto3.client("secretsmanager", region_name=region)
+    response = client.get_secret_value(SecretId=secret_arn)
+    try:
+        secret = json.loads(response["SecretString"])
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise RuntimeError("RDS secret is missing a valid JSON SecretString") from error
+    # The application endpoint belongs to this deployment. A retained secret
+    # may still describe the source DB host after restoring a snapshot.
+    if os.getenv("DB_HOST", "").strip():
+        secret["host"] = os.getenv("DB_HOST", "").strip()
+    if not all(secret.get(field) for field in ("username", "password", "host")):
+        raise RuntimeError("RDS secret or application environment is missing connection fields")
+
+    with _RDS_SECRET_CACHE_LOCK:
+        _RDS_SECRET_CACHE[secret_arn] = (
+            time.monotonic() + RDS_SECRET_CACHE_TTL_SECONDS,
+            dict(secret),
+        )
+    return dict(secret)
+
+
+def invalidate_rds_secret(secret_arn):
+    with _RDS_SECRET_CACHE_LOCK:
+        _RDS_SECRET_CACHE.pop(secret_arn, None)
+
+
+def connect_rds_secret(database_target, psycopg2):
+    parsed = urlparse(str(database_target))
+    secret_arn = unquote(parsed.netloc)
+    database_name = unquote(parsed.path.lstrip("/")) or "tangamandapio"
+    if not secret_arn:
+        raise ValueError("RDS secret reference is empty")
+
+    for attempt in range(2):
+        secret = load_rds_secret(secret_arn, force_refresh=attempt > 0)
+        try:
+            raw_connection = psycopg2.connect(
+                host=secret["host"],
+                port=int(secret.get("port", 5432)),
+                dbname=database_name,
+                user=secret["username"],
+                password=secret["password"],
+                connect_timeout=5,
+                sslmode="require",
+            )
+            return closing(PostgreSQLConnection(raw_connection))
+        except psycopg2.OperationalError as error:
+            if attempt == 0 and getattr(error, "pgcode", None) == "28P01":
+                invalidate_rds_secret(secret_arn)
+                continue
+            raise
+    raise RuntimeError("Unable to connect to PostgreSQL with the current RDS secret")
 
 
 def insert_and_return_id(connection, statement, params):
@@ -2411,22 +2842,27 @@ def require_roles(*roles):
     return decorator
 
 
+def insert_audit(connection, user_id, action, subject_type, subject_id=None, detail=None):
+    """Append an audit row to the caller's transaction."""
+    connection.execute(
+        """
+        INSERT INTO audit_log(user_id, action, subject_type, subject_id, detail, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            action,
+            subject_type,
+            str(subject_id) if subject_id is not None else None,
+            json.dumps(detail, separators=(",", ":")) if detail else None,
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+
+
 def write_audit(database_path, user_id, action, subject_type, subject_id=None, detail=None):
     with connect(database_path) as connection:
-        connection.execute(
-            """
-            INSERT INTO audit_log(user_id, action, subject_type, subject_id, detail, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                action,
-                subject_type,
-                str(subject_id) if subject_id is not None else None,
-                json.dumps(detail, separators=(",", ":")) if detail else None,
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
+        insert_audit(connection, user_id, action, subject_type, subject_id, detail)
         connection.commit()
 
 
@@ -2491,6 +2927,43 @@ def ensure_portal_bootstrap(app, database_path):
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
+            reset_version = app.config.get(
+                "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION", ""
+            ).strip()
+            if app.config.get("RESET_BOOTSTRAP_ADMIN_PASSWORD") and reset_version:
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS portal_admin_recovery_events (
+                        secret_version TEXT PRIMARY KEY,
+                        applied_at TEXT NOT NULL
+                    )
+                    """
+                )
+                normalized_username = app.config["BOOTSTRAP_ADMIN_USERNAME"].strip().lower()
+                admin_row = connection.execute(
+                    "SELECT id FROM portal_users WHERE username = ? AND active = TRUE",
+                    (normalized_username,),
+                ).fetchone()
+                if admin_row is not None:
+                    recovery_claim = connection.execute(
+                        """
+                        INSERT INTO portal_admin_recovery_events(secret_version, applied_at)
+                        VALUES (?, ?)
+                        ON CONFLICT(secret_version) DO NOTHING
+                        """,
+                        (reset_version, datetime.now(timezone.utc).isoformat()),
+                    )
+                    if recovery_claim.rowcount == 1:
+                        connection.execute(
+                            """
+                            UPDATE portal_users
+                            SET password_hash = ?, must_change_password = TRUE,
+                                auth_version = auth_version + 1
+                            WHERE id = ?
+                            """,
+                            (generate_password_hash(password), admin_row["id"]),
+                        )
+                        LOGGER.warning("Applied one-time administrator recovery from secret version")
         demo_password = app.config.get("DEMO_VOICE_PASSWORD", "")
         if demo_password:
             for username, role in (
@@ -2631,6 +3104,43 @@ def outbox_backoff_seconds(interval, attempts):
     return min(interval * (2 ** min(max(int(attempts), 0), 10)), 3600)
 
 
+def pg_try_advisory_lock(connection, lock_name):
+    """Acquire a cluster-wide PostgreSQL session lock for one outbox task."""
+    row = connection.execute(
+        "SELECT pg_try_advisory_lock(hashtextextended(?, 0)) AS acquired",
+        (str(lock_name),),
+    ).fetchone()
+    connection.commit()
+    return bool(row["acquired"])
+
+
+def pg_release_advisory_lock(connection, lock_name):
+    connection.execute(
+        "SELECT pg_advisory_unlock(hashtextextended(?, 0)) AS released",
+        (str(lock_name),),
+    )
+    connection.commit()
+
+
+@contextmanager
+def outbox_dispatch_lock(database_path, event_id):
+    """Serialize dispatch for an event across all web workers and EC2 nodes."""
+    if not is_postgresql(database_path):
+        yield True
+        return
+
+    lock_name = f"tangamandapio:outbox-event:{event_id}"
+    with connect(database_path) as connection:
+        acquired = pg_try_advisory_lock(connection, lock_name)
+        if not acquired:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            pg_release_advisory_lock(connection, lock_name)
+
+
 def retry_pending_outbox(app, database_path, deadlines, now=None):
     """Despacha en segundo plano los eventos no entregados cuyo plazo ya venció.
 
@@ -2678,17 +3188,41 @@ def start_outbox_retry_worker(app, database_path):
         return None
     deadlines = {}
 
+    def sweep_once():
+        try:
+            with app.app_context():
+                outcomes = retry_pending_outbox(app, database_path, deadlines)
+        except Exception:
+            LOGGER.exception("outbox_retry_sweep_failed")
+            return
+        for outcome in outcomes:
+            LOGGER.info(json.dumps({"event": "outbox_retry", **outcome}))
+
     def sweep_forever():
         while True:
-            time.sleep(interval)
-            try:
-                with app.app_context():
-                    outcomes = retry_pending_outbox(app, database_path, deadlines)
-            except Exception:
-                LOGGER.exception("outbox_retry_sweep_failed")
+            if not is_postgresql(database_path):
+                time.sleep(interval)
+                sweep_once()
                 continue
-            for outcome in outcomes:
-                LOGGER.info(json.dumps({"event": "outbox_retry", **outcome}))
+            try:
+                # Gunicorn creates one app per worker and the ASG runs multiple
+                # instances. Keep exactly one retry scheduler active for the
+                # shared RDS database; PostgreSQL releases this lock on process
+                # exit or connection loss so another worker can take over.
+                with connect(database_path) as lock_connection:
+                    lock_name = "tangamandapio:outbox-retry-scheduler"
+                    if not pg_try_advisory_lock(lock_connection, lock_name):
+                        time.sleep(interval)
+                        continue
+                    LOGGER.info(json.dumps({"event": "outbox_retry_leader_acquired"}))
+                    while True:
+                        time.sleep(interval)
+                        lock_connection.execute("SELECT 1").fetchone()
+                        lock_connection.commit()
+                        sweep_once()
+            except Exception:
+                LOGGER.exception("outbox_retry_leader_lost")
+                time.sleep(interval)
 
     worker = threading.Thread(target=sweep_forever, name="outbox-retry", daemon=True)
     worker.start()
@@ -2705,7 +3239,7 @@ def log_outbox_dispatch(result):
     LOGGER.info(json.dumps(entry))
 
 
-def dispatch_outbox_event(app, database_path, event_id):
+def _dispatch_outbox_event(app, database_path, event_id):
     """Deliver an already committed event. A failure never rolls back the order."""
     with connect(database_path) as connection:
         row = connection.execute(
@@ -2733,7 +3267,6 @@ def dispatch_outbox_event(app, database_path, event_id):
                 "reason": "azure_not_configured",
             }
         )
-
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     token = app.config["AZURE_FUNCTION_KEY"]
     if token:
@@ -2792,6 +3325,20 @@ def dispatch_outbox_event(app, database_path, event_id):
                 "reason": type(error).__name__,
             }
         )
+
+
+def dispatch_outbox_event(app, database_path, event_id):
+    """Deliver once per event even when several web workers race to dispatch."""
+    with outbox_dispatch_lock(database_path, event_id) as acquired:
+        if not acquired:
+            result = {
+                "status": "pending",
+                "event_id": event_id,
+                "reason": "dispatch_in_progress",
+            }
+            log_outbox_dispatch(result)
+            return result
+        return _dispatch_outbox_event(app, database_path, event_id)
 
 
 app = create_app()

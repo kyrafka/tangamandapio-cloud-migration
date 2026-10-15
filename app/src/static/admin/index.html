@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Administración segura del portal Tangamandapio." />
+    <title>Administración · Tangamandapio</title>
+    <link rel="stylesheet" href="/assets/admin-console.css" />
+    <script src="/assets/admin-console.js" defer></script>
+  </head>
+  <body class="admin-page">
+    <div class="admin-shell">
+      <header class="admin-header">
+        <a class="admin-brand" href="/" aria-label="Volver al portal Tangamandapio">
+          <span class="admin-mark" aria-hidden="true">T</span>
+          <span><strong>Tangamandapio</strong><small>Administración general</small></span>
+        </a>
+        <div class="admin-header-actions">
+          <span id="admin-identity" class="admin-identity">Validando sesión…</span>
+          <button id="admin-theme" class="admin-icon-button" type="button" aria-label="Cambiar tema" title="Cambiar tema">◐</button>
+          <a class="admin-back" href="/">Volver al portal</a>
+        </div>
+      </header>
+
+      <main class="admin-main">
+        <section class="admin-intro">
+          <div>
+            <p class="eyebrow">Gobierno y configuración</p>
+            <h1>Administración general</h1>
+            <p>Gestiona identidades, empresas y destinatarios de las alarmas en un solo lugar. Cada cambio sensible queda auditado.</p>
+          </div>
+          <div class="admin-summary" aria-label="Resumen administrativo">
+            <div><span class="admin-summary-icon" aria-hidden="true">♙</span><span><small>Cuentas activas</small><strong id="active-user-count">—</strong></span></div>
+            <div><span class="admin-summary-icon" aria-hidden="true">⌂</span><span><small>Empresas</small><strong id="company-count">—</strong></span></div>
+            <div><span class="admin-summary-icon" aria-hidden="true">♧</span><span><small>Alertas confirmadas</small><strong id="confirmed-alert-count">—</strong></span></div>
+          </div>
+        </section>
+
+        <div id="admin-notice" class="admin-notice" role="status" aria-live="polite" hidden></div>
+
+        <div class="admin-layout">
+          <nav class="admin-nav" aria-label="Secciones de administración">
+            <p class="admin-nav-heading">Administración</p>
+            <button type="button" data-section="users" aria-current="page"><span aria-hidden="true">♙</span><span>Usuarios y roles</span></button>
+            <button type="button" data-section="companies"><span aria-hidden="true">⌂</span><span>Empresas</span></button>
+            <button type="button" data-section="alerts"><span aria-hidden="true">♧</span><span>Alertas de nube</span></button>
+            <button type="button" data-section="audit"><span aria-hidden="true">≋</span><span>Auditoría</span></button>
+            <div class="admin-nav-note"><span class="admin-live-dot" aria-hidden="true"></span><span>Control de acceso activo<br /><small>Las API validan el rol en el servidor.</small></span></div>
+          </nav>
+
+          <div class="admin-content">
+            <section class="admin-view" data-view="users" aria-labelledby="users-heading">
+              <div class="admin-section-heading">
+                <div><p class="eyebrow">Identidad y mínimo privilegio</p><h2 id="users-heading">Usuarios y roles</h2><p>Asigna rol y empresa, suspende accesos y restablece contraseñas con entrega única.</p></div>
+                <button class="admin-button secondary" type="button" data-reload="users">Actualizar</button>
+              </div>
+              <div class="admin-grid">
+                <section class="admin-card">
+                  <div class="admin-card-heading"><div><h3>Cuentas del portal</h3><p>Los cambios revocan las sesiones activas de la cuenta.</p></div><span id="users-count" class="admin-count">—</span></div>
+                  <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Cuenta</th><th>Rol</th><th>Empresa</th><th>Acceso</th><th>Acciones</th></tr></thead><tbody id="users-rows"></tbody></table></div>
+                  <p id="users-empty" class="admin-empty" hidden>No hay cuentas para mostrar.</p>
+                  <div id="temporary-credential" class="temporary-credential" role="status" hidden></div>
+                </section>
+                <section class="admin-card admin-form-card">
+                  <p class="eyebrow">Provisionamiento</p><h3>Nueva cuenta</h3>
+                  <form id="user-form">
+                    <label>Correo o usuario<input name="username" type="text" autocomplete="off" maxlength="160" required /></label>
+                    <label>Contraseña temporal<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /><small>12 caracteres como mínimo; se exigirá cambiarla al ingresar.</small></label>
+                    <label>Rol<select name="role" id="new-user-role" required></select></label>
+                    <label>Empresa<select name="company_id" id="new-user-company" required></select></label>
+                    <button class="admin-button primary" type="submit">Crear cuenta</button>
+                  </form>
+                </section>
+              </div>
+            </section>
+
+            <section class="admin-view" data-view="companies" aria-labelledby="companies-heading" hidden>
+              <div class="admin-section-heading">
+                <div><p class="eyebrow">Aislamiento B2B</p><h2 id="companies-heading">Empresas</h2><p>Organizaciones y distribuidores que aíslan los pedidos y las cuentas del portal.</p></div>
+                <button class="admin-button secondary" type="button" data-reload="companies">Actualizar</button>
+              </div>
+              <div class="admin-grid">
+                <section class="admin-card"><div class="admin-card-heading"><div><h3>Organizaciones registradas</h3><p>Una cuenta pertenece a una empresa.</p></div><span id="companies-count" class="admin-count">—</span></div>
+                  <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Empresa</th><th>Identificador</th><th>Cuentas</th><th>Creada</th></tr></thead><tbody id="companies-rows"></tbody></table></div>
+                  <p id="companies-empty" class="admin-empty" hidden>No hay empresas registradas.</p>
+                </section>
+                <section class="admin-card admin-form-card"><p class="eyebrow">Nuevo tenant</p><h3>Registrar empresa</h3>
+                  <form id="company-form"><label>Razón social<input name="name" type="text" maxlength="160" required /></label><label>Identificador técnico<input name="slug" type="text" pattern="[a-z0-9-]+" maxlength="80" placeholder="distribuidor-norte" required /><small>Usa minúsculas, números y guiones.</small></label><button class="admin-button primary" type="submit">Crear empresa</button></form>
+                </section>
+              </div>
+            </section>
+
+            <section class="admin-view" data-view="alerts" aria-labelledby="alerts-heading" hidden>
+              <div class="admin-section-heading">
+                <div><p class="eyebrow">CloudWatch · Amazon SNS</p><h2 id="alerts-heading">Destinatarios de alarmas</h2><p>Administra quién recibe avisos operativos del balanceador, la aplicación y la base de datos.</p></div>
+                <button class="admin-button secondary" type="button" data-reload="alerts">Actualizar</button>
+              </div>
+              <div class="admin-alert-explainer"><span class="admin-summary-icon" aria-hidden="true">♧</span><p><strong>Confirmación obligatoria</strong><br />Al agregar un correo, SNS envía un mensaje de verificación. Empezará a recibir alarmas solo después de que su titular confirme la suscripción.</p></div>
+              <div class="admin-grid">
+                <section class="admin-card"><div class="admin-card-heading"><div><h3>Suscripciones al tema de alarmas</h3><p>Solo se listan direcciones de correo; no se exponen credenciales de AWS.</p></div><span id="alerts-count" class="admin-count">—</span></div>
+                  <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Destinatario</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="alerts-rows"></tbody></table></div>
+                  <p id="alerts-empty" class="admin-empty" hidden>No hay destinatarios suscritos. Agrega uno para habilitar avisos por correo.</p>
+                </section>
+                <section class="admin-card admin-form-card"><p class="eyebrow">Distribución de avisos</p><h3>Agregar destinatario</h3>
+                  <form id="alert-form"><label>Correo electrónico<input name="email" type="email" autocomplete="email" maxlength="254" placeholder="operaciones@empresa.com" required /></label><p class="admin-form-hint">El correo debe aceptar el mensaje de confirmación de Amazon SNS.</p><button class="admin-button primary" type="submit">Enviar confirmación</button></form>
+                </section>
+              </div>
+            </section>
+
+            <section class="admin-view" data-view="audit" aria-labelledby="audit-heading" hidden>
+              <div class="admin-section-heading">
+                <div><p class="eyebrow">Trazabilidad</p><h2 id="audit-heading">Auditoría administrativa</h2><p>Registro de cambios sensibles ejecutados desde el portal.</p></div>
+                <button class="admin-button secondary" type="button" data-reload="audit">Actualizar</button>
+              </div>
+              <section class="admin-card"><div class="admin-card-heading"><div><h3>Actividad reciente</h3><p>Se muestran hasta 100 registros recientes.</p></div><span id="audit-count" class="admin-count">—</span></div>
+                <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Fecha</th><th>Actor</th><th>Acción</th><th>Objeto</th></tr></thead><tbody id="audit-rows"></tbody></table></div>
+                <p id="audit-empty" class="admin-empty" hidden>Aún no hay actividad administrativa registrada.</p>
+              </section>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

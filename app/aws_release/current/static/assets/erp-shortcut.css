@@ -1,0 +1,5 @@
+.erp-shortcut { align-items: center; background: var(--portal-soft, #e4ece6); border: 1px solid var(--portal-line, #cad5cd); border-radius: 999px; color: var(--portal-ink, #1e2922); display: inline-flex; font-size: .78rem; font-weight: 750; gap: .45rem; justify-content: center; min-height: 2.35rem; padding: .45rem .85rem; text-decoration: none; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; white-space: nowrap; }
+.erp-shortcut:hover { border-color: var(--portal-accent, #1d704d); transform: translateY(-1px); }
+.erp-shortcut:focus-visible { outline: 3px solid color-mix(in srgb, var(--portal-accent, #1d704d) 45%, transparent); outline-offset: 2px; }
+@media (max-width: 700px) { .erp-shortcut { font-size: 0; gap: 0; padding: 0; width: 2.35rem; } .erp-shortcut::before { content: "▦"; font-size: 1rem; } }
+@media (prefers-reduced-motion: reduce) { .erp-shortcut { transition: none; } }

@@ -1,0 +1,44 @@
+{
+  "captured_at_utc": "2026-10-14T20:27:50Z",
+  "result": "AUTOSCALING_TRIGGERED_AND_CLEANED_UP",
+  "asg": {
+    "name": "tangamandapio-asg",
+    "min": 2,
+    "max": 4,
+    "baseline_desired": 2,
+    "target_metric": "ASGAverageCPUUtilization",
+    "target_percent": 60
+  },
+  "probe": {
+    "type": "synthetic_cpu_only",
+    "duration_seconds": 240,
+    "workers_per_instance": 2,
+    "business_data_written": false
+  },
+  "automatic_scale_out": {
+    "alarm_transition": "OK->ALARM",
+    "alarm_transition_local": "2026-10-14T15:19:21-05:00",
+    "policy_changed_desired": "2->3",
+    "new_instance_launch_local": "2026-10-14T15:19:29-05:00",
+    "new_target_state": "healthy"
+  },
+  "scale_in_cleanup": {
+    "alarm_returned_to_ok_local": "2026-10-14T15:21:21-05:00",
+    "desired_manually_restored_to": 2,
+    "deregistration_delay_seconds": 300,
+    "temporary_instance_terminated": true,
+    "final_in_service_instances": 2,
+    "final_healthy_targets": 2,
+    "cloudformation_drift": "IN_SYNC",
+    "drift_check_local": "2026-10-14T15:27:50-05:00"
+  },
+  "health_after_test": {
+    "/health": 200,
+    "/ready": 200
+  },
+  "limitations": [
+    "The probe verified the CPU target-tracking mechanism and instance lifecycle, not application transaction throughput.",
+    "This does not demonstrate capacity for 3000 users."
+  ],
+  "secret_material_in_report": false
+}

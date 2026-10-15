@@ -1,0 +1,66 @@
+.alert.success {
+  border-color: #66d69d;
+  background: #66d69d15;
+  color: #b8f5d0;
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.temporary-credential {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #a57d37;
+  border-radius: 12px;
+  background: #8b641b1c;
+}
+
+.temporary-credential > div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.temporary-credential strong {
+  color: #fff;
+}
+
+.temporary-credential code {
+  width: fit-content;
+  max-width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #5b523c;
+  border-radius: 8px;
+  background: #071321;
+  color: #ffdf8a;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.temporary-credential small {
+  color: #d5c9a9;
+  line-height: 1.45;
+}
+
+.password-card {
+  height: max-content;
+  margin: auto;
+}
+
+.password-card .form-hint {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .temporary-credential {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

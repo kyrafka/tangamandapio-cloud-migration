@@ -1,0 +1,50 @@
+{
+  "captured_at_utc": "2026-10-14T19:58:09Z",
+  "result": "LIVE_E2E_PASSED",
+  "execution": "AWS Academy EC2 via SSM; deployed portal runtime; authenticated service requests",
+  "cloud_mutations": {
+    "infrastructure_changed": false,
+    "synthetic_qa_orders_and_audit_events_persisted": true,
+    "real_inventory_touched": false
+  },
+  "catalog_import": "passed",
+  "database_health": "ok",
+  "admin_authentication_and_erp_access": "passed",
+  "azure_inventory_mode": "demo-inventory-ledger",
+  "sku": "SKU-QA-V10-20261014",
+  "sale_status": "completed_demo",
+  "purchase_status": "received_demo",
+  "outbox_events_delivered": 2,
+  "azure_application_insights_last_10m": {
+    "receive_fulfillment_event_http_202": 2,
+    "process_fulfillment_message_success": 2,
+    "failures": 0,
+    "latest_worker_utc": "2026-10-14T19:57:57Z"
+  },
+  "synthetic_stock": {
+    "baseline": 10,
+    "final": 10
+  },
+  "role_authorization_checks": {
+    "comercial": {
+      "/api/erp/sales/orders": 200,
+      "/api/outbox": 403,
+      "/api/wms/inventory": 403,
+      "/api/admin/users": 403
+    },
+    "operaciones": {
+      "/api/erp/sales/orders": 403,
+      "/api/outbox": 200,
+      "/api/wms/inventory": 200,
+      "/api/admin/users": 403
+    }
+  },
+  "authenticated_read_only_load": {
+    "requests": 24,
+    "concurrency": 6,
+    "all_http_200": true,
+    "p95_ms": 1360.41,
+    "path": "127.0.0.1:8080 from EC2; not through ALB"
+  },
+  "secret_material_in_report": false
+}

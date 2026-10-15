@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STACK_NAME="${1:-tangamandapio-live-20260930}"
+if [[ -n "${AWS_CLI:-}" ]]; then
+  aws() { "$AWS_CLI" "$@"; }
+fi
+
+STACK_NAME="${1:-${STACK_NAME:-}}"
+if [[ ! "$STACK_NAME" =~ ^tangamandapio-live-[0-9]{8}$ ]]; then
+  echo "PT-STO-01 bloqueado: STACK_NAME debe indicar explícitamente el stack verificado (tangamandapio-live-YYYYMMDD)." >&2
+  exit 2
+fi
 REGION="${AWS_REGION:-us-east-1}"
 BUCKET="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='AssetBucketName'].OutputValue" --output text)"
+if [[ -z "$BUCKET" || "$BUCKET" == "None" ]]; then
+  echo "PT-STO-01 bloqueado: el stack no entregó AssetBucketName." >&2
+  exit 2
+fi
 KEY="qa/pt-sto-01-${RANDOM}-$(date +%s).txt"
 SOURCE_FILE="$(mktemp)"
 TARGET_FILE="$(mktemp)"

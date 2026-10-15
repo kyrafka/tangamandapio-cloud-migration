@@ -1,0 +1,21 @@
+.sidebar nav .portal-admin-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #365343;
+  border-radius: 9px;
+  color: #c9e8d4;
+  background: #173a2b;
+  font-size: .84rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+.sidebar nav .portal-admin-link > span { color: #89cda0; }
+.sidebar nav .portal-admin-link:hover { border-color: #6aa980; background: #204b36; transform: translateX(2px); }
+.sidebar nav .portal-admin-link:focus-visible { outline: 3px solid #55cfff66; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar nav .portal-admin-link { transition: none; }
+}

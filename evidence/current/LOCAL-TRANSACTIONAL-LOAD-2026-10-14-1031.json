@@ -1,0 +1,33 @@
+{
+  "test_id": "PT-PERF-02",
+  "scope": "in-process Flask test client; temporary SQLite database",
+  "cloud_writes": false,
+  "external_services": false,
+  "endpoints": [
+    "POST /api/orders",
+    "GET /api/orders/{id}"
+  ],
+  "requests": 40,
+  "concurrency": 8,
+  "elapsed_seconds": 1.189,
+  "throughput_transactions_per_second": 33.65,
+  "latency_ms": {
+    "min": 23.9,
+    "mean": 202.74,
+    "p95": 377.63,
+    "max": 568.5
+  },
+  "created_http_201": 40,
+  "read_back_http_200": 40,
+  "unique_order_ids": 40,
+  "persisted_orders": 40,
+  "persisted_outbox_events": 40,
+  "pending_outbox_events_expected_without_dispatch": 40,
+  "errors": [],
+  "error_count": 0,
+  "thresholds": {
+    "max_p95_ms": 5000.0,
+    "max_error_rate": 0.0
+  },
+  "passed": true
+}

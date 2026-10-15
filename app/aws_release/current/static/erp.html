@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="ERP corporativo y mensajería interna de Tangamandapio." />
+    <title>ERP y correo interno · Tangamandapio</title>
+    <link rel="stylesheet" href="/assets/platform-console.css" />
+    <link rel="stylesheet" href="/assets/erp.css" />
+    <script type="module" src="/assets/erp.js"></script>
+  </head>
+  <body class="platform-body">
+    <main class="erp-shell">
+      <header class="erp-header">
+        <a class="erp-brand" href="/" aria-label="Volver al portal Tangamandapio">
+          <span class="erp-mark" aria-hidden="true">T</span>
+          <span><strong>Tangamandapio</strong><small>ERP corporativo · portal interno</small></span>
+        </a>
+        <div class="erp-header-actions">
+          <span id="erp-identity" class="erp-identity">Verificando sesión…</span>
+          <a class="platform-back" href="/">Volver al portal</a>
+        </div>
+      </header>
+      <section class="erp-title-row" aria-labelledby="erp-title">
+        <div>
+          <p class="eyebrow">GESTIÓN EMPRESARIAL</p>
+          <h1 id="erp-title">ERP y correo interno</h1>
+          <p class="erp-lede">Ventas, compras, finanzas y comunicación de equipos en una sola extensión del portal.</p>
+        </div>
+        <div id="erp-wms-state" class="source-state" data-state="loading" role="status"><i class="status-dot"></i><span>Consultando WMS…</span></div>
+      </section>
+      <div id="erp-alert" class="platform-alert" role="status" aria-live="polite" hidden></div>
+      <nav id="erp-tabs" class="erp-tabs" aria-label="Módulos ERP" role="tablist"></nav>
+      <section id="erp-content" class="erp-content" aria-live="polite">
+        <div class="erp-loading" role="status"><span class="erp-spinner" aria-hidden="true"></span> Cargando tu espacio de trabajo…</div>
+      </section>
+      <footer class="platform-footer erp-footer">
+        <span>Datos comerciales y financieros en PostgreSQL · existencias consultadas al WMS de Azure.</span>
+        <span>Mensajes privados del portal; no son correo externo.</span>
+      </footer>
+    </main>
+  </body>
+</html>

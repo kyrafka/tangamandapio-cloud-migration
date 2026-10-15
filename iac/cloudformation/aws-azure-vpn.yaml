@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  AWS side of the Tangamandapio AWS-Azure route-based BGP Site-to-Site VPN.
+  Creates only VPN resources and propagates Azure routes to the existing app
+  route table. It does not manage the VPC, subnets, RDS, or security groups.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing VPC from the CloudFormation portal stack.
+  AppRouteTableId:
+    Type: String
+    Description: Existing private application route table from the portal stack.
+    AllowedPattern: '^rtb-[0-9a-f]+$'
+  AzureGatewayPublicIpA:
+    Type: String
+    Description: First public IP of the active-active Azure VPN gateway.
+    AllowedPattern: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+  AzureGatewayPublicIpB:
+    Type: String
+    Description: Second public IP of the active-active Azure VPN gateway.
+    AllowedPattern: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+  AzureVnetCidr:
+    Type: String
+    Default: 10.20.0.0/16
+    Description: Pinned Azure address space; update the preflight and route design together before changing it.
+    AllowedValues:
+      - 10.20.0.0/16
+  AzureBgpAsn:
+    Type: Number
+    Default: 65515
+    MinValue: 1
+    MaxValue: 4294967294
+  AmazonSideAsn:
+    Type: Number
+    Default: 64512
+    MinValue: 1
+    MaxValue: 4294967294
+  ProjectName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '^[a-zA-Z0-9-]{3,32}$'
+  AzureFunctionPrivateHostname:
+    Type: String
+    Default: ''
+    Description: Optional exact HTTPS hostname of the green Flex Function; paired with its Private Endpoint IP to create AWS-only DNS.
+    AllowedPattern: '^$|^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]\.azurewebsites\.net$'
+  AzureFunctionPrivateEndpointIp:
+    Type: String
+    Default: ''
+    Description: Optional Private Endpoint IPv4 address from the pinned Azure Flex subnet 10.20.2.0/27.
+    AllowedPattern: '^$|^10\.20\.2\.(?:[4-9]|[12][0-9]|30)$'
+
+Rules:
+  AzureFunctionPrivateDnsInputsMustBePaired:
+    Assertions:
+      - Assert: !Or
+          - !And
+              - !Equals [!Ref AzureFunctionPrivateHostname, '']
+              - !Equals [!Ref AzureFunctionPrivateEndpointIp, '']
+          - !And
+              - !Not [!Equals [!Ref AzureFunctionPrivateHostname, '']]
+              - !Not [!Equals [!Ref AzureFunctionPrivateEndpointIp, '']]
+        AssertDescription: Provide both the Azure Function hostname and Private Endpoint IP to enable private Route 53 DNS.
+
+Conditions:
+  HasAzureFunctionHostname: !Not [!Equals [!Ref AzureFunctionPrivateHostname, '']]
+  HasAzureFunctionPrivateEndpointIp: !Not [!Equals [!Ref AzureFunctionPrivateEndpointIp, '']]
+  EnableAzureFunctionPrivateDns: !And
+    - !Condition HasAzureFunctionHostname
+    - !Condition HasAzureFunctionPrivateEndpointIp
+
+Resources:
+  VirtualPrivateGateway:
+    Type: AWS::EC2::VPNGateway
+    Properties:
+      Type: ipsec.1
+      AmazonSideAsn: !Ref AmazonSideAsn
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-azure-vpn-gateway'
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: ManagedBy
+          Value: cloudformation
+
+  VpnGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VpcId
+      VpnGatewayId: !Ref VirtualPrivateGateway
+
+  AzureCustomerGatewayA:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: !Ref AzureBgpAsn
+      IpAddress: !Ref AzureGatewayPublicIpA
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-azure-cgw-a'
+        - Key: Project
+          Value: !Ref ProjectName
+
+  AzureCustomerGatewayB:
+    Type: AWS::EC2::CustomerGateway
+    Properties:
+      Type: ipsec.1
+      BgpAsn: !Ref AzureBgpAsn
+      IpAddress: !Ref AzureGatewayPublicIpB
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-azure-cgw-b'
+        - Key: Project
+          Value: !Ref ProjectName
+
+  AzureVpnConnectionA:
+    Type: AWS::EC2::VPNConnection
+    DependsOn: VpnGatewayAttachment
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref AzureCustomerGatewayA
+      VpnGatewayId: !Ref VirtualPrivateGateway
+      StaticRoutesOnly: false
+      VpnTunnelOptionsSpecifications:
+        - TunnelInsideCidr: 169.254.21.0/30
+        - TunnelInsideCidr: 169.254.22.0/30
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-azure-vpn-a'
+        - Key: Project
+          Value: !Ref ProjectName
+
+  AzureVpnConnectionB:
+    Type: AWS::EC2::VPNConnection
+    DependsOn: VpnGatewayAttachment
+    Properties:
+      Type: ipsec.1
+      CustomerGatewayId: !Ref AzureCustomerGatewayB
+      VpnGatewayId: !Ref VirtualPrivateGateway
+      StaticRoutesOnly: false
+      VpnTunnelOptionsSpecifications:
+        - TunnelInsideCidr: 169.254.21.4/30
+        - TunnelInsideCidr: 169.254.22.4/30
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-azure-vpn-b'
+        - Key: Project
+          Value: !Ref ProjectName
+
+  PropagateAzureRoutesToApp:
+    Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn:
+      - AzureVpnConnectionA
+      - AzureVpnConnectionB
+    Properties:
+      VpnGatewayId: !Ref VirtualPrivateGateway
+      RouteTableIds:
+        - !Ref AppRouteTableId
+
+  AzureFunctionPrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: EnableAzureFunctionPrivateDns
+    Properties:
+      Name: !Ref AzureFunctionPrivateHostname
+      HostedZoneConfig:
+        Comment: Private DNS for the Tangamandapio Flex Function Private Endpoint.
+      VPCs:
+        - VPCId: !Ref VpcId
+          VPCRegion: !Ref AWS::Region
+
+  AzureFunctionPrivateRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: EnableAzureFunctionPrivateDns
+    Properties:
+      HostedZoneId: !Ref AzureFunctionPrivateHostedZone
+      Name: !Ref AzureFunctionPrivateHostname
+      Type: A
+      TTL: '60'
+      ResourceRecords:
+        - !Ref AzureFunctionPrivateEndpointIp
+
+Outputs:
+  VpnGatewayId:
+    Value: !Ref VirtualPrivateGateway
+  AzureVpnConnectionAId:
+    Value: !Ref AzureVpnConnectionA
+  AzureVpnConnectionBId:
+    Value: !Ref AzureVpnConnectionB
+  AppRouteTableId:
+    Value: !Ref AppRouteTableId
+  AzureVnetCidr:
+    Value: !Ref AzureVnetCidr
+  AmazonSideAsn:
+    Value: !Ref AmazonSideAsn
+  AzureBgpAsn:
+    Value: !Ref AzureBgpAsn
+  AzureFunctionPrivateHostedZoneId:
+    Condition: EnableAzureFunctionPrivateDns
+    Value: !Ref AzureFunctionPrivateHostedZone
+  AzureFunctionPrivateRecordName:
+    Condition: EnableAzureFunctionPrivateDns
+    Value: !Ref AzureFunctionPrivateHostname

@@ -51,6 +51,48 @@ class FakeS3:
         self.objects.pop((Bucket, Key), None)
 
 
+class FakeJsonResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
+class FakeAdvisoryConnection:
+    def __init__(self, acquired):
+        self.acquired = acquired
+        self.queries = []
+        self.last_query = ""
+        self.closed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        self.close()
+
+    def execute(self, statement, params=()):
+        self.last_query = statement
+        self.queries.append((statement, params))
+        return self
+
+    def fetchone(self):
+        return {"acquired": self.acquired}
+
+    def commit(self):
+        pass
+
+    def close(self):
+        self.closed = True
+
+
 class VoiceRecordingsS3TestCase(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory(prefix="portal-release-test-")
@@ -297,6 +339,28 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_erp_overview_hides_financial_metrics_without_finance_permission(self):
+        with patch(
+            "erp_service.urlopen",
+            return_value=FakeJsonResponse({"mode": "demo-inventory-ledger", "items": []}),
+        ):
+            sales, _ = self.login("sales@example.test", "Temporary-Password-2026")
+            sales_metrics = sales.get("/api/erp/overview").get_json()["metrics"]
+            self.assertIn("sales_orders", sales_metrics)
+            self.assertNotIn("open_receivables", sales_metrics)
+            self.assertNotIn("open_payables", sales_metrics)
+
+            assigned = self.admin.put(
+                f"/api/erp/users/{self.operations_id}/roles",
+                json={"roles": ["erp_finance"]},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            self.assertEqual(assigned.status_code, 200, assigned.get_json())
+            operations, _ = self.login("operations@example.test", "Temporary-Password-2026")
+            finance_metrics = operations.get("/api/erp/overview").get_json()["metrics"]
+            self.assertIn("open_receivables", finance_metrics)
+            self.assertIn("open_payables", finance_metrics)
+
     def test_turn_credentials_are_short_lived_and_signed_per_user(self):
         sales, _ = self.login("sales@example.test", "Temporary-Password-2026")
         self.app.config.update(
@@ -429,6 +493,95 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
             ).fetchone()
         self.assertEqual(row["status"], "delivered")
         self.assertEqual(row["attempts"], 1)
+
+    def test_retry_worker_recovers_failed_outbox_after_backoff(self):
+        event_id = self.create_outbox_event()
+        self.app.config.update(
+            AZURE_FULFILLMENT_URL="https://wms.example.test",
+            AZURE_FUNCTION_KEY="function-test-key",
+            OUTBOX_RETRY_INTERVAL=10,
+            OUTBOX_RETRY_MAX_ATTEMPTS=5,
+        )
+
+        with patch.object(portal, "urlopen", side_effect=TimeoutError):
+            first_attempt = portal.dispatch_outbox_event(
+                self.app, self.database_path, event_id
+            )
+
+        self.assertEqual(first_attempt["status"], "pending")
+        with portal.connect(self.database_path) as connection:
+            failed_event = connection.execute(
+                "SELECT order_id, status, attempts FROM outbox_events WHERE event_id = ?",
+                (event_id,),
+            ).fetchone()
+            persisted_order = connection.execute(
+                "SELECT id FROM orders WHERE id = ?", (failed_event["order_id"],)
+            ).fetchone()
+        self.assertEqual(failed_event["status"], "failed")
+        self.assertEqual(failed_event["attempts"], 1)
+        self.assertIsNotNone(persisted_order)
+
+        deadlines = {}
+        with patch.object(
+            portal,
+            "urlopen",
+            side_effect=[TimeoutError, BytesIO(b'{"status":"queued"}')],
+        ) as upstream:
+            retry = portal.retry_pending_outbox(
+                self.app, self.database_path, deadlines, now=100
+            )
+            self.assertEqual(len(retry), 1)
+            self.assertEqual(retry[0]["status"], "pending")
+
+            before_backoff = portal.retry_pending_outbox(
+                self.app, self.database_path, deadlines, now=139
+            )
+            self.assertEqual(before_backoff, [])
+            delivered = portal.retry_pending_outbox(
+                self.app, self.database_path, deadlines, now=140
+            )
+
+        self.assertEqual(len(delivered), 1)
+        self.assertEqual(delivered[0]["status"], "delivered")
+        self.assertEqual(upstream.call_count, 2)
+        with portal.connect(self.database_path) as connection:
+            final_event = connection.execute(
+                "SELECT status, attempts, last_error FROM outbox_events WHERE event_id = ?",
+                (event_id,),
+            ).fetchone()
+        self.assertEqual(final_event["status"], "delivered")
+        self.assertEqual(final_event["attempts"], 3)
+        self.assertIsNone(final_event["last_error"])
+
+    def test_outbox_dispatch_lock_is_released_after_dispatch(self):
+        connection = FakeAdvisoryConnection(acquired=True)
+
+        with patch.object(portal, "is_postgresql", return_value=True), patch.object(
+            portal, "connect", return_value=connection
+        ):
+            with portal.outbox_dispatch_lock("postgresql://test", "evt-lock-test") as acquired:
+                self.assertTrue(acquired)
+
+        query_text = " ".join(query for query, _params in connection.queries)
+        self.assertIn("pg_try_advisory_lock", query_text)
+        self.assertIn("pg_advisory_unlock", query_text)
+        self.assertTrue(connection.closed)
+
+    def test_outbox_dispatch_skips_when_another_worker_holds_event_lock(self):
+        connection = FakeAdvisoryConnection(acquired=False)
+
+        with patch.object(portal, "is_postgresql", return_value=True), patch.object(
+            portal, "connect", return_value=connection
+        ), patch.object(portal, "urlopen") as upstream:
+            result = portal.dispatch_outbox_event(
+                self.app, self.database_path, "evt-already-dispatching"
+            )
+
+        self.assertEqual(result["status"], "pending")
+        self.assertEqual(result["reason"], "dispatch_in_progress")
+        upstream.assert_not_called()
+        self.assertFalse(any("pg_advisory_unlock" in query for query, _ in connection.queries))
+        self.assertTrue(connection.closed)
 
 
 if __name__ == "__main__":

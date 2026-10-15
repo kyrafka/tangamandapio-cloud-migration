@@ -1,5 +1,31 @@
 # Evidencias Azure
 
+**E2E y seguridad de ingreso — 14/10/2026, 07:43–07:49 America/Chicago:**
+el smoke live del portal local verificó 401 sin Function key, 400 para fuente
+no permitida y ausencia de persistencia del ID rechazado. Después procesó venta
+y recepción compensatoria; stock del ledger demo volvió a la línea base.
+Application Insights mostró seis respuestas 202, un 400 de validación y seis
+workers `resultCode=0` para tres corridas recientes. Poison count cero antes y
+después, sin leer payloads. No fue tráfico de EC2 ni una prueba de VPN; los
+eventos válidos sintéticos quedan en auditoría. Detalle en
+[`AZURE-ERP-E2E-2026-10-14.md`](AZURE-ERP-E2E-2026-10-14.md).
+
+**E2E compensado — 14/10/2026, 07:29 America/Chicago:** el portal local, con
+SQLite efímera, envió una venta y una recepción compensatoria; la Azure
+Function procesó ambos eventos y el ledger ficticio volvió a su línea base.
+Application Insights mostró cuatro solicitudes HTTP 202 y cuatro workers con
+`resultCode=0` para dos corridas recientes. El poison count fue cero antes y
+después, solo por metadatos. No es tráfico originado desde EC2 ni conexión
+privada AWS–Azure; dos eventos sintéticos permanecen en auditoría. Detalle en
+[`AZURE-ERP-E2E-2026-10-14.md`](AZURE-ERP-E2E-2026-10-14.md).
+
+**Revalidación viva — 14/10/2026, 00:51 America/Chicago:** la Function
+`tangama-wms-261008` está `Running`, `httpsOnly=true`, Linux/West US; health
+200. Application Insights conserva dos solicitudes de
+`process_fulfillment_message`, ambas `resultCode=0` y ninguna fallida. Esta es
+telemetría agregada sin payload; no es una captura del portal ni demuestra un
+WMS comercial. Véase el [corte cloud del 14/10](../CLOUD-REVALIDATION-2026-10-14.md).
+
 **Fecha del antecedente:** 05/10/2026
 **Dominio:** operación WMS asíncrona de Tangamandapio S.A.C.  
 **Región temporal:** West US
@@ -9,6 +35,14 @@ cerraron. El portal de Azure mostró un ciclo posterior con la Function App
 [`../REVISION_CHROME_2026-10-08.md`](../REVISION_CHROME_2026-10-08.md). No se
 confundirá el cierre de los grupos antiguos con el estado de este recurso
 posterior.
+
+**Revalidación viva — 13/10/2026, 23:09 America/Chicago:** el grupo activo es
+`rg-tangamandapio-rebuild-wus`, Function `tangama-wms-261008` (`Running`,
+HTTPS-only), hash publicado `6eea3b6a…`, health 200 y E2E compensado venta/
+recepción aprobado. Un Terraform plan reciente contra el state local y el ZIP
+con ese hash terminó `No changes` (exit 0). No se aplicó nada en ese plan. La
+revalidación completa y sus límites están en
+[`../CLOUD-REVALIDATION-2026-10-13.md`](../CLOUD-REVALIDATION-2026-10-13.md).
 
 | ID | Qué demuestra | Resultado | Uso en el entregable |
 |---|---|---|---|

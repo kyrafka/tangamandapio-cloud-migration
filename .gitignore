@@ -9,6 +9,8 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+iac/environments/azure-rebuild/$planPath
+iac/environments/azure-rebuild/alert-recipients.local.tfvars
 
 # Variables y credenciales locales
 *.auto.tfvars

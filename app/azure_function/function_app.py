@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import os
 import re
 import uuid
@@ -18,7 +19,11 @@ import azure.functions as func
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 EVENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{8,80}$")
 SKU_PATTERN = re.compile(r"^[A-Z0-9_-]{3,40}$")
+DEFAULT_EVENT_SOURCES = {"aws-order-core", "aws-wms-demo-console", "tangamandapio-erp"}
+SUPPORTED_EVENT_TYPES = {"order.created", "purchase.received"}
 INVENTORY_BLOB = "inventory/state.json"
+DEFAULT_POISON_QUEUE_NAME = "fulfillment-events-poison"
+DEMO_CATALOG_VERSION = 2
 DEMO_PRODUCTS = {
     "SKU-ARROZ-001": {
         "name": "Arroz premium · saco 50 kg",
@@ -38,6 +43,60 @@ DEMO_PRODUCTS = {
         "unit_price": 86.00,
         "initial_stock": 18,
     },
+    "SKU-CAFE-001": {
+        "name": "Café tostado · saco 10 kg",
+        "unit": "saco",
+        "unit_price": 128.00,
+        "initial_stock": 12,
+    },
+    "SKU-FREJOL-001": {
+        "name": "Fréjol canario · saco 25 kg",
+        "unit": "saco",
+        "unit_price": 119.90,
+        "initial_stock": 20,
+    },
+    "SKU-QUINUA-001": {
+        "name": "Quinua blanca · saco 25 kg",
+        "unit": "saco",
+        "unit_price": 172.00,
+        "initial_stock": 14,
+    },
+    "SKU-AVENA-001": {
+        "name": "Avena tradicional · saco 25 kg",
+        "unit": "saco",
+        "unit_price": 91.50,
+        "initial_stock": 32,
+    },
+    "SKU-FIDEOS-001": {
+        "name": "Fideos tallarín · caja x 20",
+        "unit": "caja",
+        "unit_price": 64.00,
+        "initial_stock": 28,
+    },
+    "SKU-LECHE-001": {
+        "name": "Leche evaporada · caja x 48",
+        "unit": "caja",
+        "unit_price": 154.80,
+        "initial_stock": 38,
+    },
+    "SKU-ATUN-001": {
+        "name": "Atún en conserva · caja x 48",
+        "unit": "caja",
+        "unit_price": 218.00,
+        "initial_stock": 16,
+    },
+    "SKU-GALLETAS-001": {
+        "name": "Galletas surtidas · caja x 24",
+        "unit": "caja",
+        "unit_price": 55.00,
+        "initial_stock": 42,
+    },
+    "SKU-MAIZ-001": {
+        "name": "Maíz amarillo · saco 50 kg",
+        "unit": "saco",
+        "unit_price": 89.90,
+        "initial_stock": 26,
+    },
 }
 
 
@@ -45,6 +104,7 @@ def _inventory_seed() -> dict:
     now = datetime.now(timezone.utc).isoformat()
     return {
         "schema_version": 1,
+        "catalog_version": DEMO_CATALOG_VERSION,
         "mode": "demo-inventory-ledger",
         "initialized_at": now,
         "updated_at": now,
@@ -64,8 +124,19 @@ def _inventory_seed() -> dict:
     }
 
 
-def _validated_items(payload: dict) -> tuple[list[dict] | None, str | None]:
-    order = payload.get("order") if isinstance(payload.get("order"), dict) else {}
+def _validated_items(
+    payload: dict, event_type: str | None = None, known_skus: set[str] | None = None
+) -> tuple[list[dict] | None, str | None]:
+    payload_event_type = str(payload.get("event_type", "order.created"))
+    event_type = str(event_type or payload_event_type)
+    if event_type not in SUPPORTED_EVENT_TYPES:
+        return None, "event_type no está soportado"
+    if payload_event_type not in SUPPORTED_EVENT_TYPES:
+        return None, "event_type del payload no está soportado"
+    if payload_event_type != event_type:
+        return None, "event_type del sobre no coincide con el payload"
+    parent_key = "purchase_order" if event_type == "purchase.received" else "order"
+    order = payload.get(parent_key) if isinstance(payload.get(parent_key), dict) else {}
     items = order.get("items", payload.get("items"))
     if items is None:
         return None, None
@@ -78,7 +149,7 @@ def _validated_items(payload: dict) -> tuple[list[dict] | None, str | None]:
             return None, "cada línea debe ser un objeto SKU/cantidad"
         sku = str(item.get("sku", ""))
         quantity = item.get("quantity")
-        if not SKU_PATTERN.fullmatch(sku) or sku not in DEMO_PRODUCTS:
+        if not SKU_PATTERN.fullmatch(sku) or (known_skus is not None and sku not in known_skus):
             return None, "SKU fuera del catálogo de laboratorio"
         if sku in seen:
             return None, "no se permiten SKU repetidos en el mismo pedido"
@@ -146,12 +217,62 @@ def _write_json_blob(
 
 def _ensure_inventory_blob(token: str) -> None:
     try:
-        _read_json_blob(INVENTORY_BLOB, token)
-        return
+        state, _ = _read_json_blob(INVENTORY_BLOB, token)
     except HTTPError as error:
         if error.code != 404:
             raise
-    _write_json_blob(INVENTORY_BLOB, _inventory_seed(), token, if_none_match=True)
+        if _write_json_blob(INVENTORY_BLOB, _inventory_seed(), token, if_none_match=True):
+            return
+        # Another cold-start may have created the blob concurrently.
+        state = None
+
+    if state is not None:
+        items = state.get("items")
+        if not isinstance(items, dict):
+            raise ValueError("demo inventory blob has an invalid items catalog")
+        if (
+            state.get("catalog_version", 0) >= DEMO_CATALOG_VERSION
+            and set(DEMO_PRODUCTS).issubset(items)
+        ):
+            return
+
+    try:
+        lease_id = _acquire_inventory_lease(token)
+    except HTTPError as error:
+        # A queue worker may currently own the short lease; the next request
+        # will retry the additive migration without failing a read-only view.
+        if error.code == 409:
+            return
+        raise
+    try:
+        current, etag = _read_json_blob(INVENTORY_BLOB, token)
+        items = current.get("items")
+        if not isinstance(items, dict):
+            raise ValueError("demo inventory blob has an invalid items catalog")
+        seed = _inventory_seed()
+        additions = {
+            sku: item
+            for sku, item in seed["items"].items()
+            if sku not in items
+        }
+        if not additions and current.get("catalog_version", 0) >= DEMO_CATALOG_VERSION:
+            return
+        updated = dict(current)
+        updated_items = dict(items)
+        updated_items.update(additions)
+        updated["items"] = updated_items
+        updated["catalog_version"] = DEMO_CATALOG_VERSION
+        updated["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if not etag or not _write_json_blob(
+            INVENTORY_BLOB,
+            updated,
+            token,
+            if_match=etag,
+            lease_id=lease_id,
+        ):
+            raise RuntimeError("demo inventory catalog changed during migration")
+    finally:
+        _release_inventory_lease(token, lease_id)
 
 
 def _acquire_inventory_lease(token: str) -> str:
@@ -199,12 +320,21 @@ def _fulfill_against_inventory(event: dict, state: dict) -> tuple[dict, dict]:
         return state, dict(prior)
 
     payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-    items, validation_error = _validated_items(payload)
+    event_type = str(
+        event.get("event_type") or payload.get("event_type", "order.created")
+    )
+    items, validation_error = _validated_items(
+        payload, event_type, known_skus=set(state.get("items", {}))
+    )
     now = datetime.now(timezone.utc).isoformat()
     if validation_error:
         result = {
             "event_id": event_id,
-            "status": "rejected_invalid_items",
+            "status": (
+                "rejected_invalid_event"
+                if "event_type" in validation_error
+                else "rejected_invalid_items"
+            ),
             "mode": "demo-inventory-ledger",
             "processed_at": now,
             "source_sha256": event.get("sha256"),
@@ -220,6 +350,21 @@ def _fulfill_against_inventory(event: dict, state: dict) -> tuple[dict, dict]:
             "source_sha256": event.get("sha256"),
             "note": "El evento no incluye SKU y cantidad; no se modificó el inventario de laboratorio.",
             "items": [],
+        }
+    elif event_type == "purchase.received":
+        received = []
+        for item in items:
+            product = state["items"][item["sku"]]
+            product["on_hand"] = int(product["on_hand"]) + item["quantity"]
+            received.append({**item, "on_hand_after": product["on_hand"]})
+        result = {
+            "event_id": event_id,
+            "status": "demo_restock_completed",
+            "mode": "demo-inventory-ledger",
+            "processed_at": now,
+            "source_sha256": event.get("sha256"),
+            "note": "Recepción aplicada una sola vez al inventario ficticio de laboratorio; no es stock comercial.",
+            "items": received,
         }
     else:
         unavailable = []
@@ -302,6 +447,21 @@ def _storage_headers(token: str, content_type: str) -> dict[str, str]:
         "x-ms-date": format_datetime(datetime.now(timezone.utc), usegmt=True),
         "x-ms-version": "2022-11-02",
     }
+
+
+def _read_queue_approximate_message_count(queue_name: str, token: str) -> int:
+    """Reads only queue metadata; poison message bodies are never exposed."""
+    account_url = os.environ["AZURE_QUEUE_ACCOUNT_URL"].rstrip("/")
+    request = Request(
+        f"{account_url}/{quote(queue_name, safe='')}?comp=metadata",
+        headers=_storage_headers(token, "application/json"),
+        method="GET",
+    )
+    with urlopen(request, timeout=10) as response:
+        count = response.headers.get("x-ms-approximate-messages-count")
+    if count is None:
+        raise RuntimeError("queue metadata omitted its approximate message count")
+    return max(0, int(count))
 
 
 def _write_event_blob(document: dict, token: str) -> bool:
@@ -418,12 +578,27 @@ def receive_fulfillment_event(req: func.HttpRequest) -> func.HttpResponse:
 
     event_id = str(payload.get("event_id", ""))
     event_type = str(payload.get("event_type", ""))
-    if not EVENT_ID_PATTERN.fullmatch(event_id) or event_type != "order.created":
+    event_source = str(payload.get("source", "")).strip()
+    allowed_sources = {
+        item.strip()
+        for item in os.getenv("ALLOWED_EVENT_SOURCES", ",".join(sorted(DEFAULT_EVENT_SOURCES))).split(",")
+        if item.strip()
+    }
+    if not EVENT_ID_PATTERN.fullmatch(event_id) or event_type not in {"order.created", "purchase.received"}:
         return func.HttpResponse(
-            "event_id válido y event_type=order.created son obligatorios",
+            "event_id válido y event_type compatible son obligatorios",
             status_code=400,
         )
+    if event_source and event_source not in allowed_sources:
+        return func.HttpResponse("source no está autorizado para el contrato WMS", status_code=400)
     _, items_error = _validated_items(payload)
+    if items_error:
+        return func.HttpResponse(items_error, status_code=400)
+
+    token = _managed_identity_token()
+    _ensure_inventory_blob(token)
+    inventory, _ = _read_json_blob(INVENTORY_BLOB, token)
+    _, items_error = _validated_items(payload, known_skus=set(inventory.get("items", {})))
     if items_error:
         return func.HttpResponse(items_error, status_code=400)
 
@@ -438,7 +613,6 @@ def receive_fulfillment_event(req: func.HttpRequest) -> func.HttpResponse:
     serialized = json.dumps(document, separators=(",", ":"), sort_keys=True)
     document["sha256"] = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
-    token = _managed_identity_token()
     created = _write_event_blob(document, token)
     if created:
         accepted_document = document
@@ -564,10 +738,176 @@ def demo_inventory(req: func.HttpRequest) -> func.HttpResponse:
             {
                 "provider": "Azure Functions + Blob Storage",
                 "mode": "demo-inventory-ledger",
+                "catalog_version": state.get("catalog_version", 1),
                 "is_real_erp": False,
                 "updated_at": state.get("updated_at"),
                 "note": "Catálogo y existencias ficticias para la demostración; no representa inventario comercial real.",
                 "items": items,
+            },
+            separators=(",", ":"),
+        ),
+        status_code=200,
+        mimetype="application/json",
+    )
+
+
+@app.route(route="wms/catalog", methods=["POST"])
+def update_demo_catalog(req: func.HttpRequest) -> func.HttpResponse:
+    """Adds or updates synthetic product metadata without resetting stock."""
+    try:
+        payload = req.get_json()
+    except ValueError:
+        return func.HttpResponse("JSON inválido", status_code=400)
+    products = payload.get("products") if isinstance(payload, dict) else None
+    if not isinstance(products, list) or not 1 <= len(products) <= 500:
+        return func.HttpResponse(
+            "products debe incluir entre 1 y 500 SKU", status_code=400
+        )
+
+    normalized = []
+    seen = set()
+    for product in products:
+        if not isinstance(product, dict):
+            return func.HttpResponse("producto inválido", status_code=400)
+        sku = str(product.get("sku", "")).strip().upper()
+        name = str(product.get("name", "")).strip()
+        unit = str(product.get("unit", "")).strip()
+        raw_unit_price = product.get("unit_price")
+        if isinstance(raw_unit_price, bool):
+            return func.HttpResponse("precio inválido", status_code=400)
+        try:
+            unit_price = float(raw_unit_price)
+        except (TypeError, ValueError):
+            return func.HttpResponse("precio inválido", status_code=400)
+        initial_stock = product.get("initial_stock")
+        if (
+            not SKU_PATTERN.fullmatch(sku)
+            or sku in seen
+            or not name
+            or len(name) > 180
+            or not unit
+            or len(unit) > 32
+            or not math.isfinite(unit_price)
+            or not 0 <= unit_price <= 1_000_000
+            or isinstance(initial_stock, bool)
+            or not isinstance(initial_stock, int)
+            or not 0 <= initial_stock <= 1_000_000
+        ):
+            return func.HttpResponse(
+                "SKU, nombre, unidad, precio o saldo inicial inválido",
+                status_code=400,
+            )
+        normalized.append(
+            {
+                "sku": sku,
+                "name": name,
+                "unit": unit,
+                "unit_price": round(unit_price, 2),
+                "initial_stock": initial_stock,
+            }
+        )
+        seen.add(sku)
+
+    token = _managed_identity_token()
+    _ensure_inventory_blob(token)
+    lease_id = _acquire_inventory_lease(token)
+    try:
+        state, etag = _read_json_blob(INVENTORY_BLOB, token)
+        items = state.get("items")
+        if not isinstance(items, dict):
+            raise ValueError("demo inventory blob has an invalid items catalog")
+        updated_items = dict(items)
+        created_count = 0
+        updated_count = 0
+        now = datetime.now(timezone.utc).isoformat()
+        for product in normalized:
+            current = updated_items.get(product["sku"])
+            if current is None:
+                updated_items[product["sku"]] = {
+                    **product,
+                    "currency": "PEN",
+                    "on_hand": product["initial_stock"],
+                    "data_origin": "synthetic",
+                    "updated_at": now,
+                }
+                created_count += 1
+            else:
+                preserved = dict(current)
+                preserved.update(
+                    {
+                        "name": product["name"],
+                        "unit": product["unit"],
+                        "unit_price": product["unit_price"],
+                        "currency": "PEN",
+                        "data_origin": "synthetic",
+                        "updated_at": now,
+                    }
+                )
+                # An import is master-data maintenance, not a stock adjustment.
+                preserved["on_hand"] = current.get("on_hand", current.get("initial_stock", 0))
+                preserved["initial_stock"] = current.get(
+                    "initial_stock", preserved["on_hand"]
+                )
+                updated_items[product["sku"]] = preserved
+                updated_count += 1
+        updated_state = dict(state)
+        updated_state["items"] = updated_items
+        updated_state["updated_at"] = now
+        if not etag or not _write_json_blob(
+            INVENTORY_BLOB,
+            updated_state,
+            token,
+            if_match=etag,
+            lease_id=lease_id,
+        ):
+            raise RuntimeError("demo inventory catalog changed during import")
+    finally:
+        _release_inventory_lease(token, lease_id)
+
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "created": created_count,
+                "updated": updated_count,
+                "stock_preserved": True,
+                "mode": "demo-inventory-ledger",
+            },
+            separators=(",", ":"),
+        ),
+        status_code=200,
+        mimetype="application/json",
+    )
+
+
+@app.route(route="wms/poison-queue", methods=["GET"])
+def poison_queue_status(req: func.HttpRequest) -> func.HttpResponse:
+    """Reports a count for authorized operators, without returning message data."""
+    queue_name = os.getenv("WMS_POISON_QUEUE_NAME", DEFAULT_POISON_QUEUE_NAME)
+    try:
+        token = _managed_identity_token()
+        count = _read_queue_approximate_message_count(queue_name, token)
+    except HTTPError as error:
+        reason = "access_denied" if error.code == 403 else "queue_unavailable"
+        logging.warning("wms_poison_queue_status_unavailable reason=%s", reason)
+        return func.HttpResponse(
+            json.dumps({"status": "unavailable", "queue": queue_name, "reason": reason}),
+            status_code=503,
+            mimetype="application/json",
+        )
+    except (KeyError, OSError, RuntimeError, ValueError):
+        logging.exception("wms_poison_queue_status_unavailable reason=storage_error")
+        return func.HttpResponse(
+            json.dumps({"status": "unavailable", "queue": queue_name, "reason": "storage_error"}),
+            status_code=503,
+            mimetype="application/json",
+        )
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "status": "ok",
+                "queue": queue_name,
+                "approximate_message_count": count,
+                "payloads_exposed": False,
             },
             separators=(",", ":"),
         ),

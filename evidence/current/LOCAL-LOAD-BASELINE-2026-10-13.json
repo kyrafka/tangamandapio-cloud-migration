@@ -1,0 +1,20 @@
+{
+  "test_id": "PT-PERF-01",
+  "url": "http://127.0.0.1:8080/health",
+  "requests": 100,
+  "concurrency": 10,
+  "elapsed_seconds": 0.394,
+  "latency_ms": {
+    "min": 6.52,
+    "mean": 34.68,
+    "p95": 303.93,
+    "max": 309.7
+  },
+  "errors": 0,
+  "error_rate": 0.0,
+  "thresholds": {
+    "max_p95_ms": 2000,
+    "max_error_rate": 0.01
+  },
+  "passed": true
+}

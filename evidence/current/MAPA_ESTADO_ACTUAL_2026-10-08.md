@@ -1,49 +1,48 @@
 # Mapa del estado actual — 08/10/2026
 
-**Corte:** 19:48 CDT. **Alcance:** solo recursos y pruebas que constan como existentes/observados. La consulta actual fue de solo lectura; no se aplicó Terraform ni CloudFormation.
+**Corte:** 08/10/2026, después del apagado. **Objetivo:** detener costos de la demostración y conservar IaC suficiente para una reconstrucción vacía. No se conservaron snapshots.
 
-## Lo que está activo ahora
+## Estado de nube
 
 ### AWS — `us-east-1`
 
-- CloudFormation `tangamandapio-live-20261005`: `UPDATE_COMPLETE`, **51 recursos**, último cambio registrado el 08/10. Drift reportado `IN_SYNC`.
-- La plantilla descargada de CloudFormation coincide, tras normalizar saltos de línea, con `iac/cloudformation/aws-lab.yaml`; `validate-template` pasó.
-- ALB y target group activos; **2/2 targets healthy**. Auto Scaling: mínimo 2, deseado 2, máximo 4; 2 instancias `InService` y sanas.
-- RDS PostgreSQL: `available`, Multi-AZ, cifrado, privada (`PubliclyAccessible=false`), `db.t3.micro`, backups automáticos de 7 días.
-- `GET /health` respondió `status=ok` y `database=ok`. La comprobación HTTPS usó `curl -k`: no valida confianza del certificado. No hay dominio propio ni HTTPS confiable verificado.
+- Se eliminaron los stacks `tangamandapio-live-20261005` y `tangamandapio-voice-recordings`, además de los tres buckets del proyecto y sus versiones.
+- Verificación posterior: cero stacks/buckets del proyecto; cero instancias EC2 activas; VPC, balanceador y RDS ausentes; NAT Gateway en estado `deleted`; sin volúmenes, EIP asociados ni snapshots manuales o automáticos.
+- Se eliminó también la clave Azure externa de Secrets Manager y el parámetro seguro SSM `/tangamandapio/azure/function-key`.
+- El inventario por tags conserva entradas históricas de recursos terminados/eliminados; las consultas de estado confirman que no son instancias o volúmenes activos. La pila base administrada por AWS Academy no se modificó.
+- Se borraron los pedidos, cuentas demo, base PostgreSQL, documentos, grabaciones (no había audios bajo `voice-recordings/`) y el historial de versiones del artefacto. No hay recuperación desde la nube.
 
 ### Azure — `westus`
 
-- Resource Group `rg-tangamandapio-261005-wus`: estado `Succeeded`.
-- Inventario actual: **10 recursos de nivel superior**, todos con `provisioningState=Succeeded`: Function App y plan, Storage, Key Vault, Application Insights, Log Analytics, dos Action Groups (uno de Smart Detection) y dos alertas de métricas (5xx y latencia).
-- `tangama-wms-fn`: habilitada, estado de runtime `Running`, `httpsOnly=true`.
-- El flujo es **demostrativo**: Blob/Queue y ledger de inventario ficticio. No está conectado a existencias reales ni a un ERP/WMS autorizado. En las ejecuciones revisadas anteriormente el resultado explícito fue `simulated_fulfillment_completed`; no se ha comprobado en este corte una invocación nueva ni una modificación real de stock.
-- La restauración PITR de RDS se probó anteriormente con una copia temporal de lectura y luego se eliminó. Falta documentar mediciones formales de RTO/RPO.
+- El Resource Group `rg-tangamandapio-261005-wus` y sus 10 recursos se eliminaron. `az group exists` devuelve `false`.
+- El Key Vault anterior aparece en la lista de vaults con soft-delete; no es un recurso activo ni forma parte de un Resource Group vivo. La reconstrucción usa un nombre nuevo para evitar colisión con ese período de recuperación.
+- Se eliminaron la Function App, su plan, Storage/Queue/Blob, Application Insights, Log Analytics, alertas y Action Groups del entorno anterior.
+- La clave de Function almacenada fuera del grupo se eliminó de AWS. No quedan conexiones operativas entre Azure y AWS.
 
-## Aplicación y pruebas realizadas
+## Infraestructura como código y reconstrucción
 
-- El portal local que sirve `127.0.0.1:8080` pertenece a la copia `Tangamandapio_SAC_LIMPIO`, fuera de este repositorio. La corrección más reciente separó fallos de endpoints opcionales y redirige sesiones vencidas al login.
-- Último control local documentado: **59/59 pruebas** y build de producción aprobado; seis roles se ejercitaron con cuentas sintéticas y una base aislada. Esto no valida las cuentas persistentes del sitio publicado.
-- La interfaz de telefonía/WebRTC está implementada, pero no se verificó una llamada bidireccional real de audio/video entre dos navegadores y redes distintas. La pila de grabaciones existe; no se probó aquí un ciclo real de grabar/reproducir.
-- Las capturas de consola mostradas en navegador no quedaron archivadas como PNG; [CAPTURAS_PENDIENTES.md](CAPTURAS_PENDIENTES.md) conserva la lista de evidencias que aún falta guardar.
-
-## IaC y preparación de despliegue
-
-| Área | Hecho comprobado | Estado real para aplicar |
+| Área | Fuente actual | Validación/estado |
 |---|---|---|
-| AWS CloudFormation | `aws-lab.yaml` coincide con la plantilla viva; validación AWS correcta; stack sin drift. `deploy.sh` ahora crea un change set revisable, conserva parámetros actuales (incluidos `NoEcho`) y no lo ejecuta por defecto. | **Listo para preparar/revisar un update** del stack existente. No se desplegó ningún cambio en este corte. |
-| Terraform AWS `environments/demo` | `fmt -check` y `validate` pasan; código cubre solo una nueva VPC segmentada y Azure opcional. No hay Terraform state. | **No es el gestor del AWS activo.** Aplicarlo crearía una VPC adicional; no usar para actualizar el stack CloudFormation. |
-| Terraform Azure `environments/azure-demo` | `fmt -check` y `validate` pasan. El state local (02/10) registra el grupo viejo `rg-tangamandapio-261001r2-wus`, no el actual `rg-tangamandapio-261005-wus`. Además, el `terraform.tfvars` local no define `function_package_path`; el `plan -refresh-only` se detuvo por esa variable faltante. | **No listo para aplicar.** Falta respaldar y reconciliar/importar recursos actuales en un state aislado, incluir alertas/Action Groups y producir/verificar el plan sin reemplazos ni borrados. No se tocó state ni nube. |
+| AWS portal | `iac/cloudformation/aws-lab.yaml`, `deploy.sh`, `package_portal_artifact.sh`, `rebuild.sh` | Plantilla validada. El rebuild crea en dos fases, inicia EC2 en cero y luego habilita dos instancias. Perfil por defecto: sin Multi-AZ, WAF ni AWS Backup, un día de retención RDS. |
+| AWS grabaciones | `iac/cloudformation/voice-recordings.yaml` | El rebuild la crea tras restaurar el rol del portal. `destroy.sh` vacía versiones y elimina explícitamente el bucket que el template retiene. |
+| Terraform AWS `environments/demo` | `iac/modules/aws_network` | Código separado, sin state del proyecto; no aplicarlo como actualización del portal. |
+| Azure anterior | `iac/environments/azure-demo` | State histórico, no reconciliado con el grupo eliminado. No usar para recrear ni destruir el nuevo entorno. |
+| Azure rebuild | `iac/environments/azure-rebuild` | `terraform validate` pasó; plan aislado: 15 por crear, 0 cambios, 0 destrucciones. No se aplicó. Requiere revisar nombres globales y generar el ZIP local de la Function. |
 
-## Aún no debe presentarse como terminado
+Para reconstruir: aplicar primero el entorno nuevo `azure-rebuild`, obtener endpoint y clave nueva de Function, guardarla en AWS Secrets Manager sin pasarla por Git/chat/historial de shell y ejecutar después `iac/cloudformation/rebuild.sh`. El rebuild de AWS necesita credenciales vigentes de AWS Academy; los recursos del proyecto están apagados hasta entonces.
 
-- WMS/ERP real y descuento de inventario empresarial.
-- Invocación Azure correlacionada de extremo a extremo en el corte actual, con evidencia durable de resultado.
-- Aplicación automática de cambios Azure mediante Terraform después de reconciliar state.
-- Medición formal de RPO/RTO para la restauración PITR ya probada.
-- Prueba A/V real entre dos navegadores; grabación/reproducción de voz comprobada.
-- Dominio propio con certificado confiable y capturas de evidencia archivadas.
+En Windows/WSL, los scripts Bash aceptan `AWS_CLI='/mnt/c/Program Files/Amazon/AWSCLIV2/aws.exe'` si la CLI no está instalada en WSL.
 
-## Cambios hechos en este corte
+## Alcance funcional y pendientes
 
-Se corrigió la guía de infraestructura para que refleje el inventario actual, se reemplazó el script AWS que apuntaba al stack antiguo y podía resetear parámetros por defecto por uno que prepara un change set y conserva valores previos, y se etiquetaron los ejemplos Terraform de Azure como sandbox aislado. No hubo `apply`, `execute-change-set`, reinicio ni borrado cloud.
+- Azure/WMS sigue siendo una simulación académica de Blob/Queue e inventario ficticio, no un WMS enlazado a existencias comerciales.
+- La reconstrucción no se probó levantando un segundo stack; solo se validaron plantillas, Terraform, paquetes y pruebas locales. No afirmar que la nube quedó desplegada.
+- El paquete Azure desplegado anteriormente no se pudo comparar binariamente con el ZIP local; el entorno nuevo debe construirse desde el ZIP versionado local.
+- A/V WebRTC entre dos navegadores reales, grabación/reproducción, dominio y HTTPS confiable siguen pendientes.
+- El portal local antes disponible en `127.0.0.1:8080` estaba en otra copia de trabajo; esta carpeta contiene las fuentes de IaC y la aplicación desplegada en AWS.
+
+## Verificaciones realizadas en este corte
+
+- AWS: stack y buckets ausentes, RDS/EC2 ausentes, backups consultados sin resultados, sin NAT activo ni EIP asociada.
+- Azure: Resource Group ausente; el vault antiguo está en recuperación por soft-delete y no activo.
+- Local: `aws-lab.yaml` valida; `bash -n` pasó en los scripts CloudFormation; `terraform fmt -check -recursive iac` y `terraform validate` de `azure-rebuild` pasaron. Las 14 pruebas unitarias del WMS local pasaron antes del apagado.

@@ -5,8 +5,12 @@ Azure para el WMS de demostración. OCI queda fuera del trabajo operativo; los
 documentos escritos del curso aún la mencionan, por lo que la excepción debe
 respaldarse por escrito antes de entregar (ver [evaluación de rúbrica](10_evaluacion_rubrica_entregable_final_2026-10-08.md)).
 
-Este inventario corresponde a las 21:26 UTC del 08/10. Para lo que existe al
-corte más reciente, usa [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md); los datos aquí se conservan como bitácora de ese ciclo.
+Este inventario corresponde a las 21:26 UTC del 08/10 y se conserva como
+bitácora histórica. Para el intento AWS más reciente, usa
+[AWS-DESPLIEGUE-V11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md)
+y la [matriz de rúbrica actualizada](04_matriz_rubrica.md); la
+[revalidación del 14/10](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md)
+precede a v11. No presentes las tablas de esta bitácora como estado actual.
 
 ## Verificación operativa registrada — 08/10/2026, 21:26 UTC
 
@@ -34,9 +38,9 @@ corte más reciente, usa [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/
 
 | Proveedor | Comprobación | Resultado y límite |
 |---|---|---|
-| AWS | STS, CloudFormation, ASG, ALB, RDS y rutas públicas | Stack `UPDATE_COMPLETE`, drift `IN_SYNC` 0; ASG/targets 2/2 saludables; auto-dispatch true, retry 60 s; RDS available/Multi-AZ/cifrado/7 días. |
-| Azure | Function `tangama-wms-fn`, health, inventario y cola poison | Health 200. Mensaje poison observado y conservado: Blob y metadato SHA son íntegros, envelope Queue difiere; ya hay resultado de fulfillment. Ledger es ficticio. |
-| Cambios | AWS y Azure | Template AWS reconciliado y cambio gradual aplicado; Function Azure sin cambios en esta ejecución; copia PITR temporal validada y eliminada. |
+| AWS | STS, CloudFormation, ALB, destinos y RDS — 14/10/2026, 10:37 | Cuenta correcta; stack `UPDATE_COMPLETE`, deriva reportada `IN_SYNC`, `/health=200`, destinos 2/2 sanos. RDS `available`, cifrada/privada, Single-AZ y backup 1 día. |
+| Azure | Function `tangama-wms-261008`, health e IaC — 14/10/2026, 10:37 | Function `Running`, `/api/health=200`; `terraform plan` terminó `No changes`. El ledger es sintético por alcance; tres ventas y una recepción QA llegaron desde el portal AWS. |
+| Cambios | AWS y Azure | No se aplicó infraestructura durante esta revalidación. La venta/recepción QA y los SecureString de cuentas demo sí son datos/secretos de aplicación; el inventario sintético no implica stock comercial. |
 
 ## 3. Matriz de brechas priorizadas
 
@@ -45,11 +49,11 @@ corte más reciente, usa [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/
 | P0 | Alcance escrito AWS–OCI vs. instrucción comunicada AWS–Azure | Adjuntar aceptación del docente y reflejar la decisión en el informe final. |
 | P0 | IaC AWS no reconciliada | **Cerrado en este corte:** template local reconciliado; stack post-cambio en `IN_SYNC`, 0 drift. |
 | P0 | Recuperación no probada | **Prueba PITR aprobada:** copia aislada disponible y legible desde EC2; se eliminó. Falta medir RTO/RPO formal. |
-| P0 | WMS empresarial no integrado | El flujo AWS→Azure ya se probó con SKU/cantidad e idempotencia, pero modifica solo un ledger ficticio; acordar contrato y credenciales del WMS real o presentarlo explícitamente como demo. |
+| P0 | Alcance del WMS académico | **Aclarado:** la Function Azure y su ledger Blob son una simulación intencional alimentada con datos sintéticos; no se exige ni se afirma inventario comercial. El flujo AWS→Azure con SKU/cantidad, ventas, recepción e idempotencia ya está probado. Un WMS empresarial queda como evolución solo si el caso lo requiere. |
 | P1 | HA/escalabilidad no demostradas bajo fallo/carga | Probar pérdida controlada de destino, capacidad ASG y recuperación; registrar métricas. |
 | P1 | Observabilidad incompleta | Mostrar dashboards y una alarma que se active/recupere, además de tratar la poison queue. |
 | P1 | Seguridad e integración de roles | Pruebas automatizadas de autorización aprobadas; falta sesión manual en navegador. HTTPS confiable y cookie `Secure` se difieren con el dominio. |
-| P1 | Integración y recuperación WMS de nube a nube | Despacho automático y retry 60 s habilitados y con test unitario; falta un pedido vivo autenticado con la configuración nueva. Poison diagnosticado y preservado; decidir archivado/retirada. |
+| P1 | Integración y recuperación de eventos AWS→Azure | E2E autenticado desde el portal AWS probado: 7/7 eventos outbox entregados; tres ventas `completed_demo`, recepción `received_demo`; balances sintéticos conservados. La conectividad usa HTTPS público. La poison queue se documentó históricamente; falta una revisión operacional actual y no se alteró su mensaje. |
 | P1 | Costos y documentación final | Estimación mensual con supuestos; informe final y capturas crudas actuales de consola/monitores. |
 | P2 | Telefonía A/V real | Probar audio/video bidireccional en dos navegadores/redes; no declarar “comprobado” solo por pruebas API. |
 | P2 | Dominio HTTPS | Dejarlo para el cierre acordado: DNS, ACM, redirección y verificación del certificado/cookie. |
@@ -59,8 +63,8 @@ corte más reciente, usa [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/
 1. Confirmar alcance AWS–Azure con el docente, sin crear recursos OCI.
 2. Mantener el template reconciliado como fuente; no recrear ni re-aplicar
    infraestructura salvo que el próximo change set sea revisado.
-3. Crear un pedido sintético desde una sesión autorizada y confirmar el nuevo
-   despacho automático en Azure; preservar el poison hasta decidir su archivo.
+3. Preservar el dataset QA sintético y revisar la poison queue de forma aislada;
+   el recorrido autenticado de venta/recepción portal→Azure ya está probado.
 4. Validar visualmente `/platform` y la matriz de roles en navegador; las
    pruebas automatizadas ya cubren los permisos principales.
 5. Ejecutar pruebas controladas de HA/escala y alarmas; documentar el flujo

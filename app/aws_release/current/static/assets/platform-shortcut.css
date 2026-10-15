@@ -30,6 +30,47 @@
   align-items: end;
 }
 
+.sidebar nav .sidebar-group-label {
+  margin: 16px 10px 4px;
+  color: var(--portal-muted, #617066);
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.sidebar nav .admin-nav-label {
+  padding-top: 13px;
+  border-top: 1px solid var(--portal-line, #c6d1c9);
+}
+
+.sidebar nav button[hidden] { display: none !important; }
+
+.sidebar nav .admin-console-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 45px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  color: var(--portal-ink, #1e2922);
+  font-size: .84rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.sidebar nav .admin-console-link .nav-icon { flex: 0 0 21px; width: 21px; display: grid; place-items: center; color: var(--portal-accent, #176b49); }
+.sidebar nav .admin-console-link svg { display: block; width: 19px; height: 19px; }
+.sidebar nav .admin-console-link:hover { color: var(--portal-accent, #176b49); background: var(--portal-soft, #e2ebe4); transform: translateX(2px); }
+.sidebar nav .admin-console-link:focus-visible { outline: 3px solid color-mix(in srgb, var(--portal-accent, #176b49) 40%, transparent); outline-offset: 2px; }
+.sidebar nav .admin-console-link[aria-current="page"] { color: var(--portal-accent, #176b49); background: var(--portal-soft, #e2ebe4); }
+.sidebar-collapsed .sidebar nav .sidebar-group-label { display: none; }
+.sidebar-collapsed .sidebar nav .admin-console-link { justify-content: center; padding-inline: 8px; }
+.sidebar-collapsed .sidebar nav .admin-console-link .nav-label { display: none; }
+.sidebar-collapsed .sidebar nav .admin-console-link .nav-icon { flex-basis: auto; }
+
 @media (max-width: 700px) {
   .platform-shortcut {
     font-size: 0;
@@ -46,4 +87,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .platform-shortcut { transition: none; }
+  .sidebar nav .admin-console-link { transition: none; }
 }

@@ -69,6 +69,9 @@ jobs:
           done
           python ../tests/performance/load_test.py --url http://127.0.0.1:18080/health --requests 50 --concurrency 5 --max-p95-ms 2000
 
+      - name: Isolated concurrent transactional order flow
+        run: python tests/performance/transactional_load_test.py --requests 40 --concurrency 8 --max-p95-ms 5000
+
   frontend:
     name: Reproducible frontend build and dependency audit
     runs-on: ubuntu-latest
@@ -95,6 +98,11 @@ jobs:
 
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Test role navigation and synthetic catalog import
+        run: |
+          pnpm run test:access
+          pnpm run test:csv
 
       - name: Build without replacing Flask-served assets
         run: pnpm run build:check

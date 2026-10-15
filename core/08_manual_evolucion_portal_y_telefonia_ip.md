@@ -4,6 +4,9 @@
 **Corte:** 05/10/2026
 **Propósito:** usar esta guía cuando se continúe el portal o se quiera añadir un piloto de telefonía IP. No activa servicios cloud ni crea costos por sí sola.
 
+> El diagnóstico inicial conserva su fecha histórica. Para el estado posterior,
+> consultar el addendum del 13/10/2026 al final de este archivo.
+
 ## 1. Diagnóstico local verificado
 
 | Área | Ya existe | Falta antes de declararlo productivo |
@@ -18,7 +21,9 @@
 ### Prioridad 1 — seguridad y operación
 
 1. Desplegar siempre con HTTPS, certificado ACM y cookie `Secure`; el HTTP del laboratorio solo sirve para datos sintéticos.
-2. Añadir limitación de intentos de login, bloqueo temporal y registro de acceso fallido.
+2. Rate limiting persistido de login ya implementado en el backend local y en
+   el release AWS; falta validarlo contra el entorno productivo con credenciales
+   vigentes y complementar con MFA/identidad corporativa.
 3. Incluir token CSRF para operaciones que cambian datos y rotar la sesión después del login.
 4. Mantener secretos fuera del repositorio: Secrets Manager en AWS y Key Vault en Azure.
 5. Añadir migraciones versionadas para PostgreSQL; no depender de crear tablas implícitamente en el arranque.
@@ -139,3 +144,17 @@ exten => 700,1,Queue(comercial,tT)
 ## 6. Definición de terminado para telefonía IP
 
 Un piloto se considera terminado solo si registra dos extensiones, una llamada interna bidireccional, una cola, controles de red, evidencia real y cierre. La producción se considera terminada cuando además existe gobierno de identidades, política de grabación, control de costos, monitoreo y prueba de recuperación.
+
+## Addendum — estado del portal, 13/10/2026
+
+- El backend local ahora limita intentos de login con un contador persistido
+  (SQLite/PostgreSQL), HTTP 429/`Retry-After` y reset al autenticar correctamente.
+  Los incrementos concurrentes son atómicos; la clave guardada es un HMAC de IP
+  y usuario, no esos datos en claro.
+- La puerta `tests/run_local_quality.ps1 -ValidateTerraform` pasó 87 pruebas
+  unitarias, auditorías de dependencias, build, CloudFormation y validación
+  Terraform. Las pruebas nuevas verifican bloqueo, persistencia entre instancias
+  y reset del contador.
+- Esto no cierra la brecha de identidad: siguen pendientes MFA/SSO, revisión
+  completa de permisos en producción, HTTPS confiable y pruebas de seguridad
+  cloud. No se infiere estado de AWS a partir de estas pruebas locales.

@@ -58,7 +58,7 @@ Azure estén activos ni que una prueba de navegador/infraestructura se haya hech
 | Pruebas web | Playwright en Chromium para roles y recorridos; Synthetics para una URL pública | Login, permisos, crear pedido, salud y recuperación de una vista | No añadido: faltan definir cuentas de prueba/ambiente y evitar exponer credenciales |
 | Seguridad de IaC | Checkov o Trivy como informe inicial; Access Analyzer en AWS | Detectar reglas públicas, permisos amplios, cifrado y exposición accidental | Recomendado; primero triage de hallazgos, no afirmar que está habilitado |
 | Protección/detección | WAF, CloudTrail, GuardDuty/Config; Entra ID, Defender for Cloud | Bloqueo controlado, cambios sospechosos, identidad y postura | Algunos recursos pueden cobrar o no estar habilitados en Academy; activar por ventana |
-| Optimización de costo | AWS Budgets/Cost Explorer y Azure Cost Management | Presupuesto, etiquetas, alertas, inventario y apagado del laboratorio | Falta una estimación reproducible y capturas de costo del ciclo final |
+| Optimización de costo | AWS Budgets/Cost Explorer y Azure Cost Management | Presupuesto, etiquetas, alertas, inventario y apagado del laboratorio | Estimación reproducible inicial en [costo cloud](13_estimacion_costos_cloud_2026-10-14.md); falta Cost Analysis final de ambas suscripciones y cerrar el componente variable de Azure |
 | Recuperación | RDS PITR/backup, restore aislado; versionado/lifecycle S3/Blob | Medir RPO/RTO, validar lectura, eliminar recurso temporal y guardar evidencia | Restauración PITR aislada ya validada; falta acordar y medir RTO/RPO formalmente |
 
 ## Consultas de operación para la demostración

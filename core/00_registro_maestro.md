@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 08/10/2026 — 19:48 CDT
+**Corte:** 15/10/2026, 00:34 UTC — v11 desplegado, red verificada y E2E aprobado
 
 ## 1. Caso y objetivo
 
@@ -22,19 +22,21 @@ Internet -> seguridad/HTTPS objetivo -> AWS ALB -> Portal B2B + API escalable ->
                                                                                      |
                                                                           TLS + event_id
                                                                                      v
-Azure Function -> Storage Queue -> WMS/despacho -> Blob privado -> Monitor/Log Analytics
+Azure Function (integración de demostración) -> Storage Queue -> worker demo -> Blob privado -> Monitor/Log Analytics
 ```
 
 La solución es **híbrida** mientras datacenter y sedes coexisten con la nube, y **multicloud** porque cada proveedor recibe una responsabilidad empresarial concreta. No se usará una nube privada.
+
+El diagrama representa el flujo académico existente, no un ERP o WMS real: el portal B2B, ERP interno, WMS/operación física, correo corporativo e identidad son sistemas separados. Sus límites y la arquitectura empresarial objetivo se detallan en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
 ## 3. Responsabilidad por proveedor
 
 | Proveedor | Dominio | Recursos de demostración |
 |---|---|---|
 | AWS | Venta y transacción crítica | VPC, ALB, ASG/EC2, RDS PostgreSQL, S3, IAM/Secrets Manager, CloudWatch y mecanismo outbox/reintento |
-| Azure | Cumplimiento logístico asíncrono | Function, Storage Queue, Blob privado, Managed Identity/RBAC, Key Vault, Log Analytics y Application Insights |
+| Azure | Integración de cumplimiento asíncrona de demostración | Function, Storage Queue, Blob privado, Managed Identity/RBAC, Key Vault, Log Analytics y Application Insights; el ledger no es stock empresarial |
 
-Azure es el segundo dominio del alcance operativo acordado AWS–Azure para este proyecto. OCI no se implementa; la descripción escrita del curso todavía menciona AWS–OCI, por lo que la sustitución debe explicarse y, de ser posible, adjuntar la aprobación docente. No presentar OCI como desplegado ni como actividad vigente.
+Azure es el segundo dominio del alcance operativo AWS–Azure para este proyecto. Según lo comunicado por el alumno, el docente confirmó presencialmente que puede usarse AWS–Azure. OCI no se implementa ni debe presentarse como desplegado; conviene incluir esa confirmación en el informe final y pedir constancia escrita si está disponible.
 
 ## 4. Reglas de verdad
 
@@ -44,9 +46,58 @@ Azure es el segundo dominio del alcance operativo acordado AWS–Azure para este
 4. Cada ventana de nube tiene: inventario previo -> validación IaC -> despliegue -> pruebas -> evidencia -> eliminación/apagado -> inventario final.
 5. Los antecedentes de `evidence/legacy/` sirven para rescatar procedimientos, no para demostrar este núcleo.
 
-## 4.1 Estado actual comprobado — 08/10/2026
+## 4.1 Estado cloud vigente — 15/10/2026, 00:18–00:30 UTC
 
-La referencia única para lo que existe ahora, las pruebas recientes y el nivel de preparación de IaC es [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md). Este corte prevalece sobre inventarios anteriores: AWS está activo; Azure tiene el vertical demo activo; la plantilla CloudFormation coincide con el stack vivo; Terraform Azure todavía no debe aplicarse porque su state pertenece a un grupo anterior.
+El perfil AWS `default` autentica por STS en la cuenta académica `841113066612`.
+CloudFormation `tangamandapio-live-20261013` está en `UPDATE_COMPLETE` y la
+detección de drift terminó `IN_SYNC` a las 00:15:27 UTC. El artefacto
+`20261014-landing-loading-v11-python312` está activo en las dos EC2
+`InService`; SSM confirmó en ambas la revisión exacta, `systemd=active` y
+`/health` local 200. El target group tiene dos destinos sanos; las dos
+instancias reemplazadas están drenando y terminando. El ASG tiene mínimo y
+deseado 2, máximo 5. El ALB devolvió HTTP 200 en `/`, `/health` y `/ready`.
+RDS no fue modificada por el change set. El ALB continúa HTTP; dominio y HTTPS
+siguen pendientes.
+
+Para v11 se usó el objeto inmutable publicado en el bucket privado con
+versionado y cifrado SSE-S3. La puerta integral local previa al cambio pasó:
+165 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditoría de
+dependencias, `cfn-lint` y Terraform `fmt`/`validate`/tests. El mecanismo
+`AutoScalingInstanceRefresh` fue denegado por la SCP de Academy; se recuperó
+el rollback y se aplicó con `AutoScalingRollingUpdate`, lote uno y mínimo dos
+instancias saludables. La evidencia cronológica está en
+[AWS-DESPLIEGUE-V11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+
+Reconsulta posterior a la transición (00:18 UTC): el ASG muestra únicamente
+dos instancias `InService`, sin nodos terminando; los dos destinos ALB están
+`healthy`. RDS `available`, cifrada, privada, Single-AZ, 20 GB, backups de un
+día. Las cinco alarmas CloudWatch están `OK`, con acciones habilitadas. Azure
+`/api/health` respondió 200. No se aplicó Terraform ni se cambió Azure.
+
+La VPC `10.10.0.0/16` se revalidó: dos subredes públicas de ALB, dos privadas
+de aplicación con NAT y dos aisladas de RDS en dos AZ; los security groups
+permiten solo ALB:80→app:8080→PostgreSQL:5432. EC2/RDS no tienen ingreso
+directo desde Internet. El listener aún no tiene TLS (dominio/HTTPS pendientes).
+
+A las 00:30 UTC el E2E autenticado volvió a pasar sobre v11: Admin, Comercial y
+Operaciones tuvieron los permisos esperados; el SKU sintético se importó, la
+venta completó, la recepción compensatoria completó y ambos eventos outbox
+fueron entregados por Azure. El ledger de demostración se mantuvo en 10→10.
+24/24 lecturas autenticadas dieron 200, concurrencia 6, p95 679.98 ms desde
+loopback en EC2; no fue una prueba por ALB ni de capacidad para 3,000 usuarios.
+La nueva puerta local también pasó: 165 Python, 14 Node, 40 transacciones
+aisladas, build, auditoría, `cfn-lint` y Terraform fmt/validate/tests, sin
+`apply`. Véase [revalidación del 15/10](../evidence/current/CLOUD-REVALIDATION-2026-10-15.md).
+
+## 4.2 Estado anterior a v11 — 14/10/2026, 14:17 (histórico)
+
+Con el token temporal nuevo, AWS STS autenticó la cuenta `841113066612`. A las 14:13, CloudFormation `tangamandapio-live-20261013` reportó `UPDATE_COMPLETE`/`IN_SYNC`; el ALB está `active`, 2/2 destinos `healthy`, ambas EC2 `t3.micro` `running` y RDS `available`, privada y cifrada, Single-AZ, con 1 día de backup. `DatabaseMultiAZ=false` y `DatabaseBackupRetentionDays=1` coinciden entre el despliegue y la IaC. A las 14:17, `/`, `/health`, `/ready` y `/api` devolvieron 200; `/api/admin/users` y `/api/orders` devolvieron 401 sin sesión y `/metrics` 404 anónimo. No se modificó infraestructura. El ALB sigue solo HTTP, sin dominio ni certificado HTTPS.
+
+La Function Azure `/api/health` devolvió 200 en el mismo corte. La ejecución E2E autenticada desde EC2 v10 pasó: admin `admin`; Comercial y Operaciones cumplieron los 200/403 previstos; importación de SKU por API, venta `completed_demo`, recepción compensatoria `received_demo`, dos eventos outbox `delivered` en Azure Queue/Function y ledger sintético 10→10. También completó 24/24 lecturas autenticadas, concurrencia 6, p95 267.93 ms desde el proceso de una EC2 por loopback; no atravesó ALB ni mide escalabilidad a 3,000 usuarios. Los documentos QA persistidos son sintéticos y auditados. La carga CSV mediante navegador no se ejecutó.
+
+La puerta local terminó aprobada: 163 pruebas Python más 14 Node, PT-PERF-02 40/40, build, auditorías y CloudFormation/Terraform fmt/validate/tests. El lote de hasta 500 SKU y rechazo de 501 se prueba localmente; el flujo API quedó además validado en vivo. PT-DR-01 pasó el 13/10 con marcador SQL, RTO 289 s, RPO observado 14 s y limpieza; no se repitió tras v10. Application Insights reportó 2 eventos aceptados, 2 ejecuciones del consumidor y 0 fallos; el peek poison fue denegado por RBAC sin alterar datos. Pendientes: importación CSV visual, revisión navegador/UX por rol, carga por ALB/ASG, evidencia de entrega de alertas Azure y acceso de solo lectura a conteo poison, decidir/reforzar la resiliencia RDS (Single-AZ/1 día), red privada AWS–Azure (diferida por costo), dominio/HTTPS y A/V WebRTC entre dos navegadores. AWS SNS: el usuario confirmó haber recibido alerta y recuperación; falta archivar evidencia directa para sustentación. Véanse la [revalidación cloud](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md), la [QA local](../evidence/current/QA-LOCAL-2026-10-14.md), el [despliegue AWS](../evidence/current/aws/AWS-DESPLIEGUE-2026-10-14.md) y el [E2E Azure](../evidence/current/azure/AZURE-ERP-E2E-2026-10-14.md).
+
+La arquitectura empresarial, que separa portal B2B, ERP, WMS, correo e identidad y distingue objetivos de lo implementado, está organizada en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
 ## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.1)
 
@@ -58,7 +109,7 @@ La referencia única para lo que existe ahora, las pruebas recientes y el nivel 
 
 ## 6. Definición de terminado
 
-El proyecto queda listo para sustentar cuando demuestre: aplicación y persistencia reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. La hoja de ruta controlada está en [07_plan_reanudacion_y_mejoras.md](07_plan_reanudacion_y_mejoras.md); la propuesta de servicios, prácticas y fases AWS + Azure está en [09_propuesta_cloud_aws_azure.md](09_propuesta_cloud_aws_azure.md). Ambas separan hechos verificados de objetivos.
+El proyecto queda listo para sustentar cuando demuestre: aplicaciones con responsabilidades separadas, persistencia e integración reales, segmentación de red, control de seguridad, balanceo/HA, observabilidad, IaC reproducible y costos/cierre. El plan funcional y sus límites están en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md); la hoja de ruta cloud sigue en [07_plan_reanudacion_y_mejoras.md](07_plan_reanudacion_y_mejoras.md) y [09_propuesta_cloud_aws_azure.md](09_propuesta_cloud_aws_azure.md). Las tres distinguen hechos verificados, candidatos y objetivos.
 
 ## 7. Actualización de ejecución — 01/10/2026
 
@@ -79,3 +130,11 @@ Después de reiniciar el laboratorio, la consola de CloudFormation muestra **Pil
 La observación de cierre del punto 8 aplica al ciclo `tangamandapio-live-20261001`, no a ciclos posteriores. La revisión actualizada y la fuente de verdad del inventario están en [MAPA_ESTADO_ACTUAL_2026-10-08.md](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.md); sustituyen la observación visual anterior que no pudo cargar CloudFormation.
 
 La primera ejecución de la puerta local aprobó 58 pruebas (22 API base, 14 Azure Functions y 22 del release AWS); una ejecución posterior aprobó 59/59. El [registro de pruebas](../evidence/current/PRUEBAS_LOCALES_2026-10-08.md) conserva ambos cortes. El build de la web y las validaciones locales de Terraform/CloudFormation también pasaron. Esto no equivale a una llamada WebRTC real ni a un WMS/ERP conectado. La restauración PITR temporal sí se probó, pero falta medir formalmente RTO/RPO. Las capturas nuevas de Chrome no pudieron archivarse desde la sesión; el índice señala qué PNG falta y qué imágenes existentes son tarjetas resumidas, no capturas crudas.
+
+## 10. Reconstrucción Azure y prueba viva — 12/10/2026
+
+La suscripción activa figura como **Azure for Students / Enabled**; ese estado no informa el saldo disponible. Se reconstruyó el vertical Azure con 14 recursos administrados por Terraform (cero destrucciones). La Function `tangama-wms-261008` quedó `Running`, HTTPS-only, con autenticación básica de publicación FTP/SCM deshabilitada; el Blob es privado, TLS 1.2 y LRS.
+
+La prueba viva devolvió `/api/health` 200; llamada sin clave 401; productor desconocido 400; evento permitido 202 `queued`; repetición del mismo ID 202 `queued_duplicate`; consulta final `demo_fulfillment_completed`. El ledger ficticio descontó una unidad de SKU-ARROZ-001 (25→24) y declaró `is_real_erp=false`. El 14/10/2026 se configuraron dos receptores en el Action Group Azure mediante Terraform; el plan posterior terminó `No changes`. Las reglas están habilitadas, pero no se disparó una alerta ni se comprobó la entrega.
+
+El entorno Azure queda activo y puede incurrir cargos. No se comprobó consumo/credito disponible ni se probó una solicitud originada en AWS en este ciclo. La Function/Blob/Queue son un WMS de laboratorio, no un WMS empresarial; VNet/VPN multicloud, inventario real, DNS/HTTPS propio, llamada WebRTC A/V real y captura directa de consola siguen pendientes.

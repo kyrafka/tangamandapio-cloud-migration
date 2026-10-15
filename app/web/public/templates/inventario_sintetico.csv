@@ -1,0 +1,13 @@
+sku,name,unit,sale_price,purchase_cost,initial_stock
+SKU-ARROZ-001,Arroz premium · saco 50 kg,saco,42.50,35.00,25
+SKU-AZUCAR-001,Azúcar rubia · saco 50 kg,saco,37.50,31.00,40
+SKU-ACEITE-001,Aceite vegetal · caja x 12,caja,86.00,72.00,18
+SKU-CAFE-001,Café tostado · saco 10 kg,saco,128.00,104.00,12
+SKU-FREJOL-001,Fréjol canario · saco 25 kg,saco,119.90,98.00,20
+SKU-QUINUA-001,Quinua blanca · saco 25 kg,saco,172.00,140.00,14
+SKU-AVENA-001,Avena tradicional · saco 25 kg,saco,91.50,74.00,32
+SKU-FIDEOS-001,Fideos tallarín · caja x 20,caja,64.00,52.00,28
+SKU-LECHE-001,Leche evaporada · caja x 48,caja,154.80,131.00,38
+SKU-ATUN-001,Atún en conserva · caja x 48,caja,218.00,180.00,16
+SKU-GALLETAS-001,Galletas surtidas · caja x 24,caja,55.00,41.50,42
+SKU-MAIZ-001,Maíz amarillo · saco 50 kg,saco,89.90,73.00,26

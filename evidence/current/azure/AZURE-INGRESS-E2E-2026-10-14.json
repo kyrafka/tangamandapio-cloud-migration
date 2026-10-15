@@ -1,0 +1,51 @@
+{
+  "captured_local_date": "2026-10-14",
+  "captured_local_time": "07:43-07:49 America/Chicago",
+  "evidence_type": "sanitized live-test and Application Insights query results",
+  "subscription_state": "Enabled",
+  "function_state": "Running",
+  "function_https_only": true,
+  "portal_source": "app/aws_release/current executed locally with temporary SQLite; not EC2 or RDS",
+  "ingress_guards": {
+    "missing_function_key": 401,
+    "unauthorized_event_source": 400,
+    "rejected_event_status_after_probe": "pending",
+    "rejected_probe_persisted": false
+  },
+  "compensated_demo_flow": {
+    "inventory_mode": "demo-inventory-ledger",
+    "sale_event_id": "evt-4995d65fee6c4993a4638926c0ee12b5",
+    "sale_status": "demo_fulfillment_completed",
+    "compensation_event_id": "evt-6dd2a06bb1c44178a458cb6ea0663ce0",
+    "compensation_status": "demo_restock_completed",
+    "final_stock_matches_initial_baseline": true,
+    "poison_queue_before_approximate_count": 0,
+    "poison_queue_after_approximate_count": 0,
+    "poison_payloads_read_or_changed": false,
+    "synthetic_successful_event_records_retained_in_azure_audit": true
+  },
+  "application_insights_last_hour": {
+    "query_shape": "requests | where name == 'process_fulfillment_message' or name == 'receive_fulfillment_event' | project timestamp, name, resultCode",
+    "receive_202_count": 6,
+    "receive_400_count": 1,
+    "worker_resultCode_0_count": 6,
+    "records": [
+      { "timestamp_utc": "2026-10-14T12:22:59.7181908Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:23:16.9012399Z", "name": "process_fulfillment_message", "resultCode": "0" },
+      { "timestamp_utc": "2026-10-14T12:23:20.6830173Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:23:23.0621769Z", "name": "process_fulfillment_message", "resultCode": "0" },
+      { "timestamp_utc": "2026-10-14T12:29:41.5853065Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:29:42.9639387Z", "name": "process_fulfillment_message", "resultCode": "0" },
+      { "timestamp_utc": "2026-10-14T12:29:47.8758304Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:29:50.4709703Z", "name": "process_fulfillment_message", "resultCode": "0" },
+      { "timestamp_utc": "2026-10-14T12:43:51.2013564Z", "name": "receive_fulfillment_event", "resultCode": "400" },
+      { "timestamp_utc": "2026-10-14T12:43:55.5148010Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:43:58.0041202Z", "name": "process_fulfillment_message", "resultCode": "0" },
+      { "timestamp_utc": "2026-10-14T12:44:01.7429414Z", "name": "receive_fulfillment_event", "resultCode": "202" },
+      { "timestamp_utc": "2026-10-14T12:44:04.9641327Z", "name": "process_fulfillment_message", "resultCode": "0" }
+    ],
+    "payloads_or_event_bodies_queried": false
+  },
+  "infrastructure_changed": false,
+  "aws_or_rds_touched": false
+}

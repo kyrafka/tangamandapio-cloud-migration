@@ -4,7 +4,7 @@
 
 **Elaborada:** 08/10/2026
 
-**Alcance:** propuesta técnica para el portal B2B y el flujo logístico ficticio.
+**Alcance:** propuesta cloud para un centro de operaciones empresarial. El portal B2B, ERP interno, ejecución WMS, correo/colaboración e identidad son dominios separados; su arquitectura empresarial y plan están en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 **Importante:** describe diseño y próximos pasos; no afirma que los recursos estén activos ni los despliega.
 
 ## Resumen ejecutivo
@@ -31,13 +31,13 @@ pero requiere configuración real de recursos y permisos antes de mostrar datos
 cloud. Los estados de despliegue deben contrastarse con el inventario del día;
 una captura o plantilla no demuestra que algo siga encendido.
 
-**Control documental antes de desplegar:** el registro maestro y el plan de
-reanudación tienen corte 04/10/2026 y describen los recursos como eliminados;
-el [README](../README.md) y el [estado web del 08/10](../app/WEB_STATUS_AND_GAPS_2026-10-08.md)
-registran una ejecución posterior como desplegada. Esta propuesta no intenta
-resolver esa diferencia sin una lectura de inventario AWS/Azure fechada. Antes
-de cualquier `apply`, actualizar un solo registro rector con evidencia del
-mismo ciclo.
+**Control documental antes de desplegar:** el mapa de inventario con corte
+08/10/2026 registra que los recursos del proyecto en AWS y Azure fueron
+eliminados para detener costos, sin snapshots retenidos. Es el último estado
+documentado, no una consulta en vivo de hoy. El [README](../README.md), el
+registro maestro y esta propuesta deben mantener esa misma distinción. Antes
+de cualquier `apply`, reconsultar inventario, revisar el plan y actualizar el
+mapa con evidencia del mismo ciclo.
 
 ## Herramientas adecuadas para este caso
 
