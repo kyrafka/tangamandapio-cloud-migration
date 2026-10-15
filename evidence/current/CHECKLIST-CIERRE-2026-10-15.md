@@ -1,9 +1,33 @@
-# Checklist de cierre — actualizado 15/10/2026, 05:33 UTC
+# Checklist de cierre — actualizado 15/10/2026, 14:32 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
 
-## Revalidación puntual — 05:10 UTC
+## Estado vigente — revalidación 14:20–14:32 UTC
+
+- [x] AWS STS aceptó el perfil `default`; CloudFormation
+  `tangamandapio-live-20261013` está `UPDATE_COMPLETE`.
+- [x] ALB activo con HTTPS/443 y certificado ACM `ISSUED`; HTTP/80 redirige a
+  HTTPS. Los dos destinos están `healthy`, el ASG está en 2/2/5 y sus dos EC2
+  están `InService`/`Healthy`. `/health` y `/ready` responden 200.
+- [x] RDS está `available`, privada y cifrada. Límite vigente: Single-AZ y
+  retención de backups de un día.
+- [x] Azure Function `tangama-wms-261008` está `Running`, `httpsOnly=true`, y
+  `/api/health` HTTPS devolvió 200. Esto no equivale a procesar un evento nuevo
+  en este corte; el E2E sintético previo está documentado aparte.
+- [x] Chrome: portada, panel de acceso, validación, teclado y vista móvil
+  390×844 revisados; consola sin errores/advertencias. Usuario sintético
+  inexistente fue rechazado y la página se limpió al recargar.
+- [x] Gate local: 173 Python, 14 Node, 40 transacciones aisladas, build,
+  auditorías, CloudFormation y cinco entornos Terraform aprobados; no hubo
+  `apply` ni servidor web local.
+- [x] Estado HTTPS y QA sincronizados en el branch GitHub
+  `codex/aws-v11-deploy-sync`, commit `f6d7eaf`; sus tres jobs de GitHub Actions
+  terminaron `success` a las 14:32 UTC.
+
+Detalle: [corte cloud/navegador 14:30 UTC](CLOUD-REVALIDATION-2026-10-15-1430UTC.md).
+
+## Corte histórico — 05:10 UTC (supersedido)
 
 - [x] AWS `UPDATE_COMPLETE` y nueva detección CloudFormation `IN_SYNC`;
   ALB 2/2 targets saludables; `/`, `/health` y `/ready` 200; API admin sin
@@ -71,29 +95,23 @@ Detalle íntegro: [revalidación cloud 05:10 UTC](CLOUD-REVALIDATION-2026-10-15-
   `ec2:CreateCustomerGateway` por SCP; dry-run sin creación. No se instaló la
   extensión Azure solicitada por la CLI ni se generaron cargos.
 
-## Pendiente, sin marcar como completado
+## Pendiente vigente tras la revalidación de 14:32 UTC
 
-- [ ] Importar un archivo CSV desde el navegador y verificar previsualización y
-  persistencia visual. La corrida viva anterior importó un producto mediante
-  JSON a la API; parser, plantilla y límites pasan pruebas automatizadas, pero
-  eso no es una prueba de la selección/preview del archivo en UI.
-- [ ] Recorrido visual autenticado de Admin, Comercial y Operaciones. No se
-  enviaron contraseñas al ALB HTTP; falta una sesión de navegador segura para
-  comprobar vistas visuales, no solo la matriz de permisos API.
-- [ ] Carga transaccional de ventas a través del ALB/RDS y análisis de capacidad
-  para 3,000 usuarios. Se completaron 120 GET de `/health` por el ALB con
-  concurrencia 8; esa ruta solo ejecuta `SELECT 1` en RDS, no prueba escrituras,
-  compras/ventas ni capacidad para 3,000 usuarios.
-- [ ] Entrega extremo a extremo de alertas Azure. La telemetría de invocaciones
-  confirma actividad, no notificación.
 - [ ] Conectividad privada AWS–Azure: no desplegada ni verificada; un intento
   Site-to-Site previo fue rechazado por SCP. El E2E usa HTTPS público.
 - [ ] WebRTC de audio/video bidireccional con dos navegadores reales.
-- [ ] Dominio y HTTPS confiable del portal, al final del cierre acordado.
-- [ ] Capturas visuales crudas actuales para inventario AWS y monitor Azure; la
-  evidencia de este corte es salida estructurada/registro, no captura de
-  consola.
-- [ ] Cualquier cambio posterior en el branch debe volver a pasar CI antes de
+- [x] Dominio `tangamandapio.kendellnm.me` y HTTPS confiable: ACM `ISSUED`,
+  HTTPS/443 activo y HTTP/80 redirige; verificación del 15/10 a las 14:20.
+- [ ] Revisar visualmente las vistas privadas de Admin, Comercial y Operaciones;
+  la pestaña sigue en login y requiere que el usuario inicie sesión allí.
+- [ ] Probar importación CSV desde archivo en la UI, con vista previa y
+  verificación visual de persistencia.
+- [ ] Ejecutar carga transaccional por ALB y dimensionar el objetivo de 3,000
+  usuarios; las sondas anteriores eran acotadas y no prueban esa capacidad.
+- [ ] Reconsultar alarmas/dashboards y guardar capturas del inventario AWS y del
+  monitor Azure. La entrega de alerta/recuperación fue confirmada por el usuario,
+  pero no existe captura independiente en el corte actual.
+- [ ] Cualquier cambio posterior de código/IaC debe volver a pasar CI antes de
   considerarse validado.
 
 ## Revalidación posterior con el laboratorio renovado — 15/10/2026, 03:50–04:11 UTC

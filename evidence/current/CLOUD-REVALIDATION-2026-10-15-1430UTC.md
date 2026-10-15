@@ -65,3 +65,10 @@ la venta ERP por navegador ni WebRTC entre dos navegadores.
   constituye correo corporativo ni SMTP productivo configurado.
 - Este corte de verificación no sustituye aprobación de rúbrica ni evidencia del
   docente.
+
+## Sincronización y CI de GitHub — 15/10/2026, 14:31–14:32 UTC
+
+El commit `f6d7eaf` está publicado en `codex/aws-v11-deploy-sync`. La API de
+GitHub reportó los tres check runs `completed/success`: backend/Azure worker y
+flujo, validación de infraestructura AWS/Azure y build/auditoría frontend.
+[Ejecución de Actions](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38752199176).

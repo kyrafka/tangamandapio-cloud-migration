@@ -23,7 +23,8 @@ validación de campos, el rechazo de un usuario sintético inexistente, el
 teclado y el ancho móvil de 390 px; no se observaron errores de consola. La
 sesión no se autenticó, por lo que las vistas internas y los roles no se
 marcan como probados visualmente. La compuerta local pasó 173 pruebas Python,
-14 Node y validaciones de build/IaC, sin aplicar cambios cloud. El
+14 Node y validaciones de build/IaC, sin aplicar cambios cloud. GitHub Actions
+aprobó los tres jobs del commit `f6d7eaf` a las 14:32 UTC. El
 [corte detallado](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
 separa resultados de límites pendientes.
 
