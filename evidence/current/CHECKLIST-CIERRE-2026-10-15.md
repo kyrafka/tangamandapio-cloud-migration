@@ -1,4 +1,4 @@
-# Checklist de cierre — corte 15/10/2026, 01:37 UTC
+# Checklist de cierre — actualizado 15/10/2026, 02:29 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -48,12 +48,21 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 
 ## Pendiente, sin marcar como completado
 
-- [ ] Importar un CSV desde el navegador y verificar previsualización y
-  persistencia en el portal desplegado. Parser, plantilla y límites están
-  cubiertos por pruebas automatizadas, pero eso no es una prueba UI.
-- [ ] Recorrido visual autenticado de Admin, Comercial y Operaciones. Se observó
-  el acceso público; no se enviaron contraseñas al ALB HTTP porque las
-  credenciales viajarían sin cifrado.
+- [x] Prueba funcional viva desde EC2 del portal desplegado: autenticación Admin,
+  importación del SKU de QA por la API, venta/recepción compensatoria hacia
+  Azure, ambos outbox `delivered` y saldo sintético 10→10; 24/24 lecturas
+  autenticadas HTTP 200 (concurrencia 6, p95 476.1 ms). Ver detalle abajo.
+- [x] Matriz de autorización por API desde EC2: Comercial venta 200 y outbox,
+  inventario WMS y administración 403; Operaciones venta 403, outbox e
+  inventario 200 y administración 403. El E2E Admin pudo importar y completar
+  el ciclo sintético.
+- [ ] Importar un archivo CSV desde el navegador y verificar previsualización y
+  persistencia visual. La corrida viva anterior importó un producto mediante
+  JSON a la API; parser, plantilla y límites pasan pruebas automatizadas, pero
+  eso no es una prueba de la selección/preview del archivo en UI.
+- [ ] Recorrido visual autenticado de Admin, Comercial y Operaciones. No se
+  enviaron contraseñas al ALB HTTP; falta una sesión de navegador segura para
+  comprobar vistas visuales, no solo la matriz de permisos API.
 - [ ] Carga transaccional de ventas a través del ALB/RDS y análisis de capacidad
   para 3,000 usuarios. Las sondas de `/health` y las lecturas loopback no prueban
   esa capacidad.
@@ -145,3 +154,19 @@ discrepancia de puntaje siguen en
   sigue accesible después del ejercicio DR.
 - El ALB sigue HTTP/80 únicamente. No se creó DNS, certificado ni listener
   HTTPS durante esta comprobación.
+
+## E2E portal→RDS/outbox→Azure — 15/10/2026, 02:29 UTC
+
+- `tests/cloud/run_live_aws_portal_azure_e2e.ps1` terminó `LIVE_E2E_PASSED`
+  desde una EC2 Online vía SSM; la clave QA se leyó dentro de AWS y no se envió
+  al ALB HTTP público.
+- El portal confirmó importación de catálogo, venta `completed_demo`, recepción
+  `received_demo` y dos eventos outbox entregados; Azure continuó identificando
+  el inventario como `demo-inventory-ledger`. El saldo del SKU QA quedó 10 antes
+  y 10 después.
+- La microcarga de lectura autenticada terminó 24/24 HTTP 200, concurrencia 6,
+  p95 476.1 ms. Es una medición de una EC2 y no demuestra carga a través del ALB,
+  escalado multinodo ni 3,000 usuarios concurrentes.
+- La matriz API confirmó los permisos de Comercial y Operaciones descritos en
+  el checklist. Esto no sustituye el recorrido visual en navegador ni la prueba
+  de CSV desde archivo.

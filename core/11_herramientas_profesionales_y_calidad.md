@@ -59,7 +59,7 @@ Azure estén activos ni que una prueba de navegador/infraestructura se haya hech
 | Seguridad de IaC | Checkov o Trivy como informe inicial; Access Analyzer en AWS | Detectar reglas públicas, permisos amplios, cifrado y exposición accidental | Recomendado; primero triage de hallazgos, no afirmar que está habilitado |
 | Protección/detección | WAF, CloudTrail, GuardDuty/Config; Entra ID, Defender for Cloud | Bloqueo controlado, cambios sospechosos, identidad y postura | Algunos recursos pueden cobrar o no estar habilitados en Academy; activar por ventana |
 | Optimización de costo | AWS Budgets/Cost Explorer y Azure Cost Management | Presupuesto, etiquetas, alertas, inventario y apagado del laboratorio | Estimación reproducible inicial en [costo cloud](13_estimacion_costos_cloud_2026-10-14.md); falta Cost Analysis final de ambas suscripciones y cerrar el componente variable de Azure |
-| Recuperación | RDS PITR/backup, restore aislado; versionado/lifecycle S3/Blob | Medir RPO/RTO, validar lectura, eliminar recurso temporal y guardar evidencia | Restauración PITR aislada ya validada; falta acordar y medir RTO/RPO formalmente |
+| Recuperación | RDS PITR/backup, restore aislado; versionado/lifecycle S3/Blob | Medir RPO/RTO, validar lectura, eliminar recurso temporal y guardar evidencia | PT-DR-01 se ejecutó contra AWS el 15/10: restore SQL verificado, RTO observado 260 s, límite superior observado de RPO 8 s y recursos temporales limpiados. Es una medición de una corrida, no un SLA ni una prueba de failover Multi-AZ. |
 
 ## Consultas de operación para la demostración
 
@@ -109,9 +109,10 @@ es:
 2. **Red/seguridad:** evidencia actual de VPC/subredes/rutas/SG, RDS privada,
    permisos mínimos y denegación por rol; conservar dominio/HTTPS para la fase
    final solicitada.
-3. **Escala y continuidad:** prueba acotada de ALB/ASG/recuperación y evento
-   Azure; restauración RDS aislada con tiempos RTO/RPO; revisar mensajes de error
-   repetido/poison sin borrarlos inadvertidamente.
+3. **Escala y continuidad:** restauración RDS aislada ya medida (RTO 260 s,
+   RPO observado ≤8 s); falta prueba transaccional acotada por ALB/RDS con
+   límites de carga aprobados y revisar mensajes repetidos/poison sin borrarlos
+   inadvertidamente.
 4. **Observabilidad:** capturas recientes de inventario AWS y monitor Azure,
    invocación correcta con un `event_id` y alarma que dispara y vuelve a OK.
 5. **Portal:** prueba de cada rol en navegador, gestión segura de usuarios y
@@ -123,6 +124,22 @@ es:
 No agregar Kubernetes, un segundo balanceador, Grafana administrado ni Service
 Bus por estética. Para el volumen y objetivo académico actual, el stack
 administrado existente es más fácil de explicar, medir y cerrar con seguridad.
+
+## Revalidación funcional — 15 de octubre de 2026
+
+La prueba `tests/cloud/run_live_aws_portal_azure_e2e.ps1` terminó
+`LIVE_E2E_PASSED` desde una EC2 vía SSM: Admin autenticó, importó un SKU QA,
+registró una venta y su recepción compensatoria; Azure procesó ambos eventos,
+el outbox marcó los dos como entregados y el saldo sintético quedó 10→10.
+Comercial y Operaciones pasaron la matriz viva de API 200/403. Veinticuatro
+lecturas autenticadas tuvieron 24/24 HTTP 200 (concurrencia 6, p95 476.1 ms),
+en una EC2, no a través del ALB. El reporte con límites y hora está en
+[`CHECKLIST-CIERRE-2026-10-15.md`](../evidence/current/CHECKLIST-CIERRE-2026-10-15.md).
+
+El workflow GitHub Actions correspondiente al commit `50e55f0` completó con
+éxito sus tres jobs (backend/flujo, frontend y validación de infraestructura).
+Esto certifica ese commit, no reemplaza las pruebas de navegador, carga del ALB,
+conectividad privada ni HTTPS que siguen pendientes.
 
 ## Fuentes oficiales
 
