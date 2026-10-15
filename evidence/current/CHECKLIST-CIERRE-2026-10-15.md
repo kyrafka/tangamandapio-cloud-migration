@@ -1,9 +1,9 @@
-# Checklist de cierre — actualizado 15/10/2026, 22:21 UTC
+# Checklist de cierre — actualizado 15/10/2026, 22:24 UTC
 
 Este corte prevalece sobre los cortes anteriores de hoy; los informes previos se
 conservan como evidencia histórica. No asigna una nota.
 
-## Revalidación vigente — 15/10/2026, 22:17–22:21 UTC
+## Revalidación vigente — 15/10/2026, 22:17–22:24 UTC
 
 - [x] AWS STS autenticó; CloudFormation `UPDATE_COMPLETE`; detección nueva
   `IN_SYNC`, cero recursos desviados; ASG 2/2/5 y target group 2/2 `healthy`.
@@ -20,16 +20,18 @@ conservan como evidencia histórica. No asigna una nota.
   el plan y no se ejecutó `apply`.
 - [x] Puerta local: 182 Python, 14 Node, 40 transacciones aisladas, build,
   auditorías, CloudFormation, seis raíces Terraform y pruebas mock aprobadas.
+- [x] Commit `a51e7b7` publicado en GitHub; Actions 38816653227 terminó
+  `success` (backend/flujo, frontend, infraestructura).
 - [ ] Recorrido visual autenticado/CSV en Chrome y WebRTC de dos navegadores:
   no verificados. Computer Use se detuvo porque no pudo determinar con
   confianza la URL activa; no se sorteó la barrera ni se tocó la contraseña.
 - [ ] Sin conectividad privada AWS–Azure; el preflight anterior fue denegado
   por SCP. RDS continúa Single-AZ con backup de un día; la carga no representa
   3,000 usuarios. WMS es ledger sintético.
-- [ ] El arnés E2E corregido y esta evidencia aún requieren commit/push y CI
-  remoto. `gh` no está instalado.
+- [ ] La interfaz visual autenticada/CSV y WebRTC siguen pendientes; la
+  publicación y CI de este corte sí están cerradas.
 
-Detalle: [revalidación AWS/Azure 22:17–22:21 UTC](CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
+Detalle: [revalidación AWS/Azure 22:17–22:24 UTC](CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
 
 ## Revalidación HTTPS, Azure y acceso AWS — 15/10/2026, 19:12–19:13 UTC
 

@@ -1,4 +1,4 @@
-# Revalidación AWS/Azure y E2E — 15/10/2026, 22:17–22:21 UTC
+# Revalidación AWS/Azure y E2E — 15/10/2026, 22:17–22:24 UTC
 
 ## Estado verificado
 
@@ -45,6 +45,9 @@ y validación TLS, evitando depender del proxy Cloudflare para esta prueba.
 - Terraform Azure ejecutó un plan vivo usando el state configurado y el archivo
   local protegido de destinatarios: `No changes`. No se guardó un plan ni se
   ejecutó `apply`.
+- El commit `a51e7b7` quedó publicado en `codex/aws-v11-deploy-sync`. Su GitHub
+  Actions run `38816653227` terminó `success` en los tres jobs: backend/flujo,
+  frontend e infraestructura.
 - También se ejecutó el smoke Azure directo: guardas de ingreso 401/400 sin
   persistir el evento no autorizado, venta y reposición sintéticas procesadas,
   con el saldo de demo restaurado. Los registros de eventos QA permanecen en
@@ -79,7 +82,7 @@ despliegue para este arreglo, porque el cambio está en el arnés de pruebas.
   medido no prueba failover Multi-AZ.
 - La carga es acotada, no valida 3,000 usuarios. WMS continúa siendo un ledger
   sintético, no inventario físico.
-- El cambio del arnés y esta evidencia aún requieren commit/push y una ejecución
-  remota de GitHub Actions; `gh` no está instalado en el entorno local.
+- El cambio del arnés y la evidencia se sincronizaron con GitHub. `gh` no está
+  instalado localmente; el estado de Actions se consultó por la API del repo.
 
 No se guardaron credenciales AWS/Azure en el repositorio ni en este informe.

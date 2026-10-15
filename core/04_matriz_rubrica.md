@@ -1,6 +1,6 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 22:21 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 22:24 UTC
 
-## Corte vigente — 15/10/2026, 22:17–22:21 UTC
+## Corte vigente — 15/10/2026, 22:17–22:24 UTC
 
 La nueva revalidación completó un E2E autenticado desde EC2/RDS/outbox hasta
 Azure: Admin, Comercial y Operaciones obtuvieron los permisos esperados, la
@@ -23,11 +23,13 @@ registró 89 solicitudes/0 fallos y el worker de Queue 8 invocaciones/0 fallos.
 El plan Terraform Azure contra el state vivo terminó `No changes`, sin `apply`.
 La puerta local aprobó 182 pruebas Python, 14 Node, 40 transacciones aisladas,
 build/auditorías, CloudFormation y seis raíces Terraform.
+El commit `a51e7b7` está publicado en GitHub y los tres jobs de Actions
+terminaron `success`.
 
 Persisten límites: RDS es Single-AZ con un día de backup; no hay red privada
 AWS–Azure; no se probaron WebRTC entre navegadores, carga de 3,000 usuarios ni
 inspección visual autenticada/CSV en Chrome. El detalle está en
-[la revalidación de las 22:17–22:21](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
+[la revalidación de las 22:17–22:24](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
 
 ## Conclusión de calificación
 
@@ -184,7 +186,7 @@ y [prueba ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E autenticado desde una EC2 recorrió AWS/RDS/outbox → Azure Queue/Function y compensó el ledger demo. | No hay conexión privada AWS–Azure; la comunicación va por HTTPS público. No presentar Azure como OCI ni afirmar inventario físico. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
 | 12 | Pruebas técnicas · 1.0 | Gate local: 182 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. AWS E2E autenticado, Azure Function y telemetría se revalidaron en este corte. | Falta inspección visual/CSV en Chrome, WebRTC con dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
-| 13 | Documentación técnica · 0.5 | Matriz, release v16 y evidencia AWS/Azure actualizados al corte 22:17 UTC. | Faltan capturas actuales de consola AWS/monitor Azure para sustentación; evidencia textual no las sustituye. |
+| 13 | Documentación técnica · 0.5 | Matriz, release v16 y evidencia AWS/Azure sincronizados en GitHub; Actions del commit `a51e7b7` terminó `success`. | Faltan capturas actuales de consola AWS/monitor Azure para sustentación; evidencia textual no las sustituye. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago
