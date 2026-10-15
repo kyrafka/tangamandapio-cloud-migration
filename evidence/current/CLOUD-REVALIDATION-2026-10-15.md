@@ -74,3 +74,24 @@ dos entradas exitosas de `process_fulfillment_message` y dos de
 complementaria al E2E sintético, no una prueba de alerta entregada ni de WMS
 comercial. El detalle reproducible está en
 [`azure/AZURE-MONITOR-INVOCACIONES-2026-10-15.md`](azure/AZURE-MONITOR-INVOCACIONES-2026-10-15.md).
+
+## Revalidación con el token nuevo — 15/10/2026, 01:30–01:37 UTC
+
+AWS STS autenticó la sesión nueva en la cuenta Academy `841113066612`. Una
+nueva detección CloudFormation concluyó `IN_SYNC` con cero recursos
+discrepantes. El ASG sigue 2/2/5 con ambas EC2 `InService`; el target group
+`tangamandapio-tg` tiene 2/2 destinos `healthy`. El ALB devolvió 200 en `/`,
+`/health` y `/ready`; `/api/admin/users` sin sesión devolvió 401. RDS continúa
+`available`, cifrada, privada, Single-AZ y con retención de backup de un día.
+No se modificaron recursos AWS.
+
+Azure CLI autenticó la suscripción `Azure for Students`; el grupo
+`rg-tangamandapio-rebuild-wus` está `Succeeded`. La Function
+`tangama-wms-261008` está `Running`, `httpsOnly=true`, y su `/api/health`
+respondió 200. La consulta ARM de la suscripción no encontró VNets. La consulta
+de red VPN pidió instalar la extensión `virtual-wan`; no se aceptó ni instaló.
+
+Se repitió `CreateCustomerGateway --dry-run`: AWS denegó
+`ec2:CreateCustomerGateway` por un `explicit deny` en la SCP de AWS Academy.
+El dry-run no creó recursos. No existe conectividad privada AWS–Azure; el flujo
+E2E vigente sigue usando HTTPS público hacia la Function.

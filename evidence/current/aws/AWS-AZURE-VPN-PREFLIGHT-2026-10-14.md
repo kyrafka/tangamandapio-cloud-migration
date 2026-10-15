@@ -29,3 +29,22 @@ verificada.
 No se intentó `apply`, `deploy`, creación ni limpieza de recursos. Tampoco se
 infieren rutas, BGP o tráfico privado. La suscripción Azure está activa, pero
 el grupo privado específico no está presente.
+
+## Revalidación con token nuevo — 15/10/2026, 01:36 UTC
+
+AWS STS autenticó en la cuenta `841113066612`; CloudFormation pudo leerse y una
+nueva detección del stack del portal terminó `IN_SYNC`. La VPC del portal sigue
+en `10.10.0.0/16`. Se volvió a ejecutar `CreateCustomerGateway --dry-run` con
+una IP reservada para documentación: AWS lo denegó por un `explicit deny` en
+la SCP `p-qa2qn8qf` para `ec2:CreateCustomerGateway`. El dry-run no creó
+recursos y el perfil actual no puede desplegar esta VPN mediante el camino
+Site-to-Site previsto.
+
+En Azure, la suscripción activa no devuelve ninguna VNet en `az network vnet
+list`; la consulta del recurso VPN Gateway requiere la extensión CLI
+`virtual-wan`, cuya instalación no se aprobó. No se instalaron extensiones ni
+se crearon recursos. La Function pública continúa healthy por HTTPS, pero esto
+no sustituye una ruta privada. Para cerrar este criterio se necesita una cuenta
+AWS sin el deny de Academy o que el administrador de la organización habilite
+la API, además de aprovisionar la VNet/gateway y demostrar túneles/rutas; no se
+debe intentar sortear la SCP.

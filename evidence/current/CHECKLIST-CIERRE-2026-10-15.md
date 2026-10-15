@@ -1,4 +1,4 @@
-# Checklist de cierre — corte 15/10/2026, 01:26 UTC
+# Checklist de cierre — corte 15/10/2026, 01:37 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -7,8 +7,8 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 
 - [x] AWS CLI `default` autenticado por STS en la cuenta Academy `841113066612`;
   el token temporal no se guardó en Git ni en el repositorio.
-- [x] CloudFormation `tangamandapio-live-20261013`: `UPDATE_COMPLETE`, drift
-  `IN_SYNC`.
+- [x] CloudFormation `tangamandapio-live-20261013`: `UPDATE_COMPLETE`; una
+  detección nueva confirmó `IN_SYNC`, cero recursos discrepantes.
 - [x] Release v11 confirmado por SSM en las dos EC2; servicio activo. ASG
   mínimo/deseado 2, máximo 5; dos destinos del target group `healthy`.
 - [x] ALB `/`, `/health` y `/ready` devolvieron HTTP 200; `/api/admin/users`
@@ -36,10 +36,15 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
   versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, commit publicado `e6f7a95`; `main` no se modificó. El token
+  `codex/aws-v11-deploy-sync`, commit publicado `327549f`; `main` no se modificó. El token
   AWS y las contraseñas no forman parte del commit.
-- [x] Checks de GitHub Actions en `e6f7a95`: backend/flujo, frontend e
+- [x] Checks de GitHub Actions en `327549f`: backend/flujo, frontend e
   infraestructura AWS/Azure, los tres `success`.
+- [x] Revalidación tras actualizar el token: Azure Function `Running`,
+  HTTPS-only y health 200; la consulta de VNets devolvió lista vacía.
+- [x] Preflight VPN repetido: AWS Academy deniega explícitamente
+  `ec2:CreateCustomerGateway` por SCP; dry-run sin creación. No se instaló la
+  extensión Azure solicitada por la CLI ni se generaron cargos.
 
 ## Pendiente, sin marcar como completado
 
@@ -64,8 +69,8 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [ ] Capturas visuales crudas actuales para inventario AWS y monitor Azure; la
   evidencia de este corte es salida estructurada/registro, no captura de
   consola.
-- [ ] Los checks verdes corresponden al commit `e6f7a95`; cualquier cambio
-  posterior en el branch debe volver a pasar CI antes de considerarse validado.
+- [ ] Cualquier cambio posterior en el branch debe volver a pasar CI antes de
+  considerarse validado.
 
 ## Límites del prototipo
 
