@@ -302,7 +302,8 @@ discrepancia de puntaje siguen en
 - [ ] HTTPS sigue pendiente: ACM reporta `PENDING_VALIDATION` y el CNAME
   `_9568d15842cb7c5bd79e0208316e57af.tangamandapio.kendellnm.me` aún no resuelve
   públicamente. Las capturas de Cloudflare muestran otros CNAME de validación,
-  no el nombre que espera este certificado. No se desplegó listener 443.
+  no el nombre que espera este certificado. HTTPS `/` y `/health` desde fuera
+  agotaron 20 s a las 05:29 UTC. No se desplegó listener 443.
 - [ ] Falta que Kendell publique el CNAME exacto de ACM como DNS only; al pasar
   ACM a `ISSUED`, desplegar el listener/redirect y probar HTTPS externamente.
   Después se podrá comprobar WebRTC desde navegadores seguros.

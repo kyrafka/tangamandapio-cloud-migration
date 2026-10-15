@@ -109,3 +109,6 @@ capacidad para 3,000 usuarios, entrega de alertas ni una VPN privada AWS–Azure
 - No hubo despliegue ni cambio de recursos en esta revalidación. HTTPS y la
   prueba WebRTC de dos navegadores siguen pendientes del CNAME ACM y del
   listener 443.
+- Prueba externa posterior a las 05:29 UTC: HTTPS `/` y `/health` en
+  `tangamandapio.kendellnm.me` agotaron el límite de 20 s. El CNAME de aplicación
+  proxied visible en Cloudflare no equivale a un endpoint HTTPS funcional.
