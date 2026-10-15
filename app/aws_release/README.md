@@ -1,21 +1,38 @@
 # Paquete de release AWS
 
-> Corte 15/10/2026, 15:58 UTC: v12 está desplegado. CloudFormation terminó en
-> `UPDATE_COMPLETE`; las dos EC2 activas usan launch template v14 y están
-> saludables detrás del ALB. El target de la EC2 previa continúa drenando
-> durante su terminación. La revalidación en Chrome confirmó el helper de
-> accesibilidad v12 y el foco correcto al cerrar/abrir el acceso. Véase
-> [evidencia del corte v12](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1558UTC.md).
+> Revalidación de consola 15/10/2026, 19:22 UTC: stack
+> `tangamandapio-live-20261013` en `UPDATE_COMPLETE` (47 recursos), 2/2 targets
+> `Healthy`; el prefijo principal de S3 enumera 10 objetos e incluye el paquete
+> v12. El último release confirmado como desplegado sigue siendo v12 (18:56
+> UTC). El CLI local devuelve `ExpiredToken`; no se hizo drift detection ni se
+> consultó RDS.
 
-`current/` identifica `20261015-login-drawer-a11y-v12-python312`. El artefacto
-reproducible tiene SHA-256
-`c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`; la
-plantilla CloudFormation apunta al mismo hash y al objeto privado versionado en
-S3. Este cambio no reemplazó RDS, VPC, ALB ni buckets. El target viejo estaba
-`Terminating`/`draining` durante la revalidación, mientras que los dos targets
-v14 estaban `healthy`.
+`current/` identifica el candidato local
+`20261015-cloudwatch-wiring-v13-python312`, SHA-256
+`d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57`. La
+plantilla local referencia esa clave inmutable, pero su presencia en S3 y su
+despliegue no están confirmados. El último release conocido en nube es v12,
+`20261015-login-drawer-a11y-v12-python312`, SHA-256
+`c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`.
+La consola S3 confirma que ese paquete está en el prefijo principal; v13 no
+aparece entre los 10 objetos listados (la subcarpeta `qa/` no se inspeccionó).
 
-## Release v12 — foco seguro del acceso oculto
+## Candidato local v13 — dimensiones CloudWatch (no desplegado)
+
+CloudFormation ahora pasa a la aplicación las dimensiones físicas de ALB,
+target group, RDS y ASG; configura las dimensiones del Web ACL solo cuando
+WAF está habilitado. El panel distingue “No desplegado”, “Sin datos recientes”,
+“Sin permiso de lectura” y métricas disponibles, en vez de insinuar que WAF
+está configurado por defecto. Se añadieron pruebas de wiring y de postura; la
+puerta local completa, CloudFormation y Terraform aprobaron. GitHub Actions
+`38792459084` pasó para `977f437`.
+
+Este candidato no se debe considerar publicado: no se subió a S3 ni se aplicó
+CloudFormation en esta revalidación. Primero se necesita una sesión AWS CLI
+vigente y permisos para comprobar el objeto, cargarlo con clave inmutable y
+desplegarlo gradualmente; no usar el template como prueba del estado vivo.
+
+## Último release confirmado v12 — foco seguro del acceso oculto
 
 Se añadió `accessibility-drawer-7f1356105ee4.js` al bundle de `current/`.
 Observa el estado del panel de login, marca el contenedor `inert` y

@@ -1,24 +1,31 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 05:15 UTC
+## Revalidación puntual más reciente — 15/10/2026, 19:21–19:23 UTC
 
-AWS conserva `UPDATE_COMPLETE`/`IN_SYNC`, 2/2 targets sanos y respuestas HTTP
-200 en portada, health y readiness; el listener sigue solo HTTP/80. Azure
-Function responde health HTTPS 200, aunque el CLI no terminó la consulta ARM
-del recurso en este corte. Se solicitó en ACM el certificado para
-`tangamandapio.kendellnm.me`; falta que Kendell publique el CNAME de validación
-en modo DNS only. Todavía no hay HTTPS en el ALB. La suite local repetida pasó:
-152 pruebas Python, 14 Node, build, cfn-lint, seis validaciones Terraform y
-5/5 pruebas mock. Los tres checks de GitHub Actions del commit `9dc9a4b` también
-terminaron en verde. Un E2E autenticado pasó: permisos por rol, venta/compra
-sintéticas, dos eventos a Azure, ledger 10→10, alertas 2/2 confirmadas y 24/24
-lecturas HTTP 200. El CNAME de ACM aún no resolvía al corte. Detalle:
-[revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md) y
-[resultado E2E sanitizado](current/aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15-0515UTC.json).
+Portal HTTPS, `/health` y `/ready` devolvieron 200; la portada no registró
+errores JavaScript. Azure for Students está Enabled y la Function devolvió
+`/api/health=200`. En Chrome, sin escribir credenciales, el portal siguió en
+login y no se recorrieron vistas privadas.
 
-## Corte vigente — 15/10/2026, 00:34 UTC
+La sesión web AWS mostró el stack `tangamandapio-live-20261013`
+`UPDATE_COMPLETE` con 47 recursos, 2/2 destinos `Healthy` y 10 objetos en el
+prefijo de releases; entre ellos está el artefacto v12. No se hizo detección
+de drift ni se consultó RDS. El CLI local devuelve `ExpiredToken`; v13 no
+aparece en los 10 objetos listados y la subcarpeta `qa/` no se inspeccionó.
+Esto confirma estado de consola, no operatividad CLI ni una aplicación del v13.
 
-El release v11 está en `UPDATE_COMPLETE`/`IN_SYNC`, con dos EC2 y targets ALB
+La prueba de procesamiento de Azure de las 18:56 y la puerta local aprobada
+(181 Python, 14 Node, build, auditorías, CloudFormation, seis Terraform
+validate y cinco mock tests) son evidencia anterior a este corte. GitHub
+Actions `38792459084` pasó para `977f437`; el documento local actualizado aún
+no está en ese commit. Véase la [revalidación 19:23](current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md),
+la [revalidación HTTPS/headers 19:13](current/CLOUD-REVALIDATION-2026-10-15-1913UTC.md),
+el [corte cloud 18:56](current/CLOUD-REVALIDATION-2026-10-15-1856UTC.md) y
+la [matriz](../core/04_matriz_rubrica.md).
+
+## Corte histórico — 15/10/2026, 00:34 UTC
+
+En ese corte, el release v11 estaba en `UPDATE_COMPLETE`/`IN_SYNC`, con dos EC2 y targets ALB
 sanos; portal, health y readiness devuelven HTTP 200. La VPC segmenta subredes
 públicas del ALB, privadas de aplicación y aisladas para RDS; las reglas
 permiten ALB→app→DB, sin ingreso directo a EC2 ni RDS. El E2E autenticado v11
