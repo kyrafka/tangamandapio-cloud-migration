@@ -1,6 +1,6 @@
 # AWS CloudFormation — portal y reconstrucción
 
-CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 15/10/2026 00:34 UTC.** El stack `tangamandapio-live-20261013` está en `UPDATE_COMPLETE`; drift `IN_SYNC`. El release `20261014-landing-loading-v11-python312` está en las dos instancias `InService`, confirmado por SSM; ambas devolvieron servicio activo y health local 200. El ALB tiene exactamente dos destinos `healthy` y `/`, `/health` y `/ready` responden HTTP 200. El ASG está mínimo/deseado 2, máximo 5, sin instancias terminando. La VPC separa ALB público, app privada con NAT y RDS aislada; security groups limitan ALB:80→app:8080→PostgreSQL:5432 y bloquean ingreso directo a EC2/RDS. RDS quedó fuera del cambio y continúa `available`, privada y cifrada, Single-AZ con un día de backup. El listener continúa HTTP: dominio/HTTPS quedan pendientes. La secuencia y los fallos intermedios están en el [registro v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 15/10/2026 05:10 UTC.** El stack `tangamandapio-live-20261013` está en `UPDATE_COMPLETE`; la detección de drift más reciente terminó `IN_SYNC`. El release `20261014-landing-loading-v11-python312` está en las dos instancias `InService`, confirmado previamente por SSM; el ALB tiene dos destinos `healthy` y `/`, `/health` y `/ready` responden HTTP 200. El ASG está mínimo/deseado 2, máximo 5. La VPC separa ALB público, app privada con NAT y RDS aislada; security groups limitan ALB:80→app:8080→PostgreSQL:5432 y bloquean ingreso directo a EC2/RDS. RDS está `available`, Single-AZ, con un día de backup. El listener continúa HTTP/80. Ya se solicitó en ACM un certificado para `tangamandapio.kendellnm.me`, aún `PENDING_VALIDATION`; falta publicar el CNAME DNS only y esperar emisión antes de actualizar CloudFormation. La revalidación está en [evidencia cloud 05:10 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md); la secuencia y los fallos intermedios están en el [registro v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
 
 Históricamente, el stack se eliminó el 08/10 y se reconstruyó el 09/10. Los snapshots y restauraciones anotados en los cortes anteriores no determinan el estado de hoy. `rebuild.sh` solo debe ejecutarse después de verificar el nombre exacto del stack, el snapshot y los secretos requeridos, reconciliar la plantilla con el inventario y aprobar el costo; ahora exige un `STACK_NAME` explícito.
 
@@ -16,12 +16,10 @@ El preflight HTTPS se prueba localmente con respuestas ACM simuladas: exige ambo
 
 ### Activación final de dominio y HTTPS
 
-La plantilla conserva HTTP hasta tener un dominio propio. Cuando se compre o
-autorice el DNS, solicita en ACM (región `us-east-1`) un certificado público
-para un subdominio como `portal.ejemplo.com`, usando validación DNS. No hace
-falta comprar otro dominio si ya se controla el DNS del dominio principal: el
-certificado y el registro se crean para ese subdominio. Copia en
-el proveedor DNS los CNAME de validación que muestra ACM y espera el estado
+La plantilla conserva HTTP hasta tener un certificado emitido. El hostname
+acordado es `tangamandapio.kendellnm.me`; la solicitud ACM en `us-east-1` ya
+está `PENDING_VALIDATION`. Kendell debe publicar el CNAME que muestra ACM en su
+proveedor DNS con proxy desactivado para ese registro. Espera el estado
 `ISSUED`. El despliegue verifica que el ARN sea regional y que el certificado
 cubra exactamente el hostname (o un wildcard de un solo nivel), antes de
 crear el listener HTTPS 443. Con ambos valores, `deploy.sh` cambia el listener

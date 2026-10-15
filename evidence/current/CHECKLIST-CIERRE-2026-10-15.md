@@ -1,7 +1,27 @@
-# Checklist de cierre — actualizado 15/10/2026, 04:11 UTC
+# Checklist de cierre — actualizado 15/10/2026, 05:10 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
+
+## Revalidación puntual — 05:10 UTC
+
+- [x] AWS `UPDATE_COMPLETE` y nueva detección CloudFormation `IN_SYNC`;
+  ALB 2/2 targets saludables; `/`, `/health` y `/ready` 200; API admin sin
+  sesión 401. RDS disponible, Single-AZ, un día de backup.
+- [x] Azure for Students Enabled; el grupo `rg-tangamandapio-rebuild-wus` está
+  `Succeeded`; el health HTTPS de la Function respondió 200. El CLI no terminó
+  `functionapp show`/inventario; el estado ARM completo no se volvió a certificar.
+- [x] Suite repetida: 152 pruebas Python (157 subtests), 14 Node, build Vite,
+  `cfn-lint`, seis entornos Terraform (`fmt`/`init`/`validate`) y tests mock 5/5.
+- [x] Se solicitó el certificado ACM de
+  `tangamandapio.kendellnm.me`; está `PENDING_VALIDATION` y el CNAME fue
+  compartido con Diego para que Kendell lo publique como DNS only; la consulta
+  pública todavía no encuentra ese registro.
+- [ ] Esperar ACM `ISSUED`, actualizar el listener a HTTPS/443 y redirección
+  HTTP→HTTPS, y comprobar el certificado desde navegador externo. HTTPS aún
+  expira; WebRTC A/V entre dos navegadores sigue pendiente.
+
+Detalle íntegro: [revalidación cloud 05:10 UTC](CLOUD-REVALIDATION-2026-10-15-0510UTC.md).
 
 ## Comprobado en el corte previo (02:58 UTC)
 

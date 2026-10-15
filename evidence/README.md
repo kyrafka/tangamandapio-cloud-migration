@@ -1,15 +1,15 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 04:53 UTC
+## Revalidación puntual más reciente — 15/10/2026, 05:10 UTC
 
-AWS tiene el stack activo, 2/2 targets sanos y `/health`/`/ready` HTTP 200; el
-listener sigue solo HTTP/80. Azure Function está `Running`, `httpsOnly=true` y
-su health respondió 200. Se verificó que la plantilla HTTPS acepta un
-subdominio y que el preflight protege el despliegue, pero aún falta DNS
-controlado y certificado emitido para habilitarlo. El smoke público obtuvo 200
-en portada y ocho recursos estáticos; una prueba `--dry-run` confirmó que la SCP
-de AWS Academy aún bloquea crear la conexión privada AWS–Azure. Detalle: [revalidación
-puntual de nube](current/CLOUD-REVALIDATION-2026-10-15-0448UTC.md).
+AWS conserva `UPDATE_COMPLETE`/`IN_SYNC`, 2/2 targets sanos y respuestas HTTP
+200 en portada, health y readiness; el listener sigue solo HTTP/80. Azure
+Function responde health HTTPS 200, aunque el CLI no terminó la consulta ARM
+del recurso en este corte. Se solicitó en ACM el certificado para
+`tangamandapio.kendellnm.me`; falta que Kendell publique el CNAME de validación
+en modo DNS only. Todavía no hay HTTPS en el ALB. La suite local repetida pasó:
+152 pruebas Python, 14 Node, build, cfn-lint, seis validaciones Terraform y
+5/5 pruebas mock. Detalle: [revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md).
 
 ## Corte vigente — 15/10/2026, 00:34 UTC
 
