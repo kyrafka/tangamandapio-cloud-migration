@@ -21,9 +21,9 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [x] Gate local: 176 Python, 14 Node, 40 transacciones aisladas, build,
   auditorías, CloudFormation y cinco entornos Terraform aprobados; no hubo
   `apply` ni servidor web local.
-- [x] La revisión anterior HTTPS/QA está sincronizada en el branch GitHub
-  `codex/aws-v11-deploy-sync`, commit `006d5e8`; sus tres jobs terminaron
-  `success` a las 14:36 UTC.
+- [x] La revisión Chrome/E2E y el arnés actualizado están sincronizados en
+  `codex/aws-v11-deploy-sync`, commit `ee26e47`; sus tres jobs terminaron
+  `success` a las 14:51 UTC.
 
 Detalle: [corte cloud/navegador 14:30 UTC](CLOUD-REVALIDATION-2026-10-15-1430UTC.md).
 
@@ -39,8 +39,6 @@ Detalle: [corte cloud/navegador 14:30 UTC](CLOUD-REVALIDATION-2026-10-15-1430UTC
 - [ ] Vistas privadas siguen pendientes hasta que el usuario inicie sesión en
   la pestaña de Chrome. El modo claro se observó con contraste menor; requiere
   una revisión de estilos.
-- [ ] Publicar esta actualización local de evidencia y del arnés E2E; volver a
-  comprobar CI para el commit que la incluya.
 
 Detalle: [seguimiento Chrome/E2E 14:45 UTC](CLOUD-UI-SMOKE-2026-10-15-1445UTC.md).
 

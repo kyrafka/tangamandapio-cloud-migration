@@ -26,8 +26,8 @@ que las vistas internas y los roles no se marcan como probados visualmente. Un
 E2E adicional por el dominio HTTPS se detuvo en login con HTTP 403, antes de
 crear pedidos o eventos; la causa exacta no se confirmó. La compuerta local
 pasó 176 pruebas Python, 14 Node y validaciones de build/IaC, sin aplicar
-cambios cloud. GitHub Actions aprobó los tres jobs del commit `006d5e8` a las
-14:36 UTC. Consultar el [corte cloud](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
+cambios cloud. GitHub Actions aprobó los tres jobs del commit `ee26e47` a las
+14:51 UTC ([ejecución](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38754842826)). Consultar el [corte cloud](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
 y el [seguimiento Chrome/E2E](evidence/current/CLOUD-UI-SMOKE-2026-10-15-1445UTC.md)
 para distinguir resultados y límites.
 
@@ -43,11 +43,9 @@ El E2E vivo del 15/10 autenticó Admin, importó un SKU QA, registró venta y re
 
 La puerta local más reciente terminó aprobada: **176 pruebas Python, 14 Node, 40 transacciones aisladas**, auditoría de dependencias sin vulnerabilidades conocidas, build Vite, `cfn-lint` y Terraform `fmt`/`validate`/tests; no hizo `apply` ni escrituras cloud. Las pruebas aisladas no miden capacidad para 3,000 usuarios. Repetición: `.\tests\run_local_quality.ps1 -ValidateTerraform`; [QA local del 15/10](evidence/current/QA-LOCAL-2026-10-15.md).
 
-El commit `006d5e8` fue publicado en `codex/aws-v11-deploy-sync` y sus tres
+El commit `ee26e47` fue publicado en `codex/aws-v11-deploy-sync` y sus tres
 checks de GitHub Actions (backend/flujo, frontend e infraestructura AWS/Azure)
-terminaron `success`. `main` no se modificó. La nueva evidencia Chrome/E2E y
-la mejora del arnés descritas arriba están en preparación local para el siguiente
-commit; sus checks aún no han corrido.
+terminaron `success`. `main` no se modificó.
 
 ## Estructura
 
