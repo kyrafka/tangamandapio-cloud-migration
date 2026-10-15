@@ -1,9 +1,33 @@
-# Checklist de cierre — actualizado 15/10/2026, 14:45 UTC
+# Checklist de cierre — actualizado 15/10/2026, 15:58 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
 
-## Estado cloud vigente — revalidación 14:20–14:32 UTC
+## Revalidación v12 en AWS y Chrome — 15:40–15:58 UTC
+
+- [x] CloudFormation `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`;
+  revisión `20261015-login-drawer-a11y-v12-python312`, SHA-256
+  `c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`.
+- [x] ASG mínimo/deseado 2, máximo 5; dos EC2 v14 `InService`/`Healthy` y dos
+  targets v14 `healthy`. La EC2 v13 anterior estaba `Terminating` y su target
+  `draining` durante la comprobación; no se cuenta como capacidad activa.
+- [x] ALB `active`, HTTPS/443 reenvía al target group, HTTP/80 redirige a HTTPS
+  con 301; certificado ACM para `tangamandapio.kendellnm.me` `ISSUED` y en uso.
+- [x] RDS `tangamandapio-postgres` sigue `available`, privada, cifrada,
+  Single-AZ y con retención de backup de un día; el cambio no alteró la base.
+- [x] En la pestaña de Chrome del dominio HTTPS cargó el helper
+  `accessibility-drawer-7f1356105ee4.js`; no se usó localhost ni se controlaron
+  otras ventanas. El panel cerrado queda `inert`/`aria-hidden`, Tab omite el
+  usuario oculto y al reabrir enfoca el campo corporativo.
+- [x] Tema claro probado y tema oscuro restaurado. Consola del sitio sin errores
+  ni advertencias. Se dejó el panel de login abierto para autenticación manual;
+  no se introdujeron credenciales.
+- [ ] Las vistas privadas/roles siguen pendientes de inicio de sesión manual;
+  esta prueba no cubre ERP, importación CSV, Azure/WMS, WebRTC, SNS ni carga.
+
+Detalle: [corte cloud y navegador v12](CLOUD-REVALIDATION-2026-10-15-1558UTC.md).
+
+## Corte previo — revalidación 14:20–14:32 UTC (supersedido para AWS)
 
 - [x] AWS STS aceptó el perfil `default`; CloudFormation
   `tangamandapio-live-20261013` está `UPDATE_COMPLETE`.
@@ -110,7 +134,7 @@ Detalle íntegro: [revalidación cloud 05:10 UTC](CLOUD-REVALIDATION-2026-10-15-
   `ec2:CreateCustomerGateway` por SCP; dry-run sin creación. No se instaló la
   extensión Azure solicitada por la CLI ni se generaron cargos.
 
-## Pendiente vigente tras el seguimiento de 14:45 UTC
+## Pendiente vigente tras la validación de v12 — 15:58 UTC
 
 - [ ] Conectividad privada AWS–Azure: no desplegada ni verificada; un intento
   Site-to-Site previo fue rechazado por SCP. El E2E usa HTTPS público.

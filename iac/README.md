@@ -1,8 +1,10 @@
-# Infraestructura como código — corte 14/10/2026
+# Infraestructura como código — corte 15/10/2026
 
-Última actualización: 14/10/2026. Se publicó el artefacto candidato v11 en el bucket de releases y se ejecutó un change set de CloudFormation. El stack entró en `UPDATE_IN_PROGRESS`, el primer destino nuevo no pasó el health check y el ALB empezó a devolver 503. Una denegación explícita `voc-cancel-cred` impide consultar el estado del stack o verificar su recuperación; no se afirma que el despliegue terminara ni que v10 haya sido restaurado. El último corte sano confirmado antes de v11 fue v10, `UPDATE_COMPLETE`, `IN_SYNC`, 2/2 destinos sanos. En la reconsulta, AWS Academy mostró `Lab status: stopping` aunque la sesión STS aún autenticaba; no se hizo ninguna acción de inicio/cambio desde esa página. En Azure no se aplicaron cambios en esta operación. Véase la [evidencia detallada del intento v11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md) y la [revalidación anterior](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
+Última actualización: 15/10/2026, 15:58 UTC. El stack `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE` a las 15:40 UTC con el release v12 (`20261015-login-drawer-a11y-v12-python312`, SHA-256 `c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`). Las dos EC2 en servicio usan launch template v14 y están saludables; la instancia v13 previa estaba terminando y su target aún drenaba. El ALB está activo con HTTP→HTTPS/301 y certificado ACM `ISSUED`. RDS sigue disponible, cifrada, privada, Single-AZ y con un día de backup. El cambio no reemplazó RDS, VPC, ALB ni buckets. Véase la [revalidación AWS/Chrome de v12](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1558UTC.md).
 
-Puerta local más reciente (`tests/run_local_quality.ps1 -ValidateTerraform`):
+El intento v11 del 14/10 quedó registrado con el resultado observado en ese momento; sus notas de “estado desconocido” son históricas y quedaron superadas por la actualización completada el 15/10. Véase la [evidencia del intento v11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+
+Puerta general anterior al release v12 (`tests/run_local_quality.ps1 -ValidateTerraform`; corte 14/10, histórico):
 **165 pruebas Python**, 14 pruebas Node, PT-PERF-02 (40 transacciones aisladas),
 auditoría de dependencias sin vulnerabilidades conocidas, build frontend,
 CloudFormation `cfn-lint` y Terraform `fmt`/`validate`/tests aprobaron sin
@@ -16,13 +18,11 @@ artefacto todavía no está subido a S3. Después pasaron 17 pruebas del harness
 Azure, 6 pruebas CSV, 5 pruebas de catálogo y 2 pruebas locales de autorización
 para seis roles.
 
-La plantilla local se reforzó después del intento fallido: usa
-`AutoScalingInstanceRefresh` con 100% de salud mínima, 125% de capacidad máxima,
-una instancia extra de margen, warmup de 420 s y bake de 180 s. No se aplicó porque el estado del stack está
-bloqueado/no confirmado. `python_runtime_guard_test.sh` y `cfn-lint` aprobaron;
-la validación remota `cloudformation validate-template` fue denegada por la
-política del laboratorio. Este cambio local todavía no forma parte del change
-set v11 ejecutado.
+La plantilla aplicada usa `AutoScalingRollingUpdate`: mantiene dos instancias
+en servicio, reemplaza una por lote y espera hasta siete minutos para la
+estabilización del health check antes del lote siguiente. `python_runtime_guard_test.sh`
+aprobó en la validación local del release. `cfn-lint` no estaba instalado en el
+entorno de esta revisión; no se afirma una validación con esa herramienta.
 
 La puerta también prueba fail-closed en `deploy.sh`, `rebuild.sh`, `destroy.sh`,
 PT-STO-01 y PT-MON-01 ante nombres de stack ausentes/genéricos, verifica con
@@ -32,7 +32,7 @@ sano, degradado y acceso denegado.
 
 | Dominio | Fuente de verdad actual | Estado de despliegue |
 |---|---|---|
-| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | El paquete legado v11 (SHA `2a834...`) se subió y el change set comenzó después de validar drift `IN_SYNC`; el ALB dio 503 y AWS bloqueó consultas de estado/recuperación. Resultado final desconocido. La plantilla local apunta ahora al paquete portable v11 (SHA `ef3ffe...`), aún no subido a S3, e incorpora Instance Refresh con margen para una instancia adicional. No iniciar otro despliegue ni afirmar v11 vivo hasta recuperar lectura, resolver el stack y subir/verificar el artefacto local. El último corte sano previo fue v10. Véase [intento v11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md). |
+| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | v12 aplicado: stack `UPDATE_COMPLETE`; dos EC2 v14 `InService`/`Healthy`; dos targets activos `healthy`. Target v13 anterior aún `draining` durante terminación. Certificado ACM `ISSUED`; listeners 443 HTTPS y 80→443/301. RDS sin cambios: `available`, privada, cifrada, Single-AZ, backup 1 día. [Evidencia v12](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1558UTC.md). |
 | AWS grabaciones | CloudFormation: `cloudformation/voice-recordings.yaml`, creado por `cloudformation/rebuild.sh` | Último registro 09/10: `CREATE_COMPLETE`, drift `IN_SYNC`; sin objetos grabados. Estado actual no revalidado. |
 | Red AWS de ejemplo | Terraform: `environments/demo` → `modules/aws_network` | Formato y validación correctos; no tiene state y no administra el stack vivo. Un `apply` crearía una VPC adicional. |
 | WMS Azure anterior | Terraform histórico: `environments/azure-demo` → `modules/azure_operations` | Su state sigue apuntando al grupo anterior; no usarlo. El Resource Group anterior fue eliminado. |

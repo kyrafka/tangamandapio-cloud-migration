@@ -41,6 +41,7 @@ class StaticCachePolicyTests(unittest.TestCase):
         )
         self.assertIn(b"data-landing-art", page.data)
         self.assertIn(b"walpurgis-rising-pixel-diffused-v1.png", page.data)
+        self.assertIn(b"accessibility-drawer-7f1356105ee4.js", page.data)
 
         health = self.client.get("/health")
         self.assertEqual(health.headers["Cache-Control"], "no-store")
@@ -54,11 +55,12 @@ class StaticCachePolicyTests(unittest.TestCase):
             for path in assets
             if re.fullmatch(
                 r"/assets/(?:index-[A-Za-z0-9_-]{8,}\.(?:js|css)|"
-                r"landing-art-[0-9a-f]{12}\.(?:css|js))",
+                r"landing-art-[0-9a-f]{12}\.(?:css|js)|"
+                r"accessibility-drawer-[0-9a-f]{12}\.js)",
                 path.decode("ascii"),
             )
         ]
-        self.assertGreaterEqual(len(fingerprinted), 3)
+        self.assertGreaterEqual(len(fingerprinted), 4)
 
         for asset_path in fingerprinted:
             with self.subTest(asset=asset_path):

@@ -1,22 +1,40 @@
 # Paquete de release AWS
 
-> Corte 14/10/2026: v11 es un candidato empaquetado y publicado en S3, pero su
-> despliegue no quedó confirmado. La actualización de CloudFormation inició,
-> fallaron las comprobaciones de salud y el ALB respondió 503; después AWS
-> denegó las consultas de diagnóstico/recuperación. v10 fue el último release
-> confirmado sano antes de iniciar el cambio. Véase
-> [evidencia del intento v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+> Corte 15/10/2026, 15:58 UTC: v12 está desplegado. CloudFormation terminó en
+> `UPDATE_COMPLETE`; las dos EC2 activas usan launch template v14 y están
+> saludables detrás del ALB. El target de la EC2 previa continúa drenando
+> durante su terminación. La revalidación en Chrome confirmó el helper de
+> accesibilidad v12 y el foco correcto al cerrar/abrir el acceso. Véase
+> [evidencia del corte v12](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1558UTC.md).
 
-El código local `current/` corresponde a la revisión candidata
-`20261014-landing-loading-v11-python312`. El paquete legado ya subido a S3 y
-usado por el change set fallido tiene SHA-256
-`2a83449335f28ca68d232222b7383886115460315d89699347983a8f26d5f91e`. Tras
-normalizar los permisos del TAR, la compilación local portable genera
-`ef3ffe5c7ff3a20e63084ea350e060dfc11bd3bf4dd44024e4d1f0d1ad557ba3`; ese
-paquete está solo en `artifacts/` local, aún no se subió a S3. La plantilla IaC
-local ya apunta al hash nuevo. No tratar ninguno como versión viva ni aplicar
-la plantilla hasta reconciliar el stack y publicar/verificar el artefacto
-portable.
+`current/` identifica `20261015-login-drawer-a11y-v12-python312`. El artefacto
+reproducible tiene SHA-256
+`c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`; la
+plantilla CloudFormation apunta al mismo hash y al objeto privado versionado en
+S3. Este cambio no reemplazó RDS, VPC, ALB ni buckets. El target viejo estaba
+`Terminating`/`draining` durante la revalidación, mientras que los dos targets
+v14 estaban `healthy`.
+
+## Release v12 — foco seguro del acceso oculto
+
+Se añadió `accessibility-drawer-7f1356105ee4.js` al bundle de `current/`.
+Observa el estado del panel de login, marca el contenedor `inert` y
+`aria-hidden="true"` al cerrarse y devuelve el foco al disparador. Al abrirse,
+quita ambos estados y enfoca el campo corporativo. En Chrome HTTPS comprobé que
+Tab ya no entra al campo oculto y que al abrir el panel el foco sí llega al
+usuario. Tema claro/oscuro probado y se restauró el tema oscuro. El usuario
+debe autenticarse manualmente antes de probar las vistas privadas.
+
+La suite del paquete pasó 45 pruebas y la suite `current/` pasó 12. También pasó
+`node --check` para el helper y el empaquetado reproducible generó el mismo SHA
+dos veces. `cfn-lint` no estaba instalado en el entorno local; no se afirma una
+validación con esa herramienta en este corte.
+
+## Historial de release v11 — carga de imagen sin aparición parcial
+
+El estado de despliegue de v11 en esta sección es histórico y queda supersedido
+por el corte v12 de arriba. La evidencia contemporánea está en
+[el intento v11 del 14/10](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
 
 ## Release v11 — carga de imagen sin aparición parcial
 
