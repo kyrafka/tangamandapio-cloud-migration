@@ -197,8 +197,11 @@ if (Test-Path -LiteralPath $gitBashPath) {
   if ($restoreTestText -notmatch "tr -d '\\r'") {
     throw 'El parser del restore debe normalizar CRLF del Python de Windows antes del preflight.'
   }
-  if ($restoreTestText -notmatch '(?s)PROBE_CREATED=true\s+PROBE_JSON=.*invoke_probe .* create' -or $restoreProbeText -notmatch 'secret_region = secret_arn\.split\(":"\)\[3\]') {
-    throw 'La sonda debe armar limpieza antes del marcador y derivar la región del ARN secreto.'
+  if ($restoreTestText -notmatch 'REMOTE_PYTHON=.*venv/bin/python' -or
+      $restoreTestText -notmatch '(?s)invoke_probe .* preflight.*?PROBE_CREATED=true\s+PROBE_JSON=.*invoke_probe .* create' -or
+      $restoreProbeText -notmatch 'operation == "preflight"' -or
+      $restoreProbeText -notmatch 'secret_region = secret_arn\.split\(":"\)\[3\]') {
+    throw 'La sonda debe verificar el runtime de aplicación por SSM antes de armar limpieza y derivar la región del ARN secreto.'
   }
   if ($restoreTestText -notmatch 'json\.dumps\(json\.loads\(sys\.stdin\.read\(\)\)\["marker_present"\]\)') {
     throw 'El restore debe comparar booleanos JSON en minúscula para Bash multiplataforma.'

@@ -14,6 +14,20 @@ import boto3
 import psycopg2
 from psycopg2 import sql
 
+if operation == "preflight":
+    print(
+        json.dumps(
+            {
+                "runtime": "ready",
+                "python": sys.version.split()[0],
+                "boto3": boto3.__version__,
+                "psycopg2": psycopg2.__version__,
+            },
+            separators=(",", ":"),
+        )
+    )
+    raise SystemExit(0)
+
 BUSINESS_TABLES = (
     "companies",
     "portal_users",

@@ -118,3 +118,30 @@ discrepancia de puntaje siguen en
 - El navegador no puede adquirir micrófono/cámara desde el HTTP público. No se
   puede habilitarlo desde el frontend sin debilitar la seguridad del navegador;
   la corrección de producción es añadir HTTPS confiable y redirigir HTTP.
+
+## Recuperación RDS (PT-DR-01) — 15/10/2026, 02:09 UTC
+
+- [x] Restauración SQL real desde snapshot temporal: `PASSED`; marcador y
+  conteos de tablas verificados en la instancia recuperada.
+- RTO medido: 260 s desde la solicitud de restore hasta la sonda SQL lista.
+  Límite superior observado de RPO: 8 s.
+- Instancia origen y restaurada privadas; ambas cifradas. Retención automática
+  en la instancia temporal: 0 días para evitar respaldos adicionales.
+- Limpieza automática verificada: se eliminó la instancia y el snapshot
+  temporales, y se retiró el marcador de prueba del origen. El snapshot manual
+  permanente de referencia no se modificó.
+- La corrida anterior había fallado antes de tocar datos porque el Python de
+  sistema carecía de `boto3`; se corrigió el intérprete remoto y se agregó un
+  preflight de dependencias de solo lectura. El gate local completo volvió a
+  pasar antes de repetir la prueba.
+
+## Verificación posterior y limpieza — 15/10/2026, 02:22 UTC
+
+- [x] El identificador temporal `tng-dr-restore-20261015020936` ya no aparece
+  en RDS. La instancia productiva `tangamandapio-postgres` sigue `available`,
+  privada y cifrada.
+- [x] AWS ALB `/health` respondió HTTP 200 (`status: ok`); Azure WMS
+  `/api/health` respondió HTTPS 200 (`status: ok`). El flujo de aplicación
+  sigue accesible después del ejercicio DR.
+- El ALB sigue HTTP/80 únicamente. No se creó DNS, certificado ni listener
+  HTTPS durante esta comprobación.

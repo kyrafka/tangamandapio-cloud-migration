@@ -17,6 +17,11 @@ fi
 
 REGION="${AWS_REGION:-us-east-1}"
 MAX_WAIT_SECONDS="${DR_MAX_WAIT_SECONDS:-1800}"
+REMOTE_PYTHON="${DR_REMOTE_PYTHON:-/opt/tangamandapio/venv/bin/python}"
+if [[ ! "$REMOTE_PYTHON" =~ ^/[A-Za-z0-9_./-]+$ ]]; then
+  echo "DR_REMOTE_PYTHON debe ser una ruta absoluta simple del runtime de la aplicación." >&2
+  exit 2
+fi
 for binary in aws python3; do
   command -v "$binary" >/dev/null || { echo "Falta dependencia requerida: $binary" >&2; exit 2; }
 done
@@ -98,7 +103,7 @@ RTO_START=""
 invoke_probe() {
   local host="$1" operation="$2"
   local remote_command parameters_json command_id status output
-  remote_command="printf '%s' '${REMOTE_PROBE_B64}' | base64 -d | gzip -d | python3 - '${SECRET_ARN}' '${host}' '${operation}' '${PROBE_TABLE}' '${PROBE_MARKER}'"
+  remote_command="printf '%s' '${REMOTE_PROBE_B64}' | base64 -d | gzip -d | '${REMOTE_PYTHON}' - '${SECRET_ARN}' '${host}' '${operation}' '${PROBE_TABLE}' '${PROBE_MARKER}'"
   parameters_json="$(python3 -c 'import json,sys; print(json.dumps({"commands":[sys.argv[1]]}))' "$remote_command")"
   command_id="$(aws ssm send-command --document-name AWS-RunShellScript --instance-ids "$SSM_INSTANCE" --parameters "$parameters_json" --region "$REGION" --query 'Command.CommandId' --output text)"
   local waited=0
@@ -157,9 +162,12 @@ SOURCE_ENDPOINT="$(aws rds describe-db-instances --db-instance-identifier "$SOUR
 if [[ -z "$SOURCE_ENDPOINT" || "$SOURCE_ENDPOINT" == None ]]; then echo "La fuente no tiene endpoint." >&2; exit 2; fi
 
 # Preflight de permisos de SQL/SSM antes de iniciar recursos facturables. Crea
-# una tabla efímera y un marcador único que se elimina en el trap de salida.
+# comprueba el runtime remoto antes de armar limpieza o tocar PostgreSQL. Luego
+# crea una tabla efímera y un marcador único que se elimina en el trap de salida.
 # The remote command can commit the marker and then lose its SSM response;
 # arm cleanup first so DROP IF EXISTS is attempted even on an ambiguous failure.
+RUNTIME_JSON="$(invoke_probe "$SOURCE_ENDPOINT" preflight)"
+python3 -c 'import json,sys; result=json.loads(sys.stdin.read()); assert result["runtime"] == "ready"' <<<"$RUNTIME_JSON"
 PROBE_CREATED=true
 PROBE_JSON="$(invoke_probe "$SOURCE_ENDPOINT" create)"
 MARKER_CREATED_AT="$(python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["committed_at"])' <<<"$PROBE_JSON")"
