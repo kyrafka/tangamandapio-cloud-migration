@@ -18,7 +18,9 @@ El preflight HTTPS se prueba localmente con respuestas ACM simuladas: exige ambo
 
 La plantilla conserva HTTP hasta tener un dominio propio. Cuando se compre o
 autorice el DNS, solicita en ACM (región `us-east-1`) un certificado público
-para un subdominio como `portal.ejemplo.com`, usando validación DNS. Copia en
+para un subdominio como `portal.ejemplo.com`, usando validación DNS. No hace
+falta comprar otro dominio si ya se controla el DNS del dominio principal: el
+certificado y el registro se crean para ese subdominio. Copia en
 el proveedor DNS los CNAME de validación que muestra ACM y espera el estado
 `ISSUED`. El despliegue verifica que el ARN sea regional y que el certificado
 cubra exactamente el hostname (o un wildcard de un solo nivel), antes de
@@ -38,7 +40,10 @@ Primero se revisa el change set; para aplicarlo se repite con `APPLY_CHANGE_SET=
 y `CONFIRM_STACK_NAME` igual al stack verificado. Después, crea en el proveedor
 DNS el registro CNAME/ALIAS del hostname al output `LoadBalancerDNS`, confirma
 HTTPS sin advertencias, redirección HTTP→HTTPS y cookie `Secure`. Esta fase
-queda preparada en IaC, pero aún no activada en el release AWS v9.
+queda preparada en IaC, pero aún no está activada en el release AWS v11; la
+lectura puntual del 15/10/2026 confirmó que el listener vivo sigue siendo solo
+HTTP/80. No se debe afirmar HTTPS activo hasta repetir las verificaciones del
+paso 5.
 
 Si el DNS está en Route 53, usa un alias A/AAAA al ALB; en otro proveedor, un
 CNAME del subdominio `portal` al valor `LoadBalancerDNS`. El registro público

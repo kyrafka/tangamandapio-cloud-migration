@@ -1,5 +1,14 @@
 # Índice de evidencias del proyecto
 
+## Revalidación puntual más reciente — 15/10/2026, 04:48 UTC
+
+AWS tiene el stack activo, 2/2 targets sanos y `/health`/`/ready` HTTP 200; el
+listener sigue solo HTTP/80. Azure Function está `Running`, `httpsOnly=true` y
+su health respondió 200. Se verificó que la plantilla HTTPS acepta un
+subdominio y que el preflight protege el despliegue, pero aún falta DNS
+controlado y certificado emitido para habilitarlo. Detalle: [revalidación
+puntual de nube](current/CLOUD-REVALIDATION-2026-10-15-0448UTC.md).
+
 ## Corte vigente — 15/10/2026, 00:34 UTC
 
 El release v11 está en `UPDATE_COMPLETE`/`IN_SYNC`, con dos EC2 y targets ALB

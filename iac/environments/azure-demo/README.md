@@ -1,6 +1,6 @@
 # Terraform Azure — vertical WMS de demostración
 
-El grupo Azure que existe ahora es `rg-tangamandapio-261005-wus` en `westus`. En la consulta del 08/10/2026 sus diez recursos de nivel superior reportaron `provisioningState=Succeeded`; `tangama-wms-fn` aparece habilitada, `Running` y `httpsOnly=true`. Esto describe recursos y ejecución técnica, no inventario real: el flujo sigue siendo `demo-inventory-ledger`.
+Nota histórica de este root (consulta del 08/10/2026): `rg-tangamandapio-261005-wus` y `tangama-wms-fn` fueron el inventario de ese corte. No son el entorno Azure vigente ni el root que debe usarse para desplegar. La revalidación del 15/10/2026 encontró `tangama-wms-261008` en `rg-tangamandapio-rebuild-wus`, `Running`, `httpsOnly=true` y `/api/health` HTTP 200; el root de Terraform correspondiente a esa reconstrucción es `iac/environments/azure-rebuild`. El flujo sigue siendo `demo-inventory-ledger`, no un inventario comercial real.
 
 ## Estado de Terraform: no aplicar todavía
 
