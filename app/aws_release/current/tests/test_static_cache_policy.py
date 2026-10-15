@@ -3,6 +3,7 @@ import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 _test_root = tempfile.TemporaryDirectory(prefix="tangamandapio-cache-tests-")
 os.environ.setdefault("DATABASE_PATH", str(Path(_test_root.name) / "module-import.db"))
@@ -47,7 +48,41 @@ class StaticCachePolicyTests(unittest.TestCase):
         health = self.client.get("/health")
         self.assertEqual(health.headers["Cache-Control"], "no-store")
 
-    def test_hashed_assets_and_landing_vector_are_immutable(self):
+    def test_public_health_reports_availability_without_dependency_details(self):
+        healthy = self.client.get("/health")
+        self.assertEqual(healthy.status_code, 200)
+        self.assertEqual(healthy.get_json()["status"], "ok")
+        self.assertNotIn("database", healthy.get_json())
+
+        with patch.object(portal, "connect", side_effect=RuntimeError("database unavailable")):
+            degraded = self.client.get("/health")
+
+        self.assertEqual(degraded.status_code, 503)
+        self.assertEqual(degraded.get_json()["status"], "degraded")
+        self.assertNotIn("database", degraded.get_json())
+
+    def test_dashboard_uses_public_health_status_without_dependency_field(self):
+        page = self.client.get("/")
+        bundles = re.findall(
+            rb'<script[^>]+src="(/assets/index-[A-Za-z0-9_-]+\.js)\?release=[^"]+"',
+            page.data,
+        )
+        page.close()
+        self.assertEqual(len(bundles), 1)
+
+        bundle = self.client.get(bundles[0].decode("ascii"))
+        try:
+            self.assertEqual(bundle.status_code, 200)
+            expected_mapping = (
+                "value:t.status===`ok`?`ok`:t.status===`degraded`?`degradada`:`—`"
+                .encode("utf-8")
+            )
+            self.assertIn(expected_mapping, bundle.data)
+            self.assertNotIn(b"value:t.database||`", bundle.data)
+        finally:
+            bundle.close()
+
+    def test_hashed_assets_are_immutable_and_unversioned_art_is_not_cached(self):
         page = self.client.get("/")
         assets = re.findall(rb'(?:src|href)="(/assets/[^\"]+)"', page.data)
         page.close()
@@ -79,10 +114,7 @@ class StaticCachePolicyTests(unittest.TestCase):
         try:
             self.assertEqual(image.status_code, 200)
             self.assertTrue(image.headers["Content-Type"].startswith("image/svg+xml"))
-            self.assertEqual(
-                image.headers["Cache-Control"],
-                "public, max-age=31536000, immutable",
-            )
+            self.assertEqual(image.headers["Cache-Control"], "no-store")
         finally:
             image.close()
 
