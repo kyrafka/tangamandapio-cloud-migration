@@ -1,39 +1,48 @@
 # Paquete de release AWS
 
-> Corte vigente: 15/10/2026, 21:34 UTC. CloudFormation
-> `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`.
-> ASG 2/2 instancias deseadas y saludables. Portal HTTPS `/`, `/health` y
-> `/ready` respondieron 200; v16 quedó verificado en los dos nodos finales.
-> AWS STS aceptó el token temporal para la cuenta 841113066612; el secreto no se
-> registra en este archivo.
+> Corte vigente: 15/10/2026, 23:24 UTC. CloudFormation
+> `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`
+> (0 recursos desviados). El ASG volvió a 2/2 deseadas/sanas (máximo 5); un
+> destino anterior seguía drenando durante la limpieza. El portal HTTPS, salud,
+> readiness y el bundle v17 respondieron 200; HTTP redirige con 301.
+> El E2E sintético desde EC2 por ALB-HTTPS completó venta y recepción hacia
+> Azure, con dos eventos entregados y el ledger demo restaurado 10→10.
+> No se registra material de credenciales en este archivo.
 
-## Release v16 desplegado — portada vectorial y caché segura
+## Release v17 desplegado — indicador de salud coherente con API pública
 
 `current/BUILD_REVISION` identifica
-`20261015-edge-cache-safe-landing-v16-python312`. SHA-256 del artefacto:
-`94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe`. La clave,
-el digest y la revisión coinciden entre plantilla, parámetros vivos y el
-objeto privado en S3 (cifrado SSE-S3). El paquete está excluido de Git; se
-versionan fuentes, plantilla y evidencia, nunca credenciales.
+`20261015-dashboard-health-card-v17-python312`. SHA-256 del artefacto:
+`f2a4f3b8b58fae62529d27842c8422cc0c408f189efbef8956125f2e3891c8fa`. La revisión
+y el digest coinciden entre plantilla, parámetros vivos y el objeto privado en
+S3 (cifrado SSE-S3). El paquete está excluido de Git; se versionan fuentes,
+plantilla y evidencia, nunca credenciales.
+
+El indicador AWS ya no espera detalles de base de datos que el endpoint público
+omite intencionalmente: traduce solo el estado agregado seguro que devuelve
+`/health`, sin exponer dependencias internas. El bundle con hash
+`index-473d503bd063.js` fue descargado por HTTPS (200; 289742 bytes).
 
 La portada usa el SVG versionado en
 `current/static/images/tangamandapio-operations.svg`, no PNG ni audio local
 ignorado por Git. Las páginas incluyen query de release en los bundles para
-evitar respuestas antiguas del CDN. Los bundles v16 dieron 200 por HTTPS; un
-bundle inexistente dio 404 con `Cache-Control: no-store` tanto en el ALB como en
-Cloudflare (`BYPASS`).
+evitar respuestas antiguas del CDN. HTTPS con verificación TLS normal devolvió
+200 para portada, `/health`, `/ready` y el bundle; HTTP devolvió 301 a HTTPS.
 
-La actualización gradual de CloudFormation terminó correctamente. Las dos
-instancias finales reportaron la revisión v16 y `/health` y `/ready` 200; los
-destinos del balanceador quedaron 2/2 saludables. Detalle y límites en
-[la evidencia del 15/10 a las 21:34 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-2134UTC.md).
+La actualización gradual de CloudFormation terminó correctamente, con drift
+`IN_SYNC` y cero diferencias. El ASG terminó en 2 deseadas, 2 sanas y máximo 5;
+el balanceador tenía dos destinos sanos y el anterior en drenaje mientras
+terminaba su baja. Detalle, prueba E2E y brechas en
+[la revalidación del 15/10 a las 23:24 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-2324UTC.md).
 
-La puerta local aprobó 181 pruebas Python, 14 Node, 40 transacciones aisladas,
+La puerta local aprobó 197 pruebas Python, 14 Node, 40 transacciones aisladas,
 build/auditorías frontend y dependencias, `cfn-lint`, y Terraform
-`fmt`/`validate`/pruebas con mocks. No se revalidaron Azure ni llamadas WebRTC
-entre dos navegadores, y esta sesión no incluye recorrido visual autenticado.
+`fmt`/`validate`/pruebas con mocks en seis raíces. GitHub Actions para el commit
+`a257a71` pasó sus tres jobs. El E2E verificó Admin, Comercial y Operaciones en
+la API; el recorrido visual autenticado/CSV y WebRTC entre dos navegadores aún
+no están probados.
 
-## Historial — candidato v15 (supersedido por el release v16)
+## Historial — candidato v15 (supersedido por el release v17)
 
 ### Candidato local v15 — corte histórico anterior al despliegue
 
