@@ -1,9 +1,9 @@
-# Checklist de cierre — actualizado 15/10/2026, 02:58 UTC
+# Checklist de cierre — actualizado 15/10/2026, 04:11 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
 
-## Comprobado en este corte
+## Comprobado en el corte previo (02:58 UTC)
 
 - [x] AWS CLI `default` autenticado por STS en la cuenta Academy `841113066612`;
   el token temporal no se guardó en Git ni en el repositorio.
@@ -61,9 +61,6 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   compras/ventas ni capacidad para 3,000 usuarios.
 - [ ] Entrega extremo a extremo de alertas Azure. La telemetría de invocaciones
   confirma actividad, no notificación.
-- [ ] State remoto y privado de Terraform Azure. Los state y respaldos actuales
-  están en la máquina local e ignorados por Git; conservarlos y migrarlos con un
-  procedimiento revisado antes de reconstruir desde otro entorno.
 - [ ] Conectividad privada AWS–Azure: no desplegada ni verificada; un intento
   Site-to-Site previo fue rechazado por SCP. El E2E usa HTTPS público.
 - [ ] WebRTC de audio/video bidireccional con dos navegadores reales.
@@ -73,6 +70,41 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   consola.
 - [ ] Cualquier cambio posterior en el branch debe volver a pasar CI antes de
   considerarse validado.
+
+## Revalidación posterior con el laboratorio renovado — 15/10/2026, 03:50–04:11 UTC
+
+- [x] Perfil AWS default actualizado con el token proporcionado; STS autenticó
+  en la cuenta Academy 841113066612. El secreto no se copió a archivos del
+  proyecto ni al repositorio.
+- [x] CloudFormation está UPDATE_COMPLETE; el estado de drift visible es
+  IN_SYNC (la detección registrada más reciente fue a las 02:36 UTC).
+- [x] ASG mínimo/deseado 2, máximo 5, dos instancias en servicio; ALB activo y
+  2/2 destinos healthy. Portada y /health respondieron 200 antes y después
+  del E2E. Listener solo HTTP/80.
+- [x] RDS available, privada, cifrada, 20 GB, Single-AZ y backup de un día.
+- [x] Siete alarmas métricas con acciones habilitadas: seis OK, una alarma
+  TargetTracking de escala baja en INSUFFICIENT_DATA.
+- [x] E2E portal/RDS/outbox → Azure desde EC2 vía SSM: Admin autenticó, venta
+  completed_demo, recepción received_demo, dos eventos entregados y ledger
+  sintético 10→10. Comercial y Operaciones recibieron los 200/403 esperados.
+- [x] Lecturas autenticadas 24/24 HTTP 200, concurrencia 6, p95 277.17 ms. La
+  carga fue loopback en una EC2; no prueba escrituras por ALB ni escala a 3,000.
+- [x] Azure /api/health HTTPS 200. La consulta ARM directa de estado de la
+  Function no terminó en este corte; Running y httpsOnly=true se habían
+  confirmado en la revalidación de las 02:58 UTC.
+- [x] Los dos blobs de state remoto existen. La cuenta usa HTTPS/TLS 1.2,
+  autenticación Entra, shared-key deshabilitado y acceso anónimo al contenedor
+  deshabilitado; la red pública de la cuenta permanece habilitada.
+- [x] Planes vivos Terraform de azure-rebuild y azure-tfstate: No changes,
+  sin apply.
+- [x] Gate local completo: 165 Python, 14 Node, 40 transacciones aisladas,
+  build Vite, auditorías sin vulnerabilidades conocidas, CloudFormation y
+  Terraform validados; pruebas mock de costos/red aprobadas.
+- [x] GitHub Actions en 39617c9 terminó success; el branch remoto y el local
+  coincidían antes de esta actualización documental.
+
+La evidencia íntegra de este corte está en
+[CLOUD-REVALIDATION-2026-10-15-0410UTC.md](CLOUD-REVALIDATION-2026-10-15-0410UTC.md).
 
 ## Límites del prototipo
 

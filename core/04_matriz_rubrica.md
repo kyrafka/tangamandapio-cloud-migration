@@ -1,4 +1,4 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 02:58 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 04:11 UTC
 
 ## Conclusión de calificación
 
@@ -24,7 +24,32 @@ Los cortes sanos anteriores se conservan en el
 [revalidación Azure](../evidence/current/azure/AZURE-PLAN-PAQUETE-2026-10-13.md)
 y la [revalidación anterior a v11](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
 
-Revalidación vigente al 15/10/2026 02:58 UTC: AWS STS autenticó en la cuenta
+## Revalidación vigente — 15/10/2026, 04:11 UTC
+
+AWS STS autenticó en la cuenta Academy 841113066612; ALB activo, 2/2 destinos
+healthy, portada y /health 200. ASG 2/2/5; RDS available, privada, cifrada,
+20 GB, Single-AZ y backup de un día. CloudFormation UPDATE_COMPLETE; estado
+visible IN_SYNC (detección más reciente registrada a las 02:36 UTC). De siete
+alarmas métricas, seis OK y una TargetTracking de escala baja INSUFFICIENT_DATA;
+todas con acciones habilitadas. Listener ALB solo HTTP/80.
+
+El E2E desde EC2 por SSM autenticó Admin, completó venta completed_demo y
+recepción received_demo, entregó dos eventos a Azure y devolvió el ledger demo
+a 10→10. Comercial y Operaciones obtuvieron los 200/403 previstos. Las 24
+lecturas autenticadas fueron 24/24 HTTP 200, p95 277.17 ms, concurrencia 6,
+por loopback, no por el ALB. Azure /api/health devolvió HTTPS 200.
+
+Terraform leyó los dos estados remotos Azure; los planes de azure-rebuild y
+azure-tfstate terminaron No changes. El contenedor es privado y requiere Entra;
+shared-key está deshabilitado, TLS mínimo 1.2 y HTTPS obligatorio. La red
+pública de la cuenta sigue habilitada. Gate local 165 Python, 14 Node, 40
+transacciones aisladas, build y auditorías aprobados. GitHub Actions del commit
+39617c9 terminó success. El detalle está en
+[la revalidación del 15/10](../evidence/current/CLOUD-REVALIDATION-2026-10-15-0410UTC.md).
+
+## Corte histórico — 15/10/2026, 02:58 UTC
+
+Revalidación anterior: AWS STS autenticó en la cuenta
 Academy `841113066612`; ALB `active`, 2/2 destinos `healthy` y una microcarga
 de 120 sondas `/health` 200 a concurrencia 8; Azure `/api/health` también dio
 200 en la misma revalidación. CloudFormation
@@ -65,12 +90,12 @@ primera sección reflejan la última evidencia disponible.
 | 4 | Cómputo, almacenamiento y BD · 1.5 | v11 desplegado: dos EC2 `InService`, dos destinos ALB `healthy`, ASG mínimo/deseado 2 máximo 5; RDS disponible/cifrada/privada, Single-AZ, backup un día. Restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | No se ha demostrado Multi-AZ ni failover automático; el ledger Azure es ficticio. |
 | 5 | Seguridad cloud · 2.5 | E2E del 15/10: Admin autenticó; matriz viva API Comercial/Operaciones verificó rutas 200/403; `/api/admin/users` anónimo devolvió 401 en corte previo. Security groups no exponen EC2/RDS a Internet; Azure exige Function key y rechazó origen no autorizado sin persistencia. | Falta revisión visual autenticada en navegador. ALB continúa sin HTTPS confiable; dominio/certificado siguen diferidos. |
 | 6 | Alta disponibilidad y escalabilidad · 1.5 | Prueba histórica de Target Tracking 2→3 y microprueba ALB 60/60; despliegue gradual v11 conservó dos instancias y destinos saludables. La corrida del 15/10 tuvo 24 lecturas autenticadas loopback 24/24 y, posteriormente, 120 sondas `/health` por ALB/RDS 120/120 con concurrencia 8 (p95 1,194–1,720 ms). | La sonda no crea transacciones de venta, no mide escritura/concurrencia de negocio ni demuestra capacidad para 3,000 usuarios; falta prueba transaccional acotada por ALB/RDS y dimensionamiento. |
-| 7 | Monitoreo y observabilidad · 1.0 | Cinco alarmas CloudWatch `OK` con acciones habilitadas y dos suscripciones SNS confirmadas; el Action Group Azure y sus dos receptores están habilitados, así como las reglas de 5xx/latencia. Application Insights reportó 17 solicitudes/24 h, cero fallidas; el E2E reciente confirma procesamiento real de dos eventos demo. | No se envió/observó un correo nuevo en este corte ni hay captura independiente de la bandeja; faltan capturas visuales de los dashboards. Contadores agregados no sustituyen correlación de negocio. |
-| 8 | Infrastructure as Code · 1.5 | CloudFormation desplegó la política `AutoScalingRollingUpdate`; stack `UPDATE_COMPLETE` y nueva detección `IN_SYNC`, cero discrepancias, 15/10 02:36 UTC. Terraform Azure terminó `No changes` en el corte anterior y pasó fmt/validate/tests locales; no se ejecutó apply. | No hay IaC aplicada para red privada. El state Terraform de Azure permanece solo local y excluido de Git; antes de reconstruir desde otra máquina, migrarlo a backend remoto privado y comprobar el plan. Nunca versionar state ni secretos. |
+| 7 | Monitoreo y observabilidad · 1.0 | Siete alarmas métricas CloudWatch con acciones habilitadas: seis `OK`, una TargetTracking de escala baja en `INSUFFICIENT_DATA`; dos suscripciones SNS confirmadas. Action Group Azure y sus dos receptores están habilitados, así como reglas 5xx/latencia. Application Insights reportó 17 solicitudes/24 h, cero fallidas; el E2E confirma dos eventos demo procesados. | No se envió/observó un correo nuevo en este corte ni hay captura independiente de la bandeja; faltan capturas visuales de dashboards. Contadores agregados no sustituyen correlación de negocio. |
+| 8 | Infrastructure as Code · 1.5 | CloudFormation desplegó `AutoScalingRollingUpdate`; stack `UPDATE_COMPLETE`, estado visible `IN_SYNC` (última detección registrada 15/10 02:36 UTC). Los estados Azure están en backend remoto; planes vivos de `azure-rebuild` y `azure-tfstate` dieron `No changes`. Contenedor privado/Entra, shared-key deshabilitado, TLS 1.2; red pública de cuenta aún habilitada. | No hay IaC aplicada para la red privada. Mantener una copia local restringida del state de bootstrap como respaldo; habilitar red privada/firewall para el backend cuando exista un runner autorizado. No versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E portal→RDS/outbox→Azure Queue/Function del 15/10 entregó venta/recepción sintéticas y ledger 10→10. | No hay conexión privada AWS–Azure; no presentar Azure como OCI ni afirmar inventario comercial. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | Gate local: 165 Python/14 Node, build e IaC; PT-PERF-02 40 transacciones aisladas. E2E vivo del 15/10 autenticó Admin, catálogo, venta/recepción portal→RDS/outbox→Azure; matriz API 200/403 y lectura 24/24 p95 476.1 ms. Restore RDS medido. GitHub Actions del commit nuevo sigue pendiente. | Falta CSV desde navegador, carga transaccional por ALB/RDS, evidencia de entrega de alertas Azure y revisión visual. WebRTC sigue diferido. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 165 Python/14 Node, build e IaC; PT-PERF-02 40 transacciones aisladas. E2E vivo del 15/10 autenticó Admin, catálogo, venta/recepción portal→RDS/outbox→Azure; matriz API 200/403 y lectura 24/24 p95 277.17 ms. Restore RDS medido. GitHub Actions del commit 39617c9 terminó success. | Falta CSV desde navegador, carga transaccional por ALB/RDS, evidencia de entrega de alertas Azure y revisión visual. WebRTC sigue diferido. |
 | 13 | Documentación técnica · 0.5 | README, matriz y evidencia actualizados con resultado E2E y restore del 15/10, RTO/RPO, salud y limpieza. | Faltan capturas actuales del inventario AWS y monitor Azure (el usuario las recopilará) y revisar visualmente el informe final. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 

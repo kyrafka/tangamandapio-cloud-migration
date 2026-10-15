@@ -10,7 +10,18 @@ El catálogo trae 12 SKU sintéticos y se amplía desde ERP → Maestros con la 
 
 El proyecto hermano se usa como referencia del problema del datacenter corporativo centralizado, no como fuente de las cifras de Tangamandapio. La arquitectura objetivo, responsabilidades, candidatos ERP/correo y fases están en [core/12_arquitectura_empresarial_portal_erp_correo.md](core/12_arquitectura_empresarial_portal_erp_correo.md).
 
-## Estado del proyecto
+## Estado vigente
+
+**Última revalidación: 15/10/2026, 04:10 UTC.** AWS autenticó el perfil local;
+el ALB y sus dos destinos están saludables, y la portada y /health responden
+200. Azure /api/health responde HTTPS 200. El E2E portal→RDS/outbox→Azure
+completó una venta y recepción sintéticas, con ledger 10→10 y autorización API
+de roles verificada. Los planes Terraform contra el backend remoto Azure dieron
+No changes; el gate local y GitHub Actions están aprobados en commit 39617c9.
+El [corte detallado](evidence/current/CLOUD-REVALIDATION-2026-10-15-0410UTC.md)
+incluye límites y pendientes.
+
+### Corte histórico anterior (02:58 UTC)
 
 **Corte vigente: 15/10/2026, 02:58 UTC.** AWS `default` autenticó por STS en la cuenta académica `841113066612`; el ALB `tangamandapio-alb` está `active`, sus dos destinos están `healthy` y `/health` respondió 200 bajo una microcarga de 120 solicitudes/8 concurrentes. Ese endpoint ejecuta `SELECT 1`, por lo que prueba disponibilidad de la ruta ALB→aplicación→RDS, no ventas. CloudFormation `tangamandapio-live-20261013` está `UPDATE_COMPLETE`; la última detección de drift (02:36 UTC) terminó `IN_SYNC`, cero diferencias. El release `20261014-landing-loading-v11-python312` está activo en dos instancias `InService`. La VPC separa ALB público, aplicación privada y RDS aislada; RDS está `available`, cifrada, privada, 20 GB, Single-AZ y con backup de un día. Las cinco alarmas CloudWatch están `OK` con acciones habilitadas. Azure for Students está `Enabled`; la Function está `Running`, `httpsOnly=true` y `/api/health` respondió 200 en la revalidación a las 02:58 UTC. El [corte completo](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) distingue comprobaciones de pendientes.
 
@@ -35,4 +46,9 @@ terminaron `success`. `main` no se modificó.
 - `evidence/current/`: evidencia y mapas fechados, con límites de cada afirmación.
 - `deliverables/`: documentos académicos existentes; no asumir que un Entregable 1 es el informe final.
 
-El state de Terraform Azure y los archivos de respaldo permanecen locales y están excluidos de Git porque pueden contener datos sensibles. Antes de reconstruir Azure desde otra máquina, migrar el state a un backend remoto privado y verificar el plan. Las cuentas y la mensajería local no son directorio ni correo corporativo de producción. La pila AWS no tiene SMTP productivo configurado en este corte. El [checklist vigente](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) diferencia lo demostrado de lo pendiente.
+Se conserva una copia local restringida del state anterior a la migración como
+respaldo; no se versiona. Los estados activos están en el backend remoto Azure y
+sus planes vivos no mostraron cambios. El buzón interno no es un servicio de
+correo corporativo ni la pila AWS tiene SMTP productivo configurado. El
+[checklist vigente](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) distingue
+lo demostrado de lo pendiente.
