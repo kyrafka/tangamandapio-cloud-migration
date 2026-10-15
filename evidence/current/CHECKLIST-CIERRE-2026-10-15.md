@@ -1,4 +1,4 @@
-# Checklist de cierre — actualizado 15/10/2026, 05:15 UTC
+# Checklist de cierre — actualizado 15/10/2026, 05:33 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -307,3 +307,24 @@ discrepancia de puntaje siguen en
 - [ ] Falta que Kendell publique el CNAME exacto de ACM como DNS only; al pasar
   ACM a `ISSUED`, desplegar el listener/redirect y probar HTTPS externamente.
   Después se podrá comprobar WebRTC desde navegadores seguros.
+
+## E2E sintético por ALB — 15/10/2026, 05:33 UTC
+
+- [x] El ALB directo `/health` respondió HTTP 200; una corrida E2E por el mismo
+  ALB terminó `LIVE_E2E_PASSED`. Admin autenticó, Comercial/Operaciones
+  respetaron 200/403, venta y recepción sintéticas se completaron, y dos eventos
+  llegaron a Azure. El ledger demo regresó 10→10.
+- [x] 24 lecturas autenticadas por el ALB: 24/24 HTTP 200, concurrencia 6,
+  p95 216.61 ms; SNS: dos suscripciones confirmadas. No representa 3,000 usuarios.
+  [Resultado sanitizado](aws/AWS-PORTAL-ERP-AZURE-ALB-E2E-2026-10-15-0533UTC.json).
+- [x] El test runner ahora limita el destino a loopback o el ALB conocido y
+  rechaza destinos arbitrarios; la suite Python completa pasó 167 pruebas y 159
+  subtests, incluidas las pruebas del runner.
+- [x] Capacidad AWS comprobada después del E2E: ASG deseado/mínimo 2, máximo 5,
+  ambas EC2 `InService` y `Healthy`. Seis alarmas métricas están `OK`; la alarma
+  target-tracking de escala baja está `ALARM` por CPU < 42%, condición que pide
+  scale-in pero no baja el ASG de su mínimo 2. Acciones habilitadas. El usuario
+  confirmó antes que recibió alertas y recuperación; no se archivó captura.
+- [ ] El certificado ACM continúa `PENDING_VALIDATION`; el CNAME de validación
+  esperado aún no aparece en DNS público. HTTPS externo sigue expirando, no se
+  habilitó 443 y WebRTC con dos navegadores queda pendiente.

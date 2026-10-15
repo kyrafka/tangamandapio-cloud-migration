@@ -1,5 +1,7 @@
 param(
-    [string]$InstanceId
+    [string]$InstanceId,
+    [ValidateSet('loopback', 'alb')]
+    [string]$PortalTarget = 'loopback'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,7 +45,7 @@ $gzip.Write($scriptBytes, 0, $scriptBytes.Length)
 $gzip.Dispose()
 $encodedScript = [Convert]::ToBase64String($compressed.ToArray())
 $compressed.Dispose()
-$remoteCommand = "printf '%s' '$encodedScript' | base64 -d | gzip -d | env RUN_LIVE_DEPLOYED_E2E=$expectedOptIn python3 -"
+$remoteCommand = "printf '%s' '$encodedScript' | base64 -d | gzip -d | env RUN_LIVE_DEPLOYED_E2E=$expectedOptIn LIVE_E2E_TARGET=$PortalTarget python3 -"
 $parameters = @{ commands = @($remoteCommand) } | ConvertTo-Json -Compress
 $commandId = aws ssm send-command `
     --document-name AWS-RunShellScript `

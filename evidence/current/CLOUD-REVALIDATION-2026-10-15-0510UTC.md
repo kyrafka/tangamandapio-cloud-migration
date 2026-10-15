@@ -112,3 +112,28 @@ capacidad para 3,000 usuarios, entrega de alertas ni una VPN privada AWS–Azure
 - Prueba externa posterior a las 05:29 UTC: HTTPS `/` y `/health` en
   `tangamandapio.kendellnm.me` agotaron el límite de 20 s. El CNAME de aplicación
   proxied visible en Cloudflare no equivale a un endpoint HTTPS funcional.
+
+## E2E sintético por ALB — 05:33 UTC
+
+- El health del ALB directo respondió HTTP 200. El test sintético autenticado
+  terminó `LIVE_E2E_PASSED` dirigiéndose explícitamente al ALB público, no a
+  `127.0.0.1`: Admin, catálogo, venta `completed_demo`, recepción
+  `received_demo`, dos eventos outbox entregados a Azure y ledger demo 10→10.
+- La matriz por el ALB devolvió 200/403 según los permisos de Comercial y
+  Operaciones; las dos suscripciones SNS siguen confirmadas.
+- 24 lecturas autenticadas por el ALB: 24/24 HTTP 200, concurrencia 6,
+  p95 216.61 ms. Es una comprobación transaccional acotada, no una prueba de
+  3,000 usuarios. Evidencia sanitizada: [resultado](aws/AWS-PORTAL-ERP-AZURE-ALB-E2E-2026-10-15-0533UTC.json).
+- El runner SSM admite únicamente los objetivos `loopback` y ALB conocido;
+  se agregaron pruebas para valor predeterminado, selección explícita y rechazo
+  cerrado de destinos arbitrarios. La suite Python completa terminó con 167
+  pruebas y 159 subtests aprobados; Node (8 permisos + 6 CSV), build Vite,
+  `cfn-lint` y `terraform fmt -check -recursive iac` también pasaron.
+- La comprobación de CloudWatch muestra seis alarmas métricas `OK` y la alarma
+  target-tracking de escala baja en `ALARM` por CPU < 42%. El ASG está en su
+  mínimo/deseado de 2 (máximo 5) y las dos EC2 permanecen `InService`/`Healthy`;
+  esa señal no redujo capacidad por debajo del mínimo. Acciones siguen habilitadas.
+  El usuario había confirmado recepción de alertas y recuperación, sin captura
+  independiente archivada.
+- No se cambió infraestructura cloud. ACM sigue pendiente, HTTPS externo
+  expiró, y quedan HTTPS/443, revisión visual y WebRTC entre dos navegadores.

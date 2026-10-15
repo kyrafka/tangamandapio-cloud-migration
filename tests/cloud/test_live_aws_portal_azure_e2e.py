@@ -56,6 +56,27 @@ class PortalLoginRoleTests(unittest.TestCase):
                 client.login()
 
 
+class LiveTargetSelectionTests(unittest.TestCase):
+    def test_loopback_is_the_safe_default(self) -> None:
+        with patch.dict(live_e2e.os.environ, {}, clear=False):
+            live_e2e.os.environ.pop("LIVE_E2E_TARGET", None)
+            client = live_e2e.PortalClient()
+        self.assertEqual(client.target, "loopback")
+        self.assertEqual(client.base_url, "http://127.0.0.1:8080")
+
+    def test_alb_target_is_explicit_and_allowlisted(self) -> None:
+        with patch.dict(live_e2e.os.environ, {"LIVE_E2E_TARGET": "alb"}):
+            client = live_e2e.PortalClient()
+        self.assertEqual(
+            client.base_url,
+            "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
+        )
+
+    def test_arbitrary_target_fails_closed(self) -> None:
+        with self.assertRaisesRegex(live_e2e.SmokeFailure, "Unsupported live E2E target"):
+            live_e2e.PortalClient("http://example.invalid")
+
+
 class AdminAlarmSubscriptionSmokeTests(unittest.TestCase):
     class FakeClient:
         def __init__(self, response: dict) -> None:

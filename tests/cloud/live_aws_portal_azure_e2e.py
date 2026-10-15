@@ -4,8 +4,9 @@
 Run only through SSM on an authorized Tangamandapio EC2 instance. It reads the
 admin password from that instance's SSM role, creates/reuses a synthetic QA
 partner and SKU, sells one unit, receives one unit, and requires the Azure demo
-ledger to return to its initial balance. It never prints credentials or API
-responses containing personal data.
+ledger to return to its initial balance. The target is restricted to loopback
+or the known public ALB. It never prints credentials or API responses containing
+personal data.
 """
 
 from __future__ import annotations
@@ -24,7 +25,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 
-BASE_URL = "http://127.0.0.1:8080"
+LIVE_TARGET_URLS = {
+    "loopback": "http://127.0.0.1:8080",
+    "alb": "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
+}
 ADMIN_USERNAME = "admin@tangamandapio.local"
 ADMIN_PARAMETER = "/tangamandapio/portal/admin-login"
 ROLE_ACCOUNTS = (
@@ -70,6 +74,14 @@ class SmokeFailure(RuntimeError):
     pass
 
 
+def resolve_live_target(target: str) -> str:
+    """Resolve only the explicitly supported, non-arbitrary live test targets."""
+    try:
+        return LIVE_TARGET_URLS[target]
+    except KeyError:
+        raise SmokeFailure("Unsupported live E2E target; use loopback or alb.") from None
+
+
 def get_secure_parameter(parameter_name: str) -> str:
     try:
         result = subprocess.run(
@@ -104,7 +116,9 @@ def get_secure_parameter(parameter_name: str) -> str:
 
 
 class PortalClient:
-    def __init__(self) -> None:
+    def __init__(self, target: str | None = None) -> None:
+        self.target = target or os.environ.get("LIVE_E2E_TARGET", "loopback")
+        self.base_url = resolve_live_target(self.target)
         policy = http.cookiejar.DefaultCookiePolicy(
             secure_protocols=("http", "https", "wss")
         )
@@ -127,7 +141,7 @@ class PortalClient:
         if method not in {"GET", "HEAD", "OPTIONS"} and self.csrf:
             headers["X-CSRF-Token"] = self.csrf
         req = Request(
-            BASE_URL + path,
+            self.base_url + path,
             data=data,
             headers=headers,
             method=method,
@@ -259,7 +273,7 @@ def measure_read_only_database_load(client: PortalClient) -> dict:
     def read_one(index: int) -> float:
         path = paths[index % len(paths)]
         request = Request(
-            BASE_URL + path,
+            client.base_url + path,
             headers={"Accept": "application/json", "Cookie": cookie},
         )
         started = time.perf_counter()
@@ -377,7 +391,12 @@ def main() -> int:
     if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != OPT_IN:
         print("Refused: set the exact opt-in only for the approved live synthetic smoke.")
         return 2
-    client = PortalClient()
+    target = os.environ.get("LIVE_E2E_TARGET", "loopback")
+    try:
+        client = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
     sku: str | None = None
     baseline: int | None = None
     partner_id: int | None = None
@@ -528,6 +547,7 @@ def main() -> int:
             json.dumps(
                 {
                     "result": "LIVE_E2E_PASSED",
+                    "target": client.target,
                     "database_health": "ok",
                     "portal_role": "admin",
                     "azure_mode": final_inventory.get("mode"),
