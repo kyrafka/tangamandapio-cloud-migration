@@ -59,3 +59,18 @@ conectividad privada AWS–Azure verificada. No se probó CSV manual en navegado
 WebRTC entre dos navegadores ni una carga transaccional por ALB/RDS a escala.
 Los resultados de roles/ERP sí se repitieron sobre v11 mediante el smoke
 autenticado anterior.
+
+## Comprobación adicional — 15/10/2026, 00:43–00:49 UTC
+
+Una lectura final posterior al despliegue confirmó CloudFormation
+`UPDATE_COMPLETE`, drift `IN_SYNC`, ASG 2/2/5 con dos instancias `InService`, y
+los dos destinos del target group `healthy`. El ALB devolvió HTTP 200 en
+`/health` y `/ready`; la Function Azure respondió HTTP 200.
+
+Además, Application Insights consultado con Azure CLI reportó 17 solicitudes
+en `requests` durante las últimas 24 horas, cero fallidas; el desglose contenía
+dos entradas exitosas de `process_fulfillment_message` y dos de
+`receive_fulfillment_event`. Es evidencia viva de actividad del worker,
+complementaria al E2E sintético, no una prueba de alerta entregada ni de WMS
+comercial. El detalle reproducible está en
+[`azure/AZURE-MONITOR-INVOCACIONES-2026-10-15.md`](azure/AZURE-MONITOR-INVOCACIONES-2026-10-15.md).

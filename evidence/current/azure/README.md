@@ -1,5 +1,13 @@
 # Evidencias Azure
 
+**Application Insights y ejecución del trigger — 15/10/2026, 00:49 UTC:**
+Function `tangama-wms-261008` `Running`/HTTPS-only; health HTTP 200. La consulta
+de 24 horas reportó 17 solicitudes y cero fallidas, incluidas dos ejecuciones
+exitosas de `process_fulfillment_message` y dos de
+`receive_fulfillment_event`. Es telemetría agregada sin payload; no prueba por
+sí sola alertas entregadas ni WMS comercial. Ver
+[`AZURE-MONITOR-INVOCACIONES-2026-10-15.md`](AZURE-MONITOR-INVOCACIONES-2026-10-15.md).
+
 **E2E y seguridad de ingreso — 14/10/2026, 07:43–07:49 America/Chicago:**
 el smoke live del portal local verificó 401 sin Function key, 400 para fuente
 no permitida y ausencia de persistencia del ID rechazado. Después procesó venta

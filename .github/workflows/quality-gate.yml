@@ -83,18 +83,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.9.1
+          run_install: false
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: pnpm
           cache-dependency-path: app/web/pnpm-lock.yaml
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          version: 12.9.1
-          run_install: false
 
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
@@ -135,14 +135,53 @@ jobs:
           terraform_version: '1.16.0'
           terraform_wrapper: false
 
-      - name: Format and validate both Terraform environments
+      - name: Show Terraform toolchain
+        run: terraform version
+
+      - name: Format every Terraform environment
         run: |
           set -euo pipefail
-          for directory in iac/environments/demo iac/environments/azure-demo; do
+          for directory in \
+            iac/environments/demo \
+            iac/environments/azure-demo \
+            iac/environments/azure-rebuild \
+            iac/environments/azure-flex-private \
+            iac/environments/aws-azure-vpn; do
+            echo "Checking Terraform format: $directory"
             terraform -chdir="$directory" fmt -check -recursive
-            terraform -chdir="$directory" init -backend=false -input=false -lockfile=readonly -no-color
-            terraform -chdir="$directory" validate -no-color
           done
+
+      - name: Initialize and validate Terraform demo (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/demo init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/demo validate -no-color
+
+      - name: Initialize and validate Terraform Azure demo (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/azure-demo init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/azure-demo validate -no-color
+
+      - name: Initialize and validate Terraform Azure rebuild (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/azure-rebuild init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/azure-rebuild validate -no-color
+
+      - name: Initialize, validate and test Azure private networking (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/azure-flex-private init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/azure-flex-private validate -no-color
+          terraform -chdir=iac/environments/azure-flex-private test -no-color
+
+      - name: Initialize, validate and test AWS–Azure VPN (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/aws-azure-vpn init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/aws-azure-vpn validate -no-color
+          terraform -chdir=iac/environments/aws-azure-vpn test -no-color
 
       - name: Check shell syntax
         run: bash -n iac/cloudformation/*.sh tests/aws/*.sh
