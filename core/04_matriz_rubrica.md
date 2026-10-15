@@ -1,6 +1,32 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 23:24 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 23:45 UTC
 
-## Corte vigente — 15/10/2026, 23:21–23:24 UTC
+## Corte vigente — 15/10/2026, 23:45 UTC
+
+El smoke remoto autenticado `admin-modules` pasó desde EC2 hacia el portal por
+ALB HTTPS. Finanzas creó una cuenta por pagar sintética de S/ 0.05, la liquidó
+como `paid` y confirmó su persistencia. El correo interno está funcional en
+modo `portal_only`: Admin envió a Comercial, el mensaje apareció en Enviados y
+en Bandeja, y el destinatario lo marcó como leído. No se envió nada por SMTP.
+El endpoint de Azure devolvió un conteo aproximado de 0 mensajes poison sin
+exponer payloads. El resumen admin indicó 1 pedido, 0 eventos pendientes y 45
+entregados; la lista mostró el único pedido y las 30 filas de outbox más
+recientes (límite de API), todas entregadas. El total 45 no se puede conciliar
+fila a fila con una vista limitada a 30. SNS informó 2 suscripciones
+confirmadas y 0 pendientes; no se disparó alarma ni se mandó correo.
+
+La suite específica aprobó 26 pruebas y el quality gate completo aprobó 205,
+con build frontend, CloudFormation y auditoría de dependencias. Terraform no se
+ejecutó en este gate. Esta pasada no vuelve a validar deriva/estado de toda la
+infraestructura: para ese corte véase la evidencia de las 23:24 UTC. El detalle
+de estas nuevas pruebas está en
+[la revalidación de módulos y poison queue](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2345UTC.md).
+
+Los módulos demo son funcionales como ledger sintético; no simulan por ello un
+WMS físico, transferencia bancaria, contabilidad legal ni transporte SMTP.
+Persisten las brechas de red privada AWS–Azure, escalado/carga representativa,
+WebRTC entre dos navegadores y revisión visual autenticada/CSV en Chrome.
+
+## Corte anterior — 15/10/2026, 23:21–23:24 UTC (infraestructura y E2E)
 
 Se desplegó v17 con CloudFormation y la actualización gradual cerró
 `UPDATE_COMPLETE`. El E2E autenticado desde EC2 por ALB HTTPS recorrió
@@ -50,8 +76,9 @@ evidencia y trabajo pendiente, no puntos.
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-La evidencia vigente de AWS/Azure/E2E es el corte del 15/10 a las 22:17 UTC:
-[revalidación](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2217UTC.md).
+La evidencia de módulos vigente es el corte del 15/10 a las 23:45 UTC:
+[revalidación](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2345UTC.md). La
+última revalidación de infraestructura sigue siendo la de las 23:21–23:24 UTC.
 Los bloques fechados anteriores, incluidos los que reportan `ExpiredToken` o
 v12/v13, son antecedentes y no sustituyen esta revalidación.
 
@@ -183,13 +210,13 @@ y [prueba ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643
 | 4 | Cómputo, almacenamiento y BD · 1.5 | Release v17, ASG 2/2/5; RDS `available`, privada y cifrada. Restore SQL aislado comprobó marcador/integridad, RTO 260 s y RPO superior observado 8 s. | RDS sigue Single-AZ y un día de backup; no se probó failover. Azure WMS opera sobre ledger sintético, no inventario físico. |
 | 5 | Seguridad cloud · 2.5 | HTTPS/TLS y redirect verificados; E2E API autenticó Admin/Comercial/Operaciones y validó 200/403; SNS tiene 2 confirmadas/0 pendientes. | Falta recorrido visual autenticado y CSV en UI. WAF desactivado y no hay evaluación externa independiente reciente. |
 | 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 con dos nodos sanos; E2E por ALB con 24/24 lecturas 200, concurrencia 6, p95 208.71 ms. | Es una prueba corta; no demuestra autoescalado ni 3,000 usuarios; RDS Single-AZ. |
-| 7 | Monitoreo y observabilidad · 1.0 | Drift AWS `IN_SYNC`; alarmas con acciones habilitadas. Application Insights: 89 solicitudes/0 fallos en la última hora; worker Queue 8/0. | No se disparó una alarma nueva en este corte ni se capturó visualmente el monitor. WAF continúa desactivado. |
+| 7 | Monitoreo y observabilidad · 1.0 | Drift AWS `IN_SYNC` en el corte de infraestructura 23:24; a las 23:45 la consulta segura de Azure poison queue devolvió conteo aproximado 0 y SNS tenía 2 suscripciones confirmadas/0 pendientes. | No se disparó una alarma nueva en este corte ni se capturó visualmente el monitor. WAF continúa desactivado. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation aplicado sin drift; release v17 en stack/S3. Terraform `fmt`, seis raíces `validate`, mocks y plan Azure vivo `No changes` pasan. | No hay IaC aplicada para la red privada AWS–Azure; no versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E autenticado desde una EC2 recorrió AWS/RDS/outbox → Azure Queue/Function y compensó el ledger demo. | No hay conexión privada AWS–Azure; la comunicación va por HTTPS público. No presentar Azure como OCI ni afirmar inventario físico. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | Gate local: 197 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. E2E AWS→RDS/outbox→Azure autenticado para catálogo, venta y recepción. | Falta inspección visual/CSV en Chrome, prueba viva de finanzas/SMTP, fallo y poison queue, WebRTC con dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
-| 13 | Documentación técnica · 0.5 | Matriz, release v17 y evidencia AWS/Azure actualizados localmente; Actions del commit `a257a71` terminó `success`. | Guardar capturas actuales de consola AWS/monitor Azure para sustentación; evidencia textual no las sustituye. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 205 pruebas unitarias, build, auditorías y CloudFormation. Smoke AWS→RDS/outbox→Azure para catálogo/venta/recepción y smoke admin de finanzas/correo interno; dashboard/outbox comparado con el límite de 30 filas, SNS y poison queue consultados en solo lectura. | Falta inspección visual/CSV en Chrome, relay SMTP externo, escenario de reintento/poison real, WebRTC entre dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
+| 13 | Documentación técnica · 0.5 | Matriz, release v17 y evidencia del smoke admin/cola actualizados localmente; Actions del commit `a257a71` terminó `success` para el corte anterior. | Esta actualización documental y de pruebas debe sincronizarse a GitHub y pasar Actions; guardar capturas actuales de consola AWS/monitor Azure para sustentación. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago

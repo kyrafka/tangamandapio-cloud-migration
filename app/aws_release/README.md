@@ -1,12 +1,18 @@
 # Paquete de release AWS
 
-> Corte vigente: 15/10/2026, 23:24 UTC. CloudFormation
+> Corte de infraestructura: 15/10/2026, 23:24 UTC. CloudFormation
 > `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`
 > (0 recursos desviados). El ASG volvió a 2/2 deseadas/sanas (máximo 5); un
 > destino anterior seguía drenando durante la limpieza. El portal HTTPS, salud,
 > readiness y el bundle v17 respondieron 200; HTTP redirige con 301.
 > El E2E sintético desde EC2 por ALB-HTTPS completó venta y recepción hacia
 > Azure, con dos eventos entregados y el ledger demo restaurado 10→10.
+> Corte de módulos: 15/10/2026, 23:45 UTC. Smoke remoto de Finanzas creó,
+> liquidó y releyó una cuenta sintética de S/ 0.05; el correo `portal_only`
+> llegó al buzón Comercial y se marcó leído; la Azure poison queue informó 0
+> mensajes, consultada sin mutar ni exponer payloads. Resumen admin: 1 pedido,
+> 0 pendientes, 45 entregados; la lista muestra solo los 30 más recientes.
+> SNS: 2 confirmadas/0 pendientes; no se disparó alarma ni se envió SMTP.
 > No se registra material de credenciales en este archivo.
 
 ## Release v17 desplegado — indicador de salud coherente con API pública
@@ -35,12 +41,15 @@ el balanceador tenía dos destinos sanos y el anterior en drenaje mientras
 terminaba su baja. Detalle, prueba E2E y brechas en
 [la revalidación del 15/10 a las 23:24 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-2324UTC.md).
 
-La puerta local aprobó 197 pruebas Python, 14 Node, 40 transacciones aisladas,
+La puerta local del corte v17 aprobó 197 pruebas Python, 14 Node, 40 transacciones aisladas,
 build/auditorías frontend y dependencias, `cfn-lint`, y Terraform
 `fmt`/`validate`/pruebas con mocks en seis raíces. GitHub Actions para el commit
 `a257a71` pasó sus tres jobs. El E2E verificó Admin, Comercial y Operaciones en
 la API; el recorrido visual autenticado/CSV y WebRTC entre dos navegadores aún
-no están probados.
+no están probados. En la revalidación del 15/10 a las 23:45 UTC, la suite
+específica del smoke obtuvo 26 aprobadas y el quality gate general 205; este
+último no ejecutó Terraform ni desplegó infraestructura. Detalle en
+[`CLOUD-REVALIDATION-2026-10-15-2345UTC.md`](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-2345UTC.md).
 
 ## Historial — candidato v15 (supersedido por el release v17)
 

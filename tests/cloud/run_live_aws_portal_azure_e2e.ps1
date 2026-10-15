@@ -1,7 +1,9 @@
 param(
     [string]$InstanceId,
     [ValidateSet('loopback', 'alb', 'https', 'alb-origin-https')]
-    [string]$PortalTarget = 'loopback'
+    [string]$PortalTarget = 'loopback',
+    [ValidateSet('full', 'admin-modules', 'admin-readonly')]
+    [string]$Mode = 'full'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,7 +47,7 @@ $gzip.Write($scriptBytes, 0, $scriptBytes.Length)
 $gzip.Dispose()
 $encodedScript = [Convert]::ToBase64String($compressed.ToArray())
 $compressed.Dispose()
-$remoteCommand = "printf '%s' '$encodedScript' | base64 -d | gzip -d | env RUN_LIVE_DEPLOYED_E2E=$expectedOptIn LIVE_E2E_TARGET=$PortalTarget python3 -"
+$remoteCommand = "printf '%s' '$encodedScript' | base64 -d | gzip -d | env RUN_LIVE_DEPLOYED_E2E=$expectedOptIn LIVE_E2E_TARGET=$PortalTarget LIVE_E2E_MODE=$Mode python3 -"
 $parameters = @{ commands = @($remoteCommand) } | ConvertTo-Json -Compress
 $commandId = aws ssm send-command `
     --document-name AWS-RunShellScript `
@@ -80,7 +82,14 @@ $output = aws ssm get-command-invocation `
     --region $region `
     --query StandardOutputContent `
     --output text
-if ($LASTEXITCODE -ne 0 -or $output -notmatch 'LIVE_E2E_PASSED') {
+if ($Mode -eq 'admin-modules') {
+    $expectedResult = 'LIVE_ADMIN_MODULE_SMOKE_PASSED'
+} elseif ($Mode -eq 'admin-readonly') {
+    $expectedResult = 'LIVE_ADMIN_READONLY_SMOKE_PASSED'
+} else {
+    $expectedResult = 'LIVE_E2E_PASSED'
+}
+if ($LASTEXITCODE -ne 0 -or $output -notmatch $expectedResult) {
     throw "The remote smoke did not report success. Inspect SSM command $commandId before retrying."
 }
 

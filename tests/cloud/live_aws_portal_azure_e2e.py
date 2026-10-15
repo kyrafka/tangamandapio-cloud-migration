@@ -83,6 +83,8 @@ PROCESS_TIMEOUT = 20
 POLL_ATTEMPTS = 25
 READ_ONLY_LOAD_REQUESTS = 24
 READ_ONLY_LOAD_CONCURRENCY = 6
+AZURE_POISON_QUEUE_URL = "https://tangama-wms-261008.azurewebsites.net/api/wms/poison-queue"
+CFN_STACK_NAME = "tangamandapio-live-20261013"
 
 
 class SmokeFailure(RuntimeError):
@@ -462,11 +464,332 @@ def verify_admin_alarm_subscriptions(client: PortalClient) -> dict:
     }
 
 
+def inspect_admin_dashboard_consistency(client: PortalClient) -> dict:
+    """Check that dashboard totals agree with the visible admin API rows."""
+    dashboard = client.json("GET", "/api/dashboard")
+    if dashboard.get("role") != "admin":
+        raise SmokeFailure("The dashboard summary did not resolve to the admin role.")
+    order_count = dashboard.get("orders")
+    outbox_summary = dashboard.get("outbox")
+    if (
+        type(order_count) is not int
+        or order_count < 0
+        or not isinstance(outbox_summary, dict)
+    ):
+        raise SmokeFailure("The dashboard returned invalid aggregate counters.")
+    pending = outbox_summary.get("pending")
+    delivered = outbox_summary.get("delivered")
+    if any(type(value) is not int or value < 0 for value in (pending, delivered)):
+        raise SmokeFailure("The dashboard returned invalid outbox counters.")
+
+    orders_status, orders = client.request("GET", "/api/orders")
+    outbox_status, outbox = client.request("GET", "/api/outbox")
+    if (
+        orders_status != 200
+        or not isinstance(orders, list)
+        or outbox_status != 200
+        or not isinstance(outbox, list)
+    ):
+        raise SmokeFailure("Admin order or outbox rows were unavailable for reconciliation.")
+    if order_count < len(orders):
+        raise SmokeFailure("The dashboard order counter is lower than its visible order rows.")
+    if len(orders) < 50 and order_count != len(orders):
+        raise SmokeFailure("The dashboard order total differs from the complete visible order list.")
+
+    pending_rows = sum(row.get("status") != "delivered" for row in outbox)
+    delivered_rows = sum(row.get("status") == "delivered" for row in outbox)
+    if pending < pending_rows or delivered < delivered_rows:
+        raise SmokeFailure("Dashboard outbox totals are lower than the visible event rows.")
+    if len(outbox) < 30 and (pending != pending_rows or delivered != delivered_rows):
+        raise SmokeFailure("Dashboard outbox counters differ from the complete event list.")
+    return {
+        "order_count": order_count,
+        "visible_orders": len(orders),
+        "orders_match_complete_list": len(orders) < 50,
+        "outbox_pending": pending,
+        "outbox_delivered": delivered,
+        "visible_outbox_rows": len(outbox),
+        "outbox_reconciliation": (
+            "complete" if len(outbox) < 30 else "visible_rows_consistent_total_capped"
+        ),
+    }
+
+
+def main_admin_readonly_smoke(target: str) -> int:
+    try:
+        client = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
+    try:
+        client.login()
+        access = client.json("GET", "/api/erp/access")
+        if "erp_admin" not in access.get("roles", []):
+            raise SmokeFailure("The authenticated account lacks the ERP admin role.")
+        dashboard = inspect_admin_dashboard_consistency(client)
+        alarms = verify_admin_alarm_subscriptions(client)
+        print(
+            json.dumps(
+                {
+                    "result": "LIVE_ADMIN_READONLY_SMOKE_PASSED",
+                    "target": client.target,
+                    "dashboard": dashboard,
+                    "alarm_subscriptions": alarms,
+                    "alarm_triggered": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except SmokeFailure as error:
+        print(f"LIVE_ADMIN_READONLY_SMOKE_FAILED: {error}")
+        return 1
+    finally:
+        client.logout()
+
+
+def exercise_finance_workflow(client: PortalClient) -> dict:
+    """Create and settle a tiny synthetic payable; this is not a real payment."""
+    reference = (
+        f"QA-CLOUD-{datetime.now(timezone.utc):%Y%m%d%H%M%S}-"
+        f"{secrets.token_hex(3).upper()}"
+    )
+    amount = 0.05
+    status, expense = client.request(
+        "POST",
+        "/api/erp/finance/expenses",
+        {
+            "description": "Prueba cloud sintética de Finanzas",
+            "amount": amount,
+            "reference": reference,
+        },
+    )
+    if status != 201 or not isinstance(expense, dict) or not isinstance(expense.get("id"), int):
+        raise SmokeFailure("The synthetic finance expense was not durably accepted.")
+
+    document_id = expense["id"]
+    settle_status, settled = client.request(
+        "POST", f"/api/erp/finance/documents/{document_id}/settle", {}
+    )
+    if settle_status not in {200, 201} or not isinstance(settled, dict) or settled.get("status") != "paid":
+        raise SmokeFailure("The synthetic finance expense did not settle in the portal ledger.")
+
+    list_status, documents = client.request("GET", "/api/erp/finance/documents")
+    if list_status != 200 or not isinstance(documents, list):
+        raise SmokeFailure("The finance document list returned an unexpected response.")
+    stored = next((row for row in documents if row.get("id") == document_id), None)
+    if not stored or stored.get("status") != "paid" or stored.get("reference") != reference:
+        raise SmokeFailure("The settled synthetic finance document was not persisted.")
+    return {"status": "paid", "amount": amount}
+
+
+def exercise_internal_portal_mail(client: PortalClient) -> dict:
+    """Test private inbox delivery only when no external SMTP relay is active."""
+    mail_status = client.json("GET", "/api/erp/mail/status")
+    smtp_configured = mail_status.get("smtp_configured")
+    if type(smtp_configured) is not bool:
+        raise SmokeFailure("The mail transport status did not report SMTP configuration.")
+    if smtp_configured:
+        # Do not send an unapproved message through a production SMTP relay.
+        return {"status": "not_sent_smtp_relay_configured", "smtp_configured": True}
+    if mail_status.get("transport") != "portal_only":
+        raise SmokeFailure("The mail service did not confirm portal-only delivery mode.")
+
+    users_status, users = client.request("GET", "/api/erp/mail/users")
+    if users_status != 200 or not isinstance(users, list):
+        raise SmokeFailure("The internal mail directory returned an unexpected response.")
+    commercial_username = ROLE_ACCOUNTS[0][1]
+    recipient = next(
+        (row for row in users if row.get("username") == commercial_username), None
+    )
+    if not recipient or not isinstance(recipient.get("id"), int):
+        raise SmokeFailure("The synthetic commercial mailbox is unavailable.")
+
+    subject = (
+        f"[QA] Prueba interna {datetime.now(timezone.utc):%Y%m%d%H%M%S}-"
+        f"{secrets.token_hex(3).upper()}"
+    )
+    body = "Mensaje sintético de prueba cloud; no enviar fuera del portal."
+    create_status, message = client.request(
+        "POST",
+        "/api/erp/mail",
+        {"recipient_id": recipient["id"], "subject": subject, "body": body},
+    )
+    if (
+        create_status != 201
+        or not isinstance(message, dict)
+        or not isinstance(message.get("id"), int)
+        or message.get("status") != "sent_internal"
+        or message.get("smtp_status") != "portal_only"
+    ):
+        raise SmokeFailure("The message was not stored in portal-only mail mode.")
+    message_id = message["id"]
+
+    sent_status, sent = client.request("GET", "/api/erp/mail?folder=sent")
+    if sent_status != 200 or not isinstance(sent, list) or not any(
+        row.get("id") == message_id and row.get("subject") == subject for row in sent
+    ):
+        raise SmokeFailure("The synthetic message is missing from the sender's sent folder.")
+
+    recipient_client = PortalClient(client.target)
+    try:
+        recipient_client.login(
+            username=commercial_username,
+            parameter=ROLE_ACCOUNTS[0][2],
+            expected_role=ROLE_ACCOUNTS[0][3],
+        )
+        inbox_status, inbox = recipient_client.request("GET", "/api/erp/mail?folder=inbox")
+        received = next(
+            (row for row in inbox if row.get("id") == message_id), None
+        ) if isinstance(inbox, list) else None
+        if (
+            inbox_status != 200
+            or not received
+            or received.get("subject") != subject
+            or received.get("body") != body
+            or received.get("unread") is not True
+        ):
+            raise SmokeFailure("The synthetic message did not arrive unread in the recipient inbox.")
+        read_status, read_result = recipient_client.request(
+            "POST", f"/api/erp/mail/{message_id}/read", {}
+        )
+        if read_status not in {200, 201} or not isinstance(read_result, dict) or read_result.get("read") is not True:
+            raise SmokeFailure("The recipient could not mark the synthetic message as read.")
+        return {"status": "portal_only_sent_and_read", "smtp_configured": False}
+    finally:
+        recipient_client.logout()
+
+
+def _aws_cli_text(arguments: list[str], failure_message: str) -> str:
+    try:
+        result = subprocess.run(
+            ["aws", *arguments],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=PROCESS_TIMEOUT,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise SmokeFailure(failure_message) from error
+    if result.returncode != 0:
+        raise SmokeFailure(failure_message)
+    return result.stdout.rstrip("\r\n")
+
+
+def inspect_azure_poison_queue() -> dict:
+    """Read only the Azure poison queue's approximate count; never touch messages."""
+    secret_name = _aws_cli_text(
+        [
+            "cloudformation",
+            "describe-stacks",
+            "--stack-name",
+            CFN_STACK_NAME,
+            "--region",
+            REGION,
+            "--query",
+            "Stacks[0].Parameters[?ParameterKey=='AzureFunctionKeySecret'].ParameterValue | [0]",
+            "--output",
+            "text",
+        ],
+        "Could not resolve the Azure Function-key secret reference from CloudFormation.",
+    )
+    if not secret_name or secret_name == "None":
+        raise SmokeFailure("The Azure Function-key secret reference is not configured.")
+    function_key = _aws_cli_text(
+        [
+            "secretsmanager",
+            "get-secret-value",
+            "--secret-id",
+            secret_name,
+            "--region",
+            REGION,
+            "--query",
+            "SecretString",
+            "--output",
+            "text",
+        ],
+        "The EC2 instance role cannot read the Azure Function-key secret.",
+    )
+    if len(function_key) < 12 or "\n" in function_key or "\r" in function_key:
+        raise SmokeFailure("The Azure Function key has an unexpected format.")
+
+    request = Request(
+        AZURE_POISON_QUEUE_URL,
+        headers={"Accept": "application/json", "x-functions-key": function_key},
+    )
+    try:
+        with urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            if response.status != 200:
+                raise SmokeFailure("The Azure poison-queue status endpoint returned an unexpected status.")
+            payload = json.loads(response.read())
+    except HTTPError as error:
+        raise SmokeFailure(
+            f"The Azure poison-queue status endpoint returned HTTP {error.code}."
+        ) from None
+    except (URLError, TimeoutError, json.JSONDecodeError) as error:
+        raise SmokeFailure(
+            f"The Azure poison-queue status request failed ({type(error).__name__})."
+        ) from None
+    count = payload.get("approximate_message_count") if isinstance(payload, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("status") != "ok"
+        or payload.get("queue") != "fulfillment-events-poison"
+        or type(count) is not int
+        or count < 0
+        or payload.get("payloads_exposed") is not False
+    ):
+        raise SmokeFailure("Azure did not return a safe poison-queue count.")
+    return {"status": "ok", "approximate_message_count": count, "payloads_exposed": False}
+
+
+def main_admin_module_smoke(target: str) -> int:
+    try:
+        client = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
+    try:
+        client.login()
+        access = client.json("GET", "/api/erp/access")
+        if "erp_admin" not in access.get("roles", []):
+            raise SmokeFailure("The authenticated account lacks the ERP admin role.")
+        poison_queue = inspect_azure_poison_queue()
+        finance = exercise_finance_workflow(client)
+        mail = exercise_internal_portal_mail(client)
+        print(
+            json.dumps(
+                {
+                    "result": "LIVE_ADMIN_MODULE_SMOKE_PASSED",
+                    "target": client.target,
+                    "finance": finance,
+                    "internal_mail": mail,
+                    "azure_poison_queue": poison_queue,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except SmokeFailure as error:
+        print(f"LIVE_ADMIN_MODULE_SMOKE_FAILED: {error}")
+        return 1
+    finally:
+        client.logout()
+
+
 def main() -> int:
     if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != OPT_IN:
         print("Refused: set the exact opt-in only for the approved live synthetic smoke.")
         return 2
     target = os.environ.get("LIVE_E2E_TARGET", "loopback")
+    mode = os.environ.get("LIVE_E2E_MODE", "full")
+    if mode == "admin-readonly":
+        return main_admin_readonly_smoke(target)
+    if mode == "admin-modules":
+        return main_admin_module_smoke(target)
+    if mode not in {"full", "admin-readonly", "admin-modules"}:
+        print("Refused: use the approved full, admin-readonly, or admin-modules test mode.")
+        return 2
     try:
         client = PortalClient(target)
     except SmokeFailure as error:

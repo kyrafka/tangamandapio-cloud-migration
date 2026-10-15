@@ -267,5 +267,209 @@ class AdminAlarmSubscriptionSmokeTests(unittest.TestCase):
             live_e2e.verify_admin_alarm_subscriptions(client)  # type: ignore[arg-type]
 
 
+class AdminModuleSmokeTests(unittest.TestCase):
+    class FakeFinanceClient:
+        target = "https"
+
+        def __init__(self) -> None:
+            self.document: dict = {}
+
+        def request(self, method: str, path: str, payload: dict | None = None):
+            if method == "POST" and path == "/api/erp/finance/expenses":
+                self.document = {
+                    "id": 73,
+                    "reference": payload["reference"],
+                    "amount": payload["amount"],
+                    "status": "open",
+                }
+                return 201, dict(self.document)
+            if method == "POST" and path == "/api/erp/finance/documents/73/settle":
+                self.document["status"] = "paid"
+                return 200, {"id": 73, "status": "paid"}
+            if method == "GET" and path == "/api/erp/finance/documents":
+                return 200, [dict(self.document)]
+            raise AssertionError(f"Unexpected finance request: {method} {path}")
+
+    def test_finance_workflow_creates_settles_and_verifies_persisted_record(self) -> None:
+        client = self.FakeFinanceClient()
+        result = live_e2e.exercise_finance_workflow(client)  # type: ignore[arg-type]
+        self.assertEqual(result, {"status": "paid", "amount": 0.05})
+        self.assertEqual(client.document["status"], "paid")
+
+    def test_mail_test_skips_external_send_when_smtp_is_configured(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {"smtp_configured": True, "transport": "smtp"}
+        result = live_e2e.exercise_internal_portal_mail(client)
+        self.assertEqual(
+            result,
+            {"status": "not_sent_smtp_relay_configured", "smtp_configured": True},
+        )
+        client.request.assert_not_called()
+
+    def test_portal_only_mail_is_received_and_marked_read_by_recipient(self) -> None:
+        message_id = 91
+        subject = "[QA] synthetic"
+        body = "Mensaje sintético de prueba cloud; no enviar fuera del portal."
+        sender = MagicMock()
+        sender.target = "https"
+        sender.json.return_value = {"smtp_configured": False, "transport": "portal_only"}
+        captured_subject = [subject]
+
+        def sender_request(method: str, path: str, payload: dict | None = None):
+            if method == "GET" and path == "/api/erp/mail/users":
+                return 200, [{"id": 2, "username": live_e2e.ROLE_ACCOUNTS[0][1]}]
+            if method == "POST" and path == "/api/erp/mail":
+                captured_subject[0] = payload["subject"]
+                return 201, {
+                    "id": message_id,
+                    "subject": captured_subject[0],
+                    "status": "sent_internal",
+                    "smtp_status": "portal_only",
+                }
+            if method == "GET" and path == "/api/erp/mail?folder=sent":
+                return 200, [{"id": message_id, "subject": captured_subject[0]}]
+            raise AssertionError(f"Unexpected mail request: {method} {path}")
+
+        sender.request.side_effect = sender_request
+        recipient = MagicMock()
+
+        def recipient_request(method: str, path: str, payload: dict | None = None):
+            if method == "GET" and path == "/api/erp/mail?folder=inbox":
+                return 200, [
+                    {"id": message_id, "subject": captured_subject[0], "body": body, "unread": True}
+                ]
+            if method == "POST" and path == f"/api/erp/mail/{message_id}/read":
+                return 200, {"id": message_id, "read": True}
+            raise AssertionError(f"Unexpected recipient mail request: {method} {path}")
+
+        recipient.request.side_effect = recipient_request
+        with patch.object(live_e2e, "PortalClient", return_value=recipient) as factory:
+            result = live_e2e.exercise_internal_portal_mail(sender)  # type: ignore[arg-type]
+        factory.assert_called_once_with("https")
+        recipient.login.assert_called_once_with(
+            username=live_e2e.ROLE_ACCOUNTS[0][1],
+            parameter=live_e2e.ROLE_ACCOUNTS[0][2],
+            expected_role=live_e2e.ROLE_ACCOUNTS[0][3],
+        )
+        recipient.logout.assert_called_once()
+        self.assertEqual(
+            result,
+            {"status": "portal_only_sent_and_read", "smtp_configured": False},
+        )
+
+    def test_poison_queue_probe_only_reads_sanitized_count(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = (
+            b'{"status":"ok","queue":"fulfillment-events-poison",'
+            b'"approximate_message_count":3,"payloads_exposed":false}'
+        )
+        function_key = "synthetic-function-key-never-output"
+        with (
+            patch.object(
+                live_e2e,
+                "_aws_cli_text",
+                side_effect=["test/function-key-secret", function_key],
+            ) as aws_text,
+            patch.object(live_e2e, "urlopen", return_value=response) as open_url,
+        ):
+            result = live_e2e.inspect_azure_poison_queue()
+        self.assertEqual(aws_text.call_count, 2)
+        request = open_url.call_args.args[0]
+        self.assertEqual(request.full_url, live_e2e.AZURE_POISON_QUEUE_URL)
+        self.assertIn(function_key, str(request.headers))
+        self.assertNotIn(function_key, str(result))
+        self.assertEqual(
+            result,
+            {"status": "ok", "approximate_message_count": 3, "payloads_exposed": False},
+        )
+
+    def test_poison_queue_probe_rejects_unexpected_payload_without_exposing_it(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b'{"message":"sensitive poison payload"}'
+        with (
+            patch.object(
+                live_e2e,
+                "_aws_cli_text",
+                side_effect=["secret-name", "synthetic-fake-function-key"],
+            ),
+            patch.object(live_e2e, "urlopen", return_value=response),
+        ):
+            with self.assertRaisesRegex(live_e2e.SmokeFailure, "safe poison-queue count") as error:
+                live_e2e.inspect_azure_poison_queue()
+        self.assertNotIn("sensitive poison payload", str(error.exception))
+
+    def test_dashboard_reconciliation_checks_complete_order_and_outbox_counts(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {
+            "role": "admin",
+            "orders": 2,
+            "outbox": {"pending": 1, "delivered": 2},
+        }
+
+        def request(method: str, path: str):
+            if path == "/api/orders":
+                return 200, [{"id": 1}, {"id": 2}]
+            if path == "/api/outbox":
+                return 200, [
+                    {"status": "delivered"},
+                    {"status": "delivered"},
+                    {"status": "pending"},
+                ]
+            raise AssertionError(f"Unexpected reconciliation request: {method} {path}")
+
+        client.request.side_effect = request
+        self.assertEqual(
+            live_e2e.inspect_admin_dashboard_consistency(client),
+            {
+                "order_count": 2,
+                "visible_orders": 2,
+                "orders_match_complete_list": True,
+                "outbox_pending": 1,
+                "outbox_delivered": 2,
+                "visible_outbox_rows": 3,
+                "outbox_reconciliation": "complete",
+            },
+        )
+
+    def test_dashboard_reconciliation_marks_outbox_limit_without_overclaiming(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {
+            "role": "admin",
+            "orders": 1,
+            "outbox": {"pending": 0, "delivered": 45},
+        }
+        client.request.side_effect = [
+            (200, [{"id": 1}]),
+            (200, [{"status": "delivered"} for _ in range(30)]),
+        ]
+        result = live_e2e.inspect_admin_dashboard_consistency(client)
+        self.assertEqual(
+            result["outbox_reconciliation"],
+            "visible_rows_consistent_total_capped",
+        )
+        self.assertEqual(result["outbox_delivered"], 45)
+        self.assertEqual(result["visible_outbox_rows"], 30)
+
+    def test_dashboard_reconciliation_rejects_inconsistent_outbox_totals(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {
+            "role": "admin",
+            "orders": 0,
+            "outbox": {"pending": 0, "delivered": 8},
+        }
+        client.request.side_effect = [
+            (200, []),
+            (200, [{"status": "delivered"}, {"status": "pending"}]),
+        ]
+        with self.assertRaisesRegex(
+            live_e2e.SmokeFailure, "lower than the visible event rows"
+        ):
+            live_e2e.inspect_admin_dashboard_consistency(client)
+
+
 if __name__ == "__main__":
     unittest.main()
