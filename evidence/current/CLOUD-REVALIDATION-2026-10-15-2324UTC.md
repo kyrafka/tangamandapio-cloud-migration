@@ -43,6 +43,10 @@ ALB-origen HTTPS, terminó `LIVE_E2E_PASSED`:
 - 24/24 lecturas autenticadas a la BD respondieron 200, concurrencia 6,
   p95 208.71 ms. Es una prueba pequeña, no una proyección de 3,000 usuarios.
 - SNS mostró dos suscripciones confirmadas y cero pendientes.
+- Esta pasada no ejercitó Finanzas, el buzón interno/relay SMTP ni una ruta de
+  fallo/reintento hasta poison queue. El quality gate local cubre el flujo de
+  Finanzas y un SMTP de prueba en memoria; eso no demuestra entrega SMTP externa
+  ni poison-message real en Azure.
 
 El smoke deja eventos sintéticos de auditoría y puede crear o reutilizar los
 registros de prueba `SKU-QA-V10-20261014` y su socio QA. La cantidad del ledger
@@ -57,7 +61,14 @@ quedó compensada en su línea base.
 - WAF y prueba de seguridad independiente.
 - Prueba de escala/autoescalado representativa; no se ha probado carga de 3,000
   usuarios.
-- Recorrido visual autenticado en Chrome, incluyendo CSV y vistas por rol.
+- Recorrido visual autenticado en Chrome, incluyendo CSV, vistas por rol,
+  Finanzas y correo interno.
+- Ejercitar en Azure un fallo recuperable, sus reintentos, el envío a poison
+  queue y el procedimiento de inspección/reproceso. Los tests locales verifican
+  la política, pero este corte solo validó el camino exitoso.
+- Validar entrega por un relay SMTP real si se quiere correo fuera del buzón
+  interno del portal. El adaptador SMTP pasó contra un servidor de prueba local;
+  no hay evidencia de relay externo configurado/probado en la nube.
 - Llamada WebRTC con dos navegadores reales ahora que hay HTTPS confiable.
 - Capturas actuales de consola AWS, monitor Azure y evidencia de alarmas/
   recuperación para la sustentación; medir Cost Analysis real de Azure/AWS.

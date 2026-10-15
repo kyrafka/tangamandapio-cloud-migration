@@ -27,8 +27,10 @@ aisladas, build/auditorías, CloudFormation y seis raíces Terraform. El commit
 
 Persisten límites: RDS es Single-AZ con un día de backup; no hay red privada
 AWS–Azure; no se probó WebRTC entre dos navegadores, carga representativa de
-3,000 usuarios ni recorrido visual autenticado/CSV en Chrome. WAF está
-desactivado; falta evidencia visual actual de métricas Azure y un ejercicio
+3,000 usuarios ni recorrido visual autenticado/CSV en Chrome. El smoke no cubrió
+Finanzas, el buzón interno/relay SMTP ni fallos de Queue hasta poison message;
+la prueba SMTP local usa un servidor simulado, no valida entrega externa. WAF
+está desactivado; falta evidencia visual actual de métricas Azure y un ejercicio
 reciente de alarma/recuperación basado en métrica. El detalle está en
 [la revalidación de las 23:21–23:24](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2324UTC.md).
 
@@ -186,7 +188,7 @@ y [prueba ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E autenticado desde una EC2 recorrió AWS/RDS/outbox → Azure Queue/Function y compensó el ledger demo. | No hay conexión privada AWS–Azure; la comunicación va por HTTPS público. No presentar Azure como OCI ni afirmar inventario físico. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | Gate local: 197 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. E2E AWS→RDS/outbox→Azure autenticado. | Falta inspección visual/CSV en Chrome, WebRTC con dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 197 Python, 14 Node, 40 transacciones aisladas, build/auditorías/IaC. E2E AWS→RDS/outbox→Azure autenticado para catálogo, venta y recepción. | Falta inspección visual/CSV en Chrome, prueba viva de finanzas/SMTP, fallo y poison queue, WebRTC con dos navegadores, red privada y carga representativa; no se afirma capacidad de 3,000 usuarios. |
 | 13 | Documentación técnica · 0.5 | Matriz, release v17 y evidencia AWS/Azure actualizados localmente; Actions del commit `a257a71` terminó `success`. | Guardar capturas actuales de consola AWS/monitor Azure para sustentación; evidencia textual no las sustituye. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
