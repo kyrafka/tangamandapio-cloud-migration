@@ -1,4 +1,4 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 14:32 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 14:45 UTC
 
 ## Conclusión de calificación
 
@@ -23,8 +23,10 @@ Los cortes sanos anteriores se conservan en el
 [inventario AWS](../evidence/current/aws/AWS-INVENTARIO-2026-10-13.md), la
 [revalidación Azure](../evidence/current/azure/AZURE-PLAN-PAQUETE-2026-10-13.md)
 y la [revalidación anterior a v11](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
-El corte vigente de HTTPS, nube y navegador está en
-[la revalidación del 15/10 a las 14:30 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md).
+El corte cloud del 15/10 a las 14:30 UTC está en
+[la revalidación HTTPS/nube](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md);
+el seguimiento visual de Chrome y el intento E2E por el dominio a las 14:45 UTC
+están en [la prueba de interfaz](../evidence/current/CLOUD-UI-SMOKE-2026-10-15-1445UTC.md).
 
 ## Revalidación vigente — 15/10/2026, 14:20–14:30 UTC
 
@@ -42,10 +44,10 @@ se afirman probados visualmente. La prueba API AWS→Azure anterior sigue siendo
 la evidencia de flujo funcional; en este corte no se generaron eventos ni
 pedidos nuevos.
 
-La puerta local del 15/10 aprobó 173 Python, 14 Node, 40 transacciones
+La puerta local del 15/10 aprobó 176 Python, 14 Node, 40 transacciones
 aisladas, build, auditorías, CloudFormation y Terraform en cinco entornos. No
-hubo `apply`. El branch remoto quedó en `f6d7eaf` con documentación actualizada;
-los tres jobs de GitHub Actions terminaron `success` a las 14:32 UTC. La
+hubo `apply`. El branch remoto quedó en `006d5e8` con documentación actualizada;
+los tres jobs de GitHub Actions terminaron `success` a las 14:36 UTC. La
 conectividad privada AWS–Azure,
 la carga transaccional representativa y WebRTC entre dos navegadores continúan
 pendientes. El detalle está en
@@ -123,8 +125,8 @@ primera sección reflejan la última evidencia disponible.
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E por ALB portal→RDS/outbox→Azure Queue/Function del 15/10 entregó venta/recepción sintéticas y ledger 10→10. | No hay conexión privada AWS–Azure; no presentar Azure como OCI ni afirmar inventario comercial. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | La puerta local más reciente aprobó 173 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías, `cfn-lint` y Terraform en cinco entornos. E2E previo por ALB autenticó Admin, importó catálogo, completó venta/recepción portal→RDS/outbox→Azure y verificó permisos API 200/403; restore RDS medido. | Falta carga transaccional representativa por ALB, CSV desde archivo en UI, evidencia independiente de alertas Azure y revisión visual autenticada. WebRTC sigue pendiente. |
-| 13 | Documentación técnica · 0.5 | README, matriz, checklist y cortes de evidencia actualizados al estado HTTPS del 15/10 a las 14:30 UTC; tres jobs GitHub Actions del commit `f6d7eaf` terminaron `success`. | Falta guardar capturas verificables de consola AWS/monitor Azure y revisar visualmente el informe final. |
+| 12 | Pruebas técnicas · 1.0 | La puerta local más reciente aprobó 176 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías, `cfn-lint` y Terraform en cinco entornos. E2E previo por ALB autenticó Admin, importó catálogo, completó venta/recepción portal→RDS/outbox→Azure y verificó permisos API 200/403; restore RDS medido. | Falta carga transaccional representativa por ALB, CSV desde archivo en UI, evidencia independiente de alertas Azure y revisión visual autenticada. El intento E2E por HTTPS se detuvo en login con HTTP 403. WebRTC sigue pendiente. |
+| 13 | Documentación técnica · 0.5 | README, matriz, checklist y cortes de evidencia locales actualizados con la revisión Chrome/E2E de las 14:45 UTC. El último commit GitHub confirmado es `006d5e8` y sus tres jobs terminaron `success`; esta actualización local aún debe sincronizarse y pasar CI. | Falta guardar capturas verificables de consola AWS/monitor Azure y revisar visualmente el informe final. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago

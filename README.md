@@ -12,23 +12,26 @@ El proyecto hermano se usa como referencia del problema del datacenter corporati
 
 ## Estado vigente
 
-**Última revalidación: 15/10/2026, 14:30 UTC.** El perfil AWS autenticó en la
+**Última revalidación cloud: 15/10/2026, 14:30 UTC; UI/E2E: 14:45 UTC.** El perfil AWS autenticó en la
 cuenta académica; CloudFormation está `UPDATE_COMPLETE`, el ALB está activo,
 HTTPS/443 sirve la aplicación y HTTP/80 redirige a HTTPS. Sus dos destinos y
 las dos instancias EC2 están saludables; `/health` y `/ready` respondieron 200.
 RDS está disponible, cifrada y privada, pero sigue Single-AZ con un día de
 retención. La Function de Azure está `Running`, `httpsOnly=true` y
 `/api/health` respondió 200. En Chrome se probó la portada, el acceso, la
-validación de campos, el rechazo de un usuario sintético inexistente, el
-teclado y el ancho móvil de 390 px; no se observaron errores de consola. La
-sesión no se autenticó, por lo que las vistas internas y los roles no se
-marcan como probados visualmente. La compuerta local pasó 173 pruebas Python,
-14 Node y validaciones de build/IaC, sin aplicar cambios cloud. GitHub Actions
-aprobó los tres jobs del commit `f6d7eaf` a las 14:32 UTC. El
-[corte detallado](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
-separa resultados de límites pendientes.
+validación de campos, el teclado y el ancho móvil de 390 px. El 14:45 se volvió
+a revisar en esa pestaña el tema claro/oscuro y el formulario vacío; el modo
+claro se ve con contraste bajo y se restauró el oscuro. No se autenticó, así
+que las vistas internas y los roles no se marcan como probados visualmente. Un
+E2E adicional por el dominio HTTPS se detuvo en login con HTTP 403, antes de
+crear pedidos o eventos; la causa exacta no se confirmó. La compuerta local
+pasó 176 pruebas Python, 14 Node y validaciones de build/IaC, sin aplicar
+cambios cloud. GitHub Actions aprobó los tres jobs del commit `006d5e8` a las
+14:36 UTC. Consultar el [corte cloud](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
+y el [seguimiento Chrome/E2E](evidence/current/CLOUD-UI-SMOKE-2026-10-15-1445UTC.md)
+para distinguir resultados y límites.
 
-### Corte histórico anterior (02:58 UTC)
+### Corte histórico (02:58 UTC)
 
 **Corte vigente: 15/10/2026, 02:58 UTC.** AWS `default` autenticó por STS en la cuenta académica `841113066612`; el ALB `tangamandapio-alb` está `active`, sus dos destinos están `healthy` y `/health` respondió 200 bajo una microcarga de 120 solicitudes/8 concurrentes. Ese endpoint ejecuta `SELECT 1`, por lo que prueba disponibilidad de la ruta ALB→aplicación→RDS, no ventas. CloudFormation `tangamandapio-live-20261013` está `UPDATE_COMPLETE`; la última detección de drift (02:36 UTC) terminó `IN_SYNC`, cero diferencias. El release `20261014-landing-loading-v11-python312` está activo en dos instancias `InService`. La VPC separa ALB público, aplicación privada y RDS aislada; RDS está `available`, cifrada, privada, 20 GB, Single-AZ y con backup de un día. Las cinco alarmas CloudWatch están `OK` con acciones habilitadas. Azure for Students está `Enabled`; la Function está `Running`, `httpsOnly=true` y `/api/health` respondió 200 en la revalidación a las 02:58 UTC. El [corte completo](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) distingue comprobaciones de pendientes.
 
@@ -36,13 +39,15 @@ El artefacto v11 fue publicado en el bucket privado versionado con cifrado SSE-S
 
 No se aplicó Terraform ni se modificó infraestructura Azure en este corte. Function `tangama-wms-261008` sigue `Running`, `httpsOnly=true` y `/api/health` respondió HTTPS 200 después del ejercicio de recuperación. Application Insights reportó en su consulta previa de 24 h 17 solicitudes y cero fallidas; el E2E vivo posterior volvió a confirmar procesamiento de eventos. Son datos agregados, no sustituyen una correlación por evento ni una captura del dashboard. El WMS/ledger contiene datos sintéticos y no representa inventario físico.
 
-El E2E vivo del 15/10 autenticó Admin, importó un SKU QA, registró venta y recepción compensatoria, entregó ambos eventos a Azure y dejó el ledger 10→10. Comercial y Operaciones recibieron los 200/403 previstos en la matriz API. La restauración PT-DR-01 del 15/10 verificó los datos, midió RTO 260 s/RPO superior observado 8 s y limpió recursos temporales. El WMS sigue siendo un ledger sintético. Siguen pendientes dominio/HTTPS, conexión privada AWS–Azure, recorridos visuales de roles, prueba CSV desde archivo en la UI, carga transaccional por ALB, evidencia independiente de entrega de alertas Azure y WebRTC A/V entre dos navegadores. El state de Terraform sigue local y excluido de Git; no reconstruir Azure desde otra máquina hasta migrarlo con seguridad a backend remoto. Ver [matriz de rúbrica](core/04_matriz_rubrica.md), [checklist de cierre](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) y [preflight VPN](evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md).
+El E2E vivo del 15/10 autenticó Admin, importó un SKU QA, registró venta y recepción compensatoria, entregó ambos eventos a Azure y dejó el ledger 10→10. Comercial y Operaciones recibieron los 200/403 previstos en la matriz API. La restauración PT-DR-01 del 15/10 verificó los datos, midió RTO 260 s/RPO superior observado 8 s y limpió recursos temporales. El WMS sigue siendo un ledger sintético. Siguen pendientes conexión privada AWS–Azure, recorridos visuales autenticados de roles, prueba CSV desde archivo en la UI, carga transaccional por ALB, evidencia independiente de entrega de alertas Azure y WebRTC A/V entre dos navegadores. Dominio y HTTPS ya están activos y no son brechas actuales. Ver [matriz de rúbrica](core/04_matriz_rubrica.md), [checklist de cierre](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) y [preflight VPN](evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md).
 
-La puerta local más reciente terminó aprobada: **165 pruebas Python, 14 Node, 40 transacciones aisladas**, auditoría de dependencias sin vulnerabilidades conocidas, build Vite, `cfn-lint` y Terraform `fmt`/`validate`/tests; no hizo `apply` ni escrituras cloud. Las pruebas aisladas no miden capacidad para 3,000 usuarios. Repetición: `.\tests\run_local_quality.ps1 -ValidateTerraform`; [QA local del 15/10](evidence/current/QA-LOCAL-2026-10-15.md).
+La puerta local más reciente terminó aprobada: **176 pruebas Python, 14 Node, 40 transacciones aisladas**, auditoría de dependencias sin vulnerabilidades conocidas, build Vite, `cfn-lint` y Terraform `fmt`/`validate`/tests; no hizo `apply` ni escrituras cloud. Las pruebas aisladas no miden capacidad para 3,000 usuarios. Repetición: `.\tests\run_local_quality.ps1 -ValidateTerraform`; [QA local del 15/10](evidence/current/QA-LOCAL-2026-10-15.md).
 
-El commit `fa8224e` fue publicado en `codex/aws-v11-deploy-sync` y sus tres
+El commit `006d5e8` fue publicado en `codex/aws-v11-deploy-sync` y sus tres
 checks de GitHub Actions (backend/flujo, frontend e infraestructura AWS/Azure)
-terminaron `success`. `main` no se modificó.
+terminaron `success`. `main` no se modificó. La nueva evidencia Chrome/E2E y
+la mejora del arnés descritas arriba están en preparación local para el siguiente
+commit; sus checks aún no han corrido.
 
 ## Estructura
 

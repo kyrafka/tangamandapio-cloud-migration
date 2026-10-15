@@ -141,8 +141,14 @@ class PortalClient:
         if payload is not None:
             headers["Content-Type"] = "application/json"
             data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        if method not in {"GET", "HEAD", "OPTIONS"} and self.csrf:
-            headers["X-CSRF-Token"] = self.csrf
+        if method not in {"GET", "HEAD", "OPTIONS"}:
+            # Mirror the same-origin headers a real browser sends. This keeps
+            # the HTTPS smoke representative and lets Cloudflare apply its
+            # normal policy without weakening or bypassing the proxy.
+            headers["Origin"] = self.base_url
+            headers["Referer"] = f"{self.base_url}/"
+            if self.csrf:
+                headers["X-CSRF-Token"] = self.csrf
         req = Request(
             self.base_url + path,
             data=data,
@@ -313,10 +319,10 @@ def measure_read_only_database_load(client: PortalClient) -> dict:
     }
 
 
-def verify_role_authorization() -> dict:
+def verify_role_authorization(target: str = "loopback") -> dict:
     results: dict[str, dict[str, int]] = {}
     for label, username, parameter, expected_role, routes in ROLE_ACCOUNTS:
-        client = PortalClient()
+        client = PortalClient(target)
         try:
             client.login(username, parameter, expected_role=expected_role)
             session = client.json("GET", "/api/auth/session")
@@ -410,7 +416,7 @@ def main() -> int:
     role_matrix: dict | None = None
     alarm_subscription_check: dict | None = None
     try:
-        role_matrix = verify_role_authorization()
+        role_matrix = verify_role_authorization(target)
         client.login()
         access = client.json("GET", "/api/erp/access")
         if "erp_admin" not in access.get("roles", []):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import live_aws_portal_azure_e2e as live_e2e  # noqa: E402
@@ -84,6 +84,47 @@ class LiveTargetSelectionTests(unittest.TestCase):
     def test_arbitrary_target_fails_closed(self) -> None:
         with self.assertRaisesRegex(live_e2e.SmokeFailure, "Unsupported live E2E target"):
             live_e2e.PortalClient("http://example.invalid")
+
+
+class PortalRequestHeaderTests(unittest.TestCase):
+    def _request(self, method: str) -> live_e2e.Request:
+        client = live_e2e.PortalClient("https")
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b"{}"
+        with patch.object(client.opener, "open", return_value=response) as open_request:
+            client.csrf = "csrf-test-token"
+            client.request(method, "/api/test", payload={"synthetic": True})
+        return open_request.call_args.args[0]
+
+    def test_unsafe_https_request_uses_same_origin_headers_and_csrf(self) -> None:
+        request = self._request("POST")
+        self.assertEqual(request.get_header("Origin"), "https://tangamandapio.kendellnm.me")
+        self.assertEqual(request.get_header("Referer"), "https://tangamandapio.kendellnm.me/")
+        self.assertEqual(request.get_header("X-csrf-token"), "csrf-test-token")
+
+    def test_safe_request_does_not_add_mutation_headers(self) -> None:
+        request = self._request("GET")
+        self.assertIsNone(request.get_header("Origin"))
+        self.assertIsNone(request.get_header("Referer"))
+        self.assertIsNone(request.get_header("X-csrf-token"))
+
+
+class RoleTargetPropagationTests(unittest.TestCase):
+    def test_role_checks_use_the_same_target_as_the_e2e(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {"user": {"role": "sales"}}
+        client.request.return_value = (200, {})
+        accounts = (("sales", "sales@example.invalid", "/parameter", "sales", {"/api/orders": 200}),)
+        with (
+            patch.object(live_e2e, "PortalClient", return_value=client) as factory,
+            patch.object(live_e2e, "ROLE_ACCOUNTS", accounts),
+        ):
+            result = live_e2e.verify_role_authorization("https")
+
+        factory.assert_called_once_with("https")
+        self.assertEqual(result, {"sales": {"/api/orders": 200}})
 
 
 class AdminAlarmSubscriptionSmokeTests(unittest.TestCase):

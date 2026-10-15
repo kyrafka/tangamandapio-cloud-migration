@@ -1,9 +1,9 @@
-# Checklist de cierre — actualizado 15/10/2026, 14:32 UTC
+# Checklist de cierre — actualizado 15/10/2026, 14:45 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
 
-## Estado vigente — revalidación 14:20–14:32 UTC
+## Estado cloud vigente — revalidación 14:20–14:32 UTC
 
 - [x] AWS STS aceptó el perfil `default`; CloudFormation
   `tangamandapio-live-20261013` está `UPDATE_COMPLETE`.
@@ -18,14 +18,31 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [x] Chrome: portada, panel de acceso, validación, teclado y vista móvil
   390×844 revisados; consola sin errores/advertencias. Usuario sintético
   inexistente fue rechazado y la página se limpió al recargar.
-- [x] Gate local: 173 Python, 14 Node, 40 transacciones aisladas, build,
+- [x] Gate local: 176 Python, 14 Node, 40 transacciones aisladas, build,
   auditorías, CloudFormation y cinco entornos Terraform aprobados; no hubo
   `apply` ni servidor web local.
-- [x] Estado HTTPS y QA sincronizados en el branch GitHub
-  `codex/aws-v11-deploy-sync`, commit `f6d7eaf`; sus tres jobs de GitHub Actions
-  terminaron `success` a las 14:32 UTC.
+- [x] La revisión anterior HTTPS/QA está sincronizada en el branch GitHub
+  `codex/aws-v11-deploy-sync`, commit `006d5e8`; sus tres jobs terminaron
+  `success` a las 14:36 UTC.
 
 Detalle: [corte cloud/navegador 14:30 UTC](CLOUD-REVALIDATION-2026-10-15-1430UTC.md).
+
+## Seguimiento de navegador y prueba E2E — 14:38–14:45 UTC
+
+- [x] Confirmación en Chrome: la prueba fue en la pestaña HTTPS desplegada,
+  sin localhost ni control de otras ventanas. Tema claro/oscuro, panel de
+  acceso y validación de formulario vacío respondieron; se restauró el tema
+  oscuro y quedó el login abierto para la continuación manual.
+- [ ] El E2E por dominio terminó en `POST /api/auth/login` HTTP 403 antes de
+  autenticarse. No se confirmó qué capa generó el 403 y no se reintentó; no se
+  inició venta/recepción ni se enviaron eventos.
+- [ ] Vistas privadas siguen pendientes hasta que el usuario inicie sesión en
+  la pestaña de Chrome. El modo claro se observó con contraste menor; requiere
+  una revisión de estilos.
+- [ ] Publicar esta actualización local de evidencia y del arnés E2E; volver a
+  comprobar CI para el commit que la incluya.
+
+Detalle: [seguimiento Chrome/E2E 14:45 UTC](CLOUD-UI-SMOKE-2026-10-15-1445UTC.md).
 
 ## Corte histórico — 05:10 UTC (supersedido)
 
@@ -95,7 +112,7 @@ Detalle íntegro: [revalidación cloud 05:10 UTC](CLOUD-REVALIDATION-2026-10-15-
   `ec2:CreateCustomerGateway` por SCP; dry-run sin creación. No se instaló la
   extensión Azure solicitada por la CLI ni se generaron cargos.
 
-## Pendiente vigente tras la revalidación de 14:32 UTC
+## Pendiente vigente tras el seguimiento de 14:45 UTC
 
 - [ ] Conectividad privada AWS–Azure: no desplegada ni verificada; un intento
   Site-to-Site previo fue rechazado por SCP. El E2E usa HTTPS público.
