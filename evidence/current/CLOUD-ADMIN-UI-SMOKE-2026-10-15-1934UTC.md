@@ -57,12 +57,15 @@ inventario, pagos, compras, ventas, mensajes o configuración cloud.
   En frontend pasaron 8 pruebas de navegación por rol, 6 de CSV y
   `pnpm run build:check`. El CI del commit `8a1fe81` también quedó verde en sus
   tres jobs (backend/Azure, frontend y validación de infraestructura).
-- A las 19:35 UTC, portal `/health` devolvió HTTP 200 (`status=ok`), `/ready`
-  devolvió HTTP 200 (`status=ready`) y Azure Function `/api/health` devolvió
-  HTTP 200 (`status=ok`).
-- A las 19:39 UTC, `aws sts get-caller-identity` volvió a devolver
+- Revalidación a las 19:49 UTC: portal `/health` HTTP 200 (`status=ok`),
+  `/ready` HTTP 200 (`status=ready`) y Azure Function `/api/health` HTTP 200
+  (`status=ok`).
+- A las 19:49 UTC, `aws sts get-caller-identity` volvió a devolver
   `ExpiredToken`; no se validaron RDS, drift ni configuración vigente por API
   de AWS.
+- A las 19:47 UTC, AWS Academy mostraba el laboratorio `ready` y un uso de
+  `$29.6 de $50`; esto no renueva automáticamente las credenciales del CLI
+  local.
 - La plantilla en CloudFormation muestra explícitamente el artefacto v12 y no
   contiene las variables de entorno que necesita la integración CloudWatch
   (`CLOUDWATCH_LOAD_BALANCER_FULL_NAME`, `CLOUDWATCH_RDS_INSTANCE_ID` y
