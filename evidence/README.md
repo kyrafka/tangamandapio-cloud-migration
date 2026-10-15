@@ -12,6 +12,10 @@ comprobó roles, venta/recepción sintéticas, entrega AWS→Azure y ledger demo
 [E2E sanitizado](current/aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15.json) y
 [QA local](current/QA-LOCAL-2026-10-15.md).
 
+La comprobación posterior también verificó en el portal desplegado que Admin
+puede consultar el estado agregado de SNS y que Comercial/Operaciones no tienen
+ese acceso; véase el [smoke de permisos y alarmas](current/aws/AWS-ALARM-SUBSCRIPTIONS-ROLE-SMOKE-2026-10-15.md).
+
 ## Revalidación viva — 14/10/2026, 14:30–15:36 America/Chicago (histórico)
 
 AWS STS autenticó con el token temporal recién entregado. CloudFormation está

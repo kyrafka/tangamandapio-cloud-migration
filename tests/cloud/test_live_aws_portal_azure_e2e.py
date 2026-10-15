@@ -56,5 +56,90 @@ class PortalLoginRoleTests(unittest.TestCase):
                 client.login()
 
 
+class AdminAlarmSubscriptionSmokeTests(unittest.TestCase):
+    class FakeClient:
+        def __init__(self, response: dict) -> None:
+            self.response = response
+            self.calls: list[tuple[str, str]] = []
+
+        def json(self, method: str, path: str) -> dict:
+            self.calls.append((method, path))
+            return self.response
+
+    @staticmethod
+    def _subscription(endpoint: str, arn: str, status: str = "confirmed") -> dict:
+        return {
+            "protocol": "email",
+            "endpoint": endpoint,
+            "subscription_arn": arn,
+            "status": status,
+        }
+
+    def test_admin_check_returns_aggregate_counts_without_sensitive_values(self) -> None:
+        email = "alert-test@example.invalid"
+        arn = "arn:aws:sns:us-east-1:123456789012:topic:subscription"
+        client = self.FakeClient(
+            {
+                "topic_configured": True,
+                "confirmation_required": True,
+                "subscriptions": [
+                    self._subscription(email, arn),
+                    self._subscription("pending@example.invalid", "PendingConfirmation", "pending_confirmation"),
+                ],
+            }
+        )
+
+        result = live_e2e.verify_admin_alarm_subscriptions(client)  # type: ignore[arg-type]
+
+        self.assertEqual(
+            result,
+            {
+                "topic_configured": True,
+                "confirmation_required": True,
+                "subscription_count": 2,
+                "confirmed_count": 1,
+                "pending_confirmation_count": 1,
+            },
+        )
+        self.assertNotIn(email, str(result))
+        self.assertNotIn(arn, str(result))
+        self.assertEqual(client.calls, [("GET", "/api/admin/alarm-subscriptions")])
+
+    def test_admin_check_fails_when_topic_is_not_configured(self) -> None:
+        client = self.FakeClient({"error": "alarm_notifications_not_configured"})
+        with self.assertRaisesRegex(live_e2e.SmokeFailure, "not configured"):
+            live_e2e.verify_admin_alarm_subscriptions(client)  # type: ignore[arg-type]
+
+    def test_admin_check_rejects_invalid_protocol_and_confirmation_state(self) -> None:
+        for subscription in (
+            {**self._subscription("alert@example.invalid", "arn"), "protocol": "sms"},
+            {**self._subscription("alert@example.invalid", "arn"), "status": "unknown"},
+        ):
+            with self.subTest(subscription=subscription):
+                client = self.FakeClient(
+                    {
+                        "topic_configured": True,
+                        "confirmation_required": True,
+                        "subscriptions": [subscription],
+                    }
+                )
+                with self.assertRaises(live_e2e.SmokeFailure):
+                    live_e2e.verify_admin_alarm_subscriptions(client)  # type: ignore[arg-type]
+
+    def test_admin_check_rejects_case_insensitive_duplicate_addresses(self) -> None:
+        client = self.FakeClient(
+            {
+                "topic_configured": True,
+                "confirmation_required": True,
+                "subscriptions": [
+                    self._subscription("Alert@example.invalid", "arn:one"),
+                    self._subscription("alert@example.invalid", "arn:two"),
+                ],
+            }
+        )
+        with self.assertRaisesRegex(live_e2e.SmokeFailure, "duplicate"):
+            live_e2e.verify_admin_alarm_subscriptions(client)  # type: ignore[arg-type]
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -69,3 +69,14 @@ rechazado por una SCP de AWS Academy. WebRTC bidireccional entre navegadores y
 dominio/HTTPS confiable siguen pendientes. El almacenamiento del state usa
 contenedor privado y Entra, pero el endpoint de la cuenta sigue público y debe
 restringirse con red privada o firewall cuando exista un runner autorizado.
+
+## Revalidación adicional — 15/10/2026
+
+Con el token temporal renovado, STS autenticó de nuevo la cuenta Academy. Se
+añadió al E2E el permiso de consulta de alertas y se volvió a ejecutar contra
+el portal desplegado: Admin vio 2 suscripciones SNS confirmadas y ninguna
+pendiente; Comercial y Operaciones recibieron 403. No se modificaron
+suscripciones ni se enviaron correos. La misma prueba completó la venta y
+recepción sintéticas hacia Azure, dejó el ledger en 10→10 y tuvo 24/24 lecturas
+RDS HTTP 200 (concurrencia 6, p95 2,005.03 ms por loopback de EC2). Véase el
+[reporte sanitizado de permisos y alarmas](aws/AWS-ALARM-SUBSCRIPTIONS-ROLE-SMOKE-2026-10-15.md).

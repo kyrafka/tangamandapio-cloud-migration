@@ -38,6 +38,7 @@ ROLE_ACCOUNTS = (
             "/api/outbox": 403,
             "/api/wms/inventory": 403,
             "/api/admin/users": 403,
+            "/api/admin/alarm-subscriptions": 403,
         },
     ),
     (
@@ -50,6 +51,7 @@ ROLE_ACCOUNTS = (
             "/api/outbox": 200,
             "/api/wms/inventory": 200,
             "/api/admin/users": 403,
+            "/api/admin/alarm-subscriptions": 403,
         },
     ),
 )
@@ -322,6 +324,55 @@ def verify_role_authorization() -> dict:
     return results
 
 
+def verify_admin_alarm_subscriptions(client: PortalClient) -> dict:
+    """Verify admin can read SNS email subscriptions without exposing addresses."""
+    result = client.json("GET", "/api/admin/alarm-subscriptions")
+    if result.get("topic_configured") is not True:
+        raise SmokeFailure("Admin alarm notifications are not configured.")
+    if result.get("confirmation_required") is not True:
+        raise SmokeFailure("Admin alarm subscriptions do not require confirmation.")
+    subscriptions = result.get("subscriptions")
+    if not isinstance(subscriptions, list):
+        raise SmokeFailure("Admin alarm subscriptions returned an invalid list.")
+
+    seen_endpoints: set[str] = set()
+    confirmed = 0
+    pending = 0
+    for subscription in subscriptions:
+        if not isinstance(subscription, dict):
+            raise SmokeFailure("Admin alarm subscriptions returned an invalid record.")
+        endpoint = subscription.get("endpoint")
+        subscription_arn = subscription.get("subscription_arn")
+        if (
+            subscription.get("protocol") != "email"
+            or not isinstance(endpoint, str)
+            or not endpoint.strip()
+            or not isinstance(subscription_arn, str)
+            or not subscription_arn.strip()
+        ):
+            raise SmokeFailure("Admin alarm subscriptions returned an invalid email record.")
+        normalized_endpoint = endpoint.strip().casefold()
+        if normalized_endpoint in seen_endpoints:
+            raise SmokeFailure("Admin alarm subscriptions contain duplicate email records.")
+        seen_endpoints.add(normalized_endpoint)
+
+        status = subscription.get("status")
+        if status == "confirmed":
+            confirmed += 1
+        elif status == "pending_confirmation":
+            pending += 1
+        else:
+            raise SmokeFailure("Admin alarm subscriptions returned an unknown confirmation state.")
+
+    return {
+        "topic_configured": True,
+        "confirmation_required": True,
+        "subscription_count": len(subscriptions),
+        "confirmed_count": confirmed,
+        "pending_confirmation_count": pending,
+    }
+
+
 def main() -> int:
     if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != OPT_IN:
         print("Refused: set the exact opt-in only for the approved live synthetic smoke.")
@@ -335,12 +386,14 @@ def main() -> int:
     purchase_id: int | None = None
     purchase_result: dict | None = None
     role_matrix: dict | None = None
+    alarm_subscription_check: dict | None = None
     try:
         role_matrix = verify_role_authorization()
         client.login()
         access = client.json("GET", "/api/erp/access")
         if "erp_admin" not in access.get("roles", []):
             raise SmokeFailure("The authenticated account lacks the ERP admin role.")
+        alarm_subscription_check = verify_admin_alarm_subscriptions(client)
 
         inventory = client.json("GET", "/api/wms/inventory")
         if inventory.get("mode") != "demo-inventory-ledger" or inventory.get("is_real_erp") is not False:
@@ -487,6 +540,7 @@ def main() -> int:
                     "synthetic_stock_final": final_stock,
                     "read_only_database_load": read_load,
                     "role_authorization_checks": role_matrix,
+                    "admin_alarm_subscription_check": alarm_subscription_check,
                 },
                 sort_keys=True,
             )
