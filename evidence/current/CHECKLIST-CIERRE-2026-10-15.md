@@ -97,3 +97,15 @@ discrepancia de puntaje siguen en
   llamada funcione. La prueba bidireccional A/V con dos navegadores sigue
   pendiente hasta disponer de HTTPS confiable.
 - Referencia: [MDN, `getUserMedia()` y contextos seguros](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia).
+
+## Revalidación breve de endpoints — 15/10/2026, 01:48 UTC
+
+- AWS STS autenticó en la cuenta Academy `841113066612`; la pila
+  `tangamandapio-live-20261013` continúa `UPDATE_COMPLETE`. Ambos destinos del
+  target group están `healthy`; `/`, `/health` y `/ready` del ALB respondieron
+  HTTP 200. El ALB sigue siendo HTTP, por lo que esto no habilita WebRTC.
+- Azure for Students sigue `Enabled`; `tangama-wms-261008` figura `Running` y
+  `httpsOnly=true`; el health HTTPS respondió 200 (`status: ok`).
+- Son comprobaciones puntuales de disponibilidad; no equivalen a un nuevo
+  inventario completo, detección de drift, recorrido autenticado ni prueba
+  transaccional.
