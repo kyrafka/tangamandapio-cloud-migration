@@ -145,6 +145,7 @@ jobs:
             iac/environments/demo \
             iac/environments/azure-demo \
             iac/environments/azure-rebuild \
+            iac/environments/azure-tfstate \
             iac/environments/azure-flex-private \
             iac/environments/aws-azure-vpn; do
             echo "Checking Terraform format: $directory"
@@ -168,6 +169,12 @@ jobs:
           set -euo pipefail
           terraform -chdir=iac/environments/azure-rebuild init -backend=false -input=false -lockfile=readonly -no-color
           terraform -chdir=iac/environments/azure-rebuild validate -no-color
+
+      - name: Initialize and validate Terraform Azure state bootstrap (offline)
+        run: |
+          set -euo pipefail
+          terraform -chdir=iac/environments/azure-tfstate init -backend=false -input=false -lockfile=readonly -no-color
+          terraform -chdir=iac/environments/azure-tfstate validate -no-color
 
       - name: Initialize, validate and test Azure private networking (offline)
         run: |

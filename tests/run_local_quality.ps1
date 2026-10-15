@@ -478,6 +478,7 @@ if ($ValidateTerraform) {
       'iac\environments\demo',
       'iac\environments\azure-demo',
       'iac\environments\azure-rebuild',
+      'iac\environments\azure-tfstate',
       'iac\environments\aws-azure-vpn',
       'iac\environments\azure-flex-private'
     )) {
@@ -489,6 +490,7 @@ if ($ValidateTerraform) {
       'iac\environments\demo',
       'iac\environments\azure-demo',
       'iac\environments\azure-rebuild',
+      'iac\environments\azure-tfstate',
       'iac\environments\aws-azure-vpn',
       'iac\environments\azure-flex-private'
     )) {
