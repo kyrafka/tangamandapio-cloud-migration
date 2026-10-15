@@ -48,6 +48,9 @@ jobs:
         working-directory: app/aws_release
         run: python -m unittest discover -s tests -v
 
+      - name: Cloud preflight and live-test harness tests
+        run: python -m unittest discover -s tests/cloud -p 'test_*.py' -v
+
       - name: Python dependency audit
         run: pip-audit -r app/requirements-ci.lock --progress-spinner off
 

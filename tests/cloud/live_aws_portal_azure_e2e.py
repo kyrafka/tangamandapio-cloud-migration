@@ -4,9 +4,9 @@
 Run only through SSM on an authorized Tangamandapio EC2 instance. It reads the
 admin password from that instance's SSM role, creates/reuses a synthetic QA
 partner and SKU, sells one unit, receives one unit, and requires the Azure demo
-ledger to return to its initial balance. The target is restricted to loopback
-or the known public ALB. It never prints credentials or API responses containing
-personal data.
+ledger to return to its initial balance. The target is restricted to loopback,
+the known public ALB, or the configured HTTPS portal domain. It never prints
+credentials or API responses containing personal data.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 LIVE_TARGET_URLS = {
     "loopback": "http://127.0.0.1:8080",
     "alb": "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
+    "https": "https://tangamandapio.kendellnm.me",
 }
 ADMIN_USERNAME = "admin@tangamandapio.local"
 ADMIN_PARAMETER = "/tangamandapio/portal/admin-login"
@@ -79,7 +80,9 @@ def resolve_live_target(target: str) -> str:
     try:
         return LIVE_TARGET_URLS[target]
     except KeyError:
-        raise SmokeFailure("Unsupported live E2E target; use loopback or alb.") from None
+        raise SmokeFailure(
+            "Unsupported live E2E target; use loopback, alb, or https."
+        ) from None
 
 
 def get_secure_parameter(parameter_name: str) -> str:

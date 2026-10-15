@@ -1,5 +1,12 @@
 # Evidencias Azure
 
+**Prueba viva ERP→Azure compensada — 15/10/2026:** el release local con SQLite
+efímera recorrió la venta y recepción sintéticas contra la Function desplegada;
+Azure procesó ambos eventos y el ledger demo regresó a la línea base. Pasaron
+los guardas de ingreso y la comprobación de poison queue solo por metadatos.
+No fue tráfico originado desde EC2. Véase
+[`AZURE-LIVE-ERP-SMOKE-2026-10-15.md`](AZURE-LIVE-ERP-SMOKE-2026-10-15.md).
+
 **Application Insights y ejecución del trigger — 15/10/2026, 00:49 UTC:**
 Function `tangama-wms-261008` `Running`/HTTPS-only; health HTTP 200. La consulta
 de 24 horas reportó 17 solicitudes y cero fallidas, incluidas dos ejecuciones

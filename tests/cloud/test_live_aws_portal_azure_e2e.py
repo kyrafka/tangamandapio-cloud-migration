@@ -72,6 +72,15 @@ class LiveTargetSelectionTests(unittest.TestCase):
             "http://tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
         )
 
+    def test_https_domain_target_is_explicit_and_allowlisted(self) -> None:
+        with patch.dict(live_e2e.os.environ, {"LIVE_E2E_TARGET": "https"}):
+            client = live_e2e.PortalClient()
+        self.assertEqual(client.target, "https")
+        self.assertEqual(
+            client.base_url,
+            "https://tangamandapio.kendellnm.me",
+        )
+
     def test_arbitrary_target_fails_closed(self) -> None:
         with self.assertRaisesRegex(live_e2e.SmokeFailure, "Unsupported live E2E target"):
             live_e2e.PortalClient("http://example.invalid")

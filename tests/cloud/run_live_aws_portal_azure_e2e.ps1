@@ -1,6 +1,6 @@
 param(
     [string]$InstanceId,
-    [ValidateSet('loopback', 'alb')]
+    [ValidateSet('loopback', 'alb', 'https')]
     [string]$PortalTarget = 'loopback'
 )
 

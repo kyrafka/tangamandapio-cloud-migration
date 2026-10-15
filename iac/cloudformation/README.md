@@ -1,6 +1,6 @@
 # AWS CloudFormation — portal y reconstrucción
 
-CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 15/10/2026 05:13 UTC.** El stack `tangamandapio-live-20261013` está en `UPDATE_COMPLETE`; la detección de drift más reciente terminó `IN_SYNC`. El release `20261014-landing-loading-v11-python312` está en las dos instancias `InService`, confirmado previamente por SSM; el ALB tiene dos destinos `healthy` y `/`, `/health` y `/ready` responden HTTP 200. El ASG está mínimo/deseado 2, máximo 5. La VPC separa ALB público, app privada con NAT y RDS aislada; security groups limitan ALB:80→app:8080→PostgreSQL:5432 y bloquean ingreso directo a EC2/RDS. RDS está `available`, Single-AZ, con un día de backup. El listener continúa HTTP/80. Ya se solicitó en ACM un certificado para `tangamandapio.kendellnm.me`, aún `PENDING_VALIDATION`; el CNAME no resuelve públicamente y falta esperar la emisión antes de actualizar CloudFormation. La revalidación está en [evidencia cloud 05:13 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md); la secuencia y los fallos intermedios están en el [registro v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 15/10/2026 13:47 UTC.** El stack `tangamandapio-live-20261013` está en `UPDATE_COMPLETE`; una detección posterior terminó `IN_SYNC`. `ApplicationURL` es `https://tangamandapio.kendellnm.me`. El ALB tiene dos destinos `healthy`; el ASG está mínimo/deseado 2, máximo 5. El certificado ACM de `us-east-1` está `ISSUED` y el CNAME de validación aparece `SUCCESS`. El listener 443 termina TLS y reenvía a la aplicación; el listener 80 redirige a HTTPS. Se comprobaron desde fuera `/health` y `/ready` con HTTP 200, HTTP→HTTPS con 301 y la cookie de sesión con `Secure`, `HttpOnly` y `SameSite=Lax`. La prueba funcional integral a través del dominio quedó **bloqueada en el inicio de sesión admin**: el runner reportó 403 y se detuvo antes de crear pedidos o alterar el ledger; un registro de aplicación cercano muestra un rechazo de login 401, así que no se afirma que el E2E por HTTPS haya pasado. RDS está `available`, cifrada, Single-AZ y con un día de retención de backup. El historial del primer estado degradado y la recuperación/activación TLS se conserva en [evidencia AWS live del 15/10](../../evidence/current/aws/AWS-ESTADO-LIVE-2026-10-15.md); la secuencia y fallos v11 anteriores están en el [registro v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
 
 Históricamente, el stack se eliminó el 08/10 y se reconstruyó el 09/10. Los snapshots y restauraciones anotados en los cortes anteriores no determinan el estado de hoy. `rebuild.sh` solo debe ejecutarse después de verificar el nombre exacto del stack, el snapshot y los secretos requeridos, reconciliar la plantilla con el inventario y aprobar el costo; ahora exige un `STACK_NAME` explícito.
 
@@ -78,17 +78,23 @@ AZURE_FUNCTION_KEY_SECRET="<nombre-del-secreto-en-Secrets-Manager>" \
 bash ./rebuild.sh
 ```
 
-El script solo crea un stack ausente. Solicita confirmación, crea con cero EC2, sube el artefacto, detecta drift para registrar la línea base `IN_SYNC` y luego habilita dos instancias mediante un change set. Los secretos del administrador del portal y los secretos RDS gestionados externamente se conservan; una restauración de snapshot sin credencial permite únicamente la fase `BootstrapMode=true`, sin instancias. Tras restaurar PostgreSQL, habilita el secreto administrado por RDS, pasa su ARN con `ExistingDatabaseSecretArn` y actualiza `ManageDatabaseMasterPassword=true` antes de habilitar EC2. Para el admin, usa el secreto original o `RESET_ADMINISTRATOR_ON_RESTORE=true`; este último restablece una sola vez por versión, revoca sesiones e impone cambio de clave. Mantén el indicador en `false` fuera de una restauración autorizada. Por defecto desactiva Multi-AZ, WAF y AWS Backup, y deja un día de retención automática RDS; se pueden habilitar con `DATABASE_MULTI_AZ=true`, `ENABLE_WAF=true`, `ENABLE_AWS_BACKUP=true` y ajustar `DATABASE_BACKUP_RETENTION_DAYS`. No configura dominio ni certificado; HTTPS confiable queda pendiente.
+El script solo crea un stack ausente. Solicita confirmación, crea con cero EC2, sube el artefacto, detecta drift para registrar la línea base `IN_SYNC` y luego habilita dos instancias mediante un change set. Los secretos del administrador del portal y los secretos RDS gestionados externamente se conservan; una restauración de snapshot sin credencial permite únicamente la fase `BootstrapMode=true`, sin instancias. Tras restaurar PostgreSQL, habilita el secreto administrado por RDS, pasa su ARN con `ExistingDatabaseSecretArn` y actualiza `ManageDatabaseMasterPassword=true` antes de habilitar EC2. Para el admin, usa el secreto original o `RESET_ADMINISTRATOR_ON_RESTORE=true`; este último restablece una sola vez por versión, revoca sesiones e impone cambio de clave. Mantén el indicador en `false` fuera de una restauración autorizada. Por defecto desactiva Multi-AZ, WAF y AWS Backup, y deja un día de retención automática RDS; se pueden habilitar con `DATABASE_MULTI_AZ=true`, `ENABLE_WAF=true`, `ENABLE_AWS_BACKUP=true` y ajustar `DATABASE_BACKUP_RETENTION_DAYS`. Una reconstrucción sin `PORTAL_DOMAIN_NAME` y `CERTIFICATE_ARN` queda en HTTP; para HTTPS se proporcionan ambos al preflight de `deploy.sh`.
 
-## Cierre HTTPS cuando se tenga el dominio
+## Dominio y HTTPS — activados el 15/10/2026
 
-La plantilla y `deploy.sh` ya están preparados, pero todavía no existe un FQDN
-ni se debe crear un certificado para un nombre que no se controla. Cuando se
-elija el dominio:
+El hostname usado es `tangamandapio.kendellnm.me`. El registro de aplicación
+Cloudflare está proxied hacia el nombre DNS del ALB; la IP que resuelve el
+hostname público pertenece al borde de Cloudflare y no debe copiarse como
+destino fijo. El CNAME de validación ACM debe mantenerse como DNS-only para que
+la renovación del certificado continúe funcionando. ACM verificó el registro y
+el certificado quedó `ISSUED`; CloudFormation instaló el listener HTTPS y
+redirige HTTP. La plantilla conserva el flujo reproducible para un futuro
+cambio de dominio:
 
 1. Confirma que puedes administrar su DNS y elige el hostname exacto (por
-   ejemplo, un subdominio dedicado al portal). Si usarás Cloudflare, deja el
-   registro en modo DNS-only durante la validación inicial.
+   ejemplo, un subdominio dedicado al portal). En Cloudflare, publica el CNAME
+   de validación ACM como DNS-only; el registro del portal puede estar proxied
+   cuando el origen y su certificado estén listos.
 2. En ACM de `us-east-1`, solicita un certificado público para ese hostname con
    validación DNS. Publica el CNAME de validación en el proveedor DNS y espera
    a que ACM indique `ISSUED`. Solicita nombres adicionales solo si realmente
@@ -150,24 +156,18 @@ export AWS_CLI='/mnt/c/Program Files/Amazon/AWSCLIV2/aws.exe'
 
 En Git Bash puede usarse `AWS_CLI='/c/Program Files/Amazon/AWSCLIV2/aws.exe'`; `rebuild.sh` y `deploy.sh` normalizan rutas `file:///c/...` para el CLI nativo de Windows.
 
-## Lo que esta plantilla no demuestra
+## Límites y pruebas pendientes
 
-- El listener actual es HTTP, por lo que no demuestra TLS confiable. El release v9 devuelve en `/health` solo estado agregado y timestamp; esto no demuestra TLS.
-- No se verificó un dominio propio ni certificados confiables del navegador.
+- El endpoint y certificado HTTPS se verificaron públicamente; la prueba integral de autenticación/ERP por ese dominio no terminó: el login admin fue rechazado antes de crear datos. Revisar la sincronización de la credencial QA con la cuenta de portal y volver a probar.
 - La Function de Azure usa inventario simulado; un pedido AWS sin SKU/cantidades fue aceptado como evento y concluyó `awaiting_items`, sin modificar stock.
 - El paquete incluye envío opcional por SMTP, pero el template no aprovisiona ni configura relay, dominio, destinatarios o buzones; el correo interno del portal no equivale a SMTP corporativo.
 - `InternalErpEnabled=false` desactiva las rutas ERP.
 
 `destroy.sh` bloquea por defecto y no tiene `STACK_NAME` predeterminado. Requiere un nombre verificado con formato `tangamandapio-live-YYYYMMDD`, `CONFIRM_DELETE_DATA=true` y que `CONFIRM_STACK_NAME` coincida exactamente con `STACK_NAME`. Antes de tocar buckets u otros stacks, inspecciona el template realmente desplegado y se niega a continuar si RDS no tiene `DeletionPolicy: Snapshot` y `UpdateReplacePolicy: Snapshot`, o si los secretos de RDS/admin no tienen `DeletionPolicy` y `UpdateReplacePolicy: Retain`. CloudFormation conserva un snapshot final al retirar la base; `PRESERVE_RDS_SNAPSHOT=true` además crea un snapshot manual previo. El script **nunca elimina snapshots manuales**. El apagado sí borra versiones de buckets, el stack de grabaciones y su bucket retenido, y la clave Azure externa de Secrets Manager/SSM; revisa y archiva los objetos que deban conservarse antes de confirmar. La plantilla configura `DeleteAutomatedBackups: true` para las reconstrucciones. Los pedidos y cuentas quedan dentro del snapshot, no disponibles en línea.
 
-## Último release sano confirmado antes del despliegue final v11 — histórico
+## Historial de releases
 
-El último corte sano confirmado fue v10, con CloudFormation `UPDATE_COMPLETE`,
-drift `IN_SYNC` y dos destinos saludables. Ese estado es anterior al intento
-v11 y no prueba que v10 se haya restaurado. El artefacto v11 legado
-(`2a834...`) se publicó y su actualización quedó sin resultado final
-verificable; el artefacto portable candidato (`ef3ffe...`) y la política de
-Instance Refresh reforzada son locales, aún no publicados. Mantén la
-[evidencia detallada v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md)
-como fuente de estado más reciente. La evidencia de v9/v10 describe cortes
-históricos; no la uses como prueba de salud actual.
+El estado vigente es el corte CloudFormation de arriba. La [evidencia detallada
+v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md) y los informes
+v9/v10 describen intentos y cortes históricos; no sustituyen las comprobaciones
+vivas fechadas en [evidencia AWS del 15/10](../../evidence/current/aws/AWS-ESTADO-LIVE-2026-10-15.md).
