@@ -62,3 +62,13 @@ para el subdominio ya acordado; ACM no cobra por certificados públicos.
 
 Este documento es evidencia de una revalidación puntual, no certifica
 capacidad para 3,000 usuarios, entrega de alertas ni una VPN privada AWS–Azure.
+
+## Seguimiento — 05:13 UTC
+
+- El CNAME ACM aún no resuelve públicamente y el certificado continúa
+  `PENDING_VALIDATION`; HTTPS no se habilitó.
+- AWS volvió a responder `/health` 200 y mantiene `UPDATE_COMPLETE` con 2/2
+  targets `healthy`. Azure volvió a responder `/api/health` HTTPS 200.
+- Los tres checks de GitHub Actions del commit `8e49d8e` terminaron
+  `completed/success`: backend y flujo, infraestructura AWS/Azure, y frontend.
+- El branch local y el remoto coinciden en `8e49d8e`.

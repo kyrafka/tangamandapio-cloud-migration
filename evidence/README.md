@@ -1,6 +1,6 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 05:10 UTC
+## Revalidación puntual más reciente — 15/10/2026, 05:13 UTC
 
 AWS conserva `UPDATE_COMPLETE`/`IN_SYNC`, 2/2 targets sanos y respuestas HTTP
 200 en portada, health y readiness; el listener sigue solo HTTP/80. Azure
@@ -9,7 +9,9 @@ del recurso en este corte. Se solicitó en ACM el certificado para
 `tangamandapio.kendellnm.me`; falta que Kendell publique el CNAME de validación
 en modo DNS only. Todavía no hay HTTPS en el ALB. La suite local repetida pasó:
 152 pruebas Python, 14 Node, build, cfn-lint, seis validaciones Terraform y
-5/5 pruebas mock. Detalle: [revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md).
+5/5 pruebas mock. Los tres checks de GitHub Actions del commit `8e49d8e` también
+terminaron en verde; al corte 05:13 UTC el CNAME de ACM aún no resolvía. Detalle:
+[revalidación cloud 05:10 UTC](current/CLOUD-REVALIDATION-2026-10-15-0510UTC.md).
 
 ## Corte vigente — 15/10/2026, 00:34 UTC
 
