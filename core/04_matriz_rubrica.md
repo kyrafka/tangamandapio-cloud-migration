@@ -1,4 +1,4 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 14:45 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 16:31 UTC
 
 ## Conclusión de calificación
 
@@ -16,19 +16,12 @@ evidencia y trabajo pendiente, no puntos.
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-Para el estado AWS más reciente, consulta el
-[despliegue v11 y su recuperación](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
-Los cortes sanos anteriores se conservan en el
-[despliegue AWS previo](../evidence/current/aws/AWS-DESPLIEGUE-2026-10-14.md), el
-[inventario AWS](../evidence/current/aws/AWS-INVENTARIO-2026-10-13.md), la
-[revalidación Azure](../evidence/current/azure/AZURE-PLAN-PAQUETE-2026-10-13.md)
-y la [revalidación anterior a v11](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
-El corte cloud del 15/10 a las 14:30 UTC está en
-[la revalidación HTTPS/nube](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md);
-el seguimiento visual de Chrome y el intento E2E por el dominio a las 14:45 UTC
-están en [la prueba de interfaz](../evidence/current/CLOUD-UI-SMOKE-2026-10-15-1445UTC.md).
+El corte vigente AWS/Azure/Chrome del 15/10, 16:12–16:31 UTC, está en
+[la revalidación actual](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1631UTC.md).
+Los informes v11, inventarios y pruebas previas enlazados en los bloques
+históricos siguientes son antecedentes; no sustituyen este último corte.
 
-## Revalidación vigente — 15/10/2026, 14:20–14:30 UTC
+## Corte anterior — 15/10/2026, 14:20–14:30 UTC (supersedido por 16:31 UTC)
 
 AWS STS autenticó en la cuenta Academy 841113066612; CloudFormation está
 `UPDATE_COMPLETE`, el ALB activo, HTTPS/443 con ACM `ISSUED` y HTTP/80
@@ -54,7 +47,7 @@ la carga transaccional representativa y WebRTC entre dos navegadores continúan
 pendientes. El detalle está en
 [la revalidación HTTPS/nube/navegador](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md).
 
-## Actualización posterior — 15/10/2026
+## E2E histórico y observabilidad — 15/10/2026 (corte previo a 16:31 UTC)
 
 Con la sesión temporal AWS renovada, STS autenticó la cuenta Academy. El E2E
 vivo posterior volvió a dejar CloudFormation `UPDATE_COMPLETE`, los dos
@@ -69,7 +62,7 @@ aisladas, build y IaC; GitHub Actions del commit `034a06e` terminó con los tres
 jobs exitosos. La evidencia detallada y sanitizada está en
 [el smoke de alarmas y permisos](../evidence/current/aws/AWS-ALARM-SUBSCRIPTIONS-ROLE-SMOKE-2026-10-15.md).
 
-## E2E vigente por ALB — 15/10/2026, 05:33 UTC
+## E2E histórico por ALB — 15/10/2026, 05:33 UTC (no revalidado en el corte 16:31)
 
 La prueba autenticada se dirigió al ALB público: Admin, Comercial y Operaciones
 respetaron la matriz 200/403; catálogo, venta y recepción sintéticas completaron
@@ -107,9 +100,30 @@ state remoto privado, VPN, WebRTC y HTTPS siguen sin evidencia completa. No se
 asigna nota: la rúbrica suma 18.5 en pesos aunque declara 20 y no define
 conversión numérica por descriptor.
 
-Los bloques fechados más abajo conservan resultados de cortes anteriores; no
-deben interpretarse como estado posterior a v11. El resumen y la tabla de esta
-primera sección reflejan la última evidencia disponible.
+Los bloques fechados anteriores conservan resultados históricos y no deben
+interpretarse como estado vigente. La revalidación 16:31 UTC precede a la tabla
+cualitativa siguiente.
+
+## Revalidación vigente — 15/10/2026, 16:12–16:31 UTC
+
+AWS STS autenticó; CloudFormation sigue UPDATE_COMPLETE e IN_SYNC, ASG está
+en 2/2/5 y ambas instancias y targets están sanos. ACM está ISSUED; el ALB
+redirige HTTP/80 a HTTPS/443. RDS está available, cifrada y privada, pero
+sigue Single-AZ y con backup de un día. Seis de siete alarmas CloudWatch están
+OK; la alarma de scale-in de Target Tracking está ALARM con el grupo en su
+mínimo. Azure for Students está Enabled; la Function está Running,
+HTTPS-only, y /api/health devolvió 200. Application Insights registró 141
+solicitudes y cero fallas en la consulta de seis horas a las 16:12 UTC.
+
+En Chrome, la portada y el drawer de acceso cargaron; claro/oscuro y cerrar/
+abrir el panel se probaron y restauraron. El /health del dominio mostró
+status=ok. No se ingresaron credenciales, así que las vistas privadas y la
+importación CSV visual siguen pendientes. Una carga loopback 100/100 dio p95
+139.09 ms, pero una carga Python externa recibió 403 de Cloudflare; ninguna
+demuestra el objetivo de 3,000 usuarios. El E2E anterior de loopback pasó,
+pero el intento por hostname ALB falla la validación TLS después de la
+redirección, sin escribir pedidos. Detalle: [revalidación 16:31 UTC]
+(../evidence/current/CLOUD-REVALIDATION-2026-10-15-1631UTC.md).
 
 ## Estado cualitativo por criterio
 
@@ -117,17 +131,17 @@ primera sección reflejan la última evidencia disponible.
 |---:|---|---|---|
 | 1 | Análisis del problema y requerimientos · 1.0 | Caso, restricciones y requisitos están documentados; el crecimiento multisede/internacional está separado de capacidades ya desplegadas. | Mantener la trazabilidad requisito→componente→prueba en el informe final y defender los supuestos ante el docente. |
 | 2 | Diseño de arquitectura cloud · 2.0 | Arquitectura AWS–Azure, diagramas y separación entre estado implementado y objetivo están documentados; AWS atiende el portal y Azure procesa eventos de demostración. | Presentar el diseño y justificar decisiones/capacidad objetivo en la sustentación. |
-| 3 | Redes VPC/VCN · 2.0 | VPC AWS `10.10.0.0/16`, subredes públicas/privadas/aisladas en dos AZ y security groups encadenados ALB:80→app:8080→DB:5432; lectura viva posterior con los destinos saludables. | No hay VNet ni rutas/VPN privadas AWS–Azure. Con el token nuevo, `CreateCustomerGateway --dry-run` fue denegado por un `explicit deny` SCP; tampoco existe VNet en la suscripción Azure. Requiere habilitación del administrador de la cuenta AWS y provisionar la red Azure; no sortear la política. HTTPS público no sustituye conectividad privada. Ver [preflight](../evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md). |
-| 4 | Cómputo, almacenamiento y BD · 1.5 | v11 desplegado: dos EC2 `InService`, dos destinos ALB `healthy`, ASG mínimo/deseado 2 máximo 5; RDS disponible/cifrada/privada, Single-AZ, backup un día. Restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | No se ha demostrado Multi-AZ ni failover automático; el ledger Azure es ficticio. |
-| 5 | Seguridad cloud · 2.5 | E2E del 15/10 por ALB: Admin autenticó; matriz API Comercial/Operaciones verificó rutas 200/403; EC2/RDS no aceptan conexiones directas desde Internet. En el corte vigente ACM está `ISSUED`, HTTPS/443 sirve el portal y HTTP/80 redirige a HTTPS; la cookie de sesión `Secure`/`HttpOnly`/`SameSite=Lax` se verificó en la evidencia HTTPS previa. | Falta recorrido visual autenticado de Admin, Comercial y Operaciones; este corte solo probó la portada, la validación de login y el rechazo de una cuenta sintética inválida. |
-| 6 | Alta disponibilidad y escalabilidad · 1.5 | Prueba histórica de Target Tracking 2→3 y despliegue gradual v11 conservó dos instancias saludables. E2E por ALB el 15/10 completó venta/recepción y dos eventos a Azure; 24 lecturas autenticadas 24/24 HTTP 200, concurrencia 6, p95 216.61 ms. ASG actual 2/2, dos EC2 `InService`/`Healthy`, máximo 5. | Esta carga acotada no demuestra capacidad para 3,000 usuarios ni failover Multi-AZ; falta prueba de carga transaccional representativa y dimensionamiento, además de HA de RDS. |
-| 7 | Monitoreo y observabilidad · 1.0 | Corte histórico 05:33: seis alarmas CloudWatch `OK` y una de target tracking en `ALARM` por CPU baja con ASG en el mínimo; SNS tenía dos suscripciones confirmadas y el usuario informó recepción de alerta/recuperación. Azure Action Group y receptores estaban habilitados; Application Insights reportó 17 requests/24 h en una consulta previa. El corte 14:30 no volvió a leer alarmas ni Application Insights. | Reconsultar estado actual; faltan capturas de dashboards y evidencia independiente de entrega de alertas. Métricas agregadas no sustituyen correlación de negocio. |
-| 8 | Infrastructure as Code · 1.5 | CloudFormation desplegó `AutoScalingRollingUpdate`; stack `UPDATE_COMPLETE`, estado visible `IN_SYNC` (última detección registrada 15/10 02:36 UTC). Los estados Azure están en backend remoto; planes vivos de `azure-rebuild` y `azure-tfstate` dieron `No changes`. Contenedor privado/Entra, shared-key deshabilitado, TLS 1.2; red pública de cuenta aún habilitada. | No hay IaC aplicada para la red privada. Mantener una copia local restringida del state de bootstrap como respaldo; habilitar red privada/firewall para el backend cuando exista un runner autorizado. No versionar state ni secretos. |
+| 3 | Redes VPC/VCN · 2.0 | VPC AWS `10.10.0.0/16`, subredes públicas/privadas/aisladas en dos AZ y SG encadenados ALB:80→app:8080→DB:5432; la revalidación actual conserva sanos los targets. | No hay VNet ni VPN/rutas privadas AWS–Azure. AWS Academy denegó `ec2:CreateCustomerGateway` por SCP y el inventario previo no encontró VNet Azure. HTTPS público no sustituye conectividad privada. Ver [preflight](../evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md). |
+| 4 | Cómputo, almacenamiento y BD · 1.5 | Release v12: dos EC2 `InService`/`Healthy`, dos targets `healthy`, ASG 2/2/5. RDS disponible, cifrada y privada; restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | RDS sigue Single-AZ con backup de un día y no se ha demostrado failover automático; el ledger Azure es sintético. |
+| 5 | Seguridad cloud · 2.5 | E2E anterior verificó Admin y matriz API de Comercial/Operaciones 200/403; EC2/RDS no aceptan conexiones directas desde Internet. ACM está `ISSUED`, HTTPS/443 sirve el dominio y HTTP/80 redirige. | Falta recorrido visual autenticado de Admin, Comercial y Operaciones y verificación de CSV desde la UI. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | Target Tracking 2→3 y despliegue gradual históricos; ASG actual 2/2/5 y las dos instancias/targets están sanos. La carga más reciente fue 100 sondas loopback en una EC2, p95 139.09 ms. | Las pruebas no demuestran tráfico transaccional por ALB ni capacidad para 3,000 usuarios; RDS no tiene Multi-AZ. La carga Python externa está bloqueada por Cloudflare 403. |
+| 7 | Monitoreo y observabilidad · 1.0 | Reconsulta 16:31: siete alarmas con acciones habilitadas, seis `OK`, una alarma de scale-in `ALARM` con ASG en mínimo. Azure Function health 200; Application Insights a las 16:12 registró 141 requests/6 h, cero fallas. | Faltan capturas de dashboards/consolas y evidencia visual independiente de entrega de alertas. |
+| 8 | Infrastructure as Code · 1.5 | CloudFormation `UPDATE_COMPLETE`, `IN_SYNC` tras detección 16:12. Plan Azure vivo con tfvars local de destinatarios: `No changes`, sin `apply`. | No hay IaC aplicada para la red privada. No versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
-| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E por ALB portal→RDS/outbox→Azure Queue/Function del 15/10 entregó venta/recepción sintéticas y ledger 10→10. | No hay conexión privada AWS–Azure; no presentar Azure como OCI ni afirmar inventario comercial. |
+| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para usar AWS–Azure; E2E previo portal→RDS/outbox→Azure Queue/Function completó venta/recepción sintéticas y ledger 10→10. | No hay conexión privada AWS–Azure; no presentar Azure como OCI ni afirmar inventario comercial. |
 | 11 | Costos y optimización · 0.5 | Existe cálculo reproducible de precio público AWS, basado en inventario y supuestos explícitos; se documentaron optimizaciones y sensibilidad. | El subtotal AWS ($91.92/mes) excluye variables; Azure Storage/Queue y el costo real del programa académico siguen sin medición/captura de Cost Analysis. La proyección es orientativa, no una factura. |
-| 12 | Pruebas técnicas · 1.0 | La puerta local más reciente aprobó 176 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías, `cfn-lint` y Terraform en cinco entornos. E2E previo por ALB autenticó Admin, importó catálogo, completó venta/recepción portal→RDS/outbox→Azure y verificó permisos API 200/403; restore RDS medido. | Falta carga transaccional representativa por ALB, CSV desde archivo en UI, evidencia independiente de alertas Azure y revisión visual autenticada. El intento E2E por HTTPS se detuvo en login con HTTP 403. WebRTC sigue pendiente. |
-| 13 | Documentación técnica · 0.5 | README, matriz, checklist y cortes de evidencia Chrome/E2E están publicados en `ee26e47`; sus tres jobs GitHub Actions terminaron `success` a las 14:51 UTC. | Falta guardar capturas verificables de consola AWS/monitor Azure y revisar visualmente el informe final. |
+| 12 | Pruebas técnicas · 1.0 | Gate local: 176 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías e IaC. Restore RDS medido. Chrome: portada, tema y drawer; dominio `/health` ok. | Falta carga transaccional aprobada por ALB, CSV desde archivo en UI, evidencia visual de alertas y recorrido autenticado. La prueba externa Python obtuvo 403 de Cloudflare; WebRTC sigue pendiente. |
+| 13 | Documentación técnica · 0.5 | Matriz, checklist y corte de evidencia 16:31 actualizados en el árbol de trabajo; el commit publicado previo `e70cee7` tuvo GitHub Actions `success`. | Las actualizaciones documentales de este corte aún requieren commit/push y CI; faltan capturas verificables de consola AWS y monitor Azure. |
 | 14 | Sustentación y defensa técnica · 0.5 | No evaluable desde archivos o código. | Demostrar el entorno y explicar arquitectura, decisiones, costos, pruebas y límites ante el docente. |
 
 ## Actualización de evidencia — 14/10/2026, 01:44–01:51 America/Chicago

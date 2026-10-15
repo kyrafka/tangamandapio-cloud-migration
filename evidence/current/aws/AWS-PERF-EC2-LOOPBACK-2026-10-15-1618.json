@@ -1,0 +1,19 @@
+{
+  "test_id": "PT-PERF-01",
+  "scope": "Single EC2 loopback health endpoint; not ALB capacity",
+  "url": "http://127.0.0.1:8080/health",
+  "requests": 100,
+  "concurrency": 10,
+  "elapsed_seconds": 1.335,
+  "latency_ms": {
+    "p95": 139.09,
+    "max": 143.6
+  },
+  "errors": 0,
+  "error_rate": 0.0,
+  "passed": true,
+  "limitations": [
+    "Requests originated on one EC2 instance and targeted loopback.",
+    "Does not measure ALB distribution, database transactions, autoscaling, or 3000 concurrent users."
+  ]
+}

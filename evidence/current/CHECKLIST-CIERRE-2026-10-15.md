@@ -1,7 +1,40 @@
-# Checklist de cierre — actualizado 15/10/2026, 15:58 UTC
+# Checklist de cierre — actualizado 15/10/2026, 16:31 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
+
+## Revalidación vigente AWS, Azure y Chrome — 16:12–16:31 UTC
+
+- [x] AWS STS autenticó; CloudFormation quedó UPDATE_COMPLETE e IN_SYNC,
+  ASG 2/2/5, dos EC2 y dos targets sanos. El ALB atiende HTTPS/443 y redirige
+  HTTP/80; ACM está ISSUED y en uso.
+- [x] RDS continúa disponible, privada y cifrada; sigue Single-AZ con
+  retención de backup de un día. Sin cambios a la base.
+- [x] Siete alarmas CloudWatch tienen acciones habilitadas: seis OK y una
+  alarma de scale-in Target Tracking en ALARM mientras el grupo está en el
+  mínimo de dos.
+- [x] Azure for Students Enabled; Function tangama-wms-261008 Running y
+  HTTPS-only; /api/health respondió 200. Application Insights registró 141
+  solicitudes/6 h y cero errores en la consulta de las 16:12 UTC.
+- [x] Plan Terraform Azure, con el archivo local protegido de destinatarios,
+  terminó sin cambios; no se ejecutó apply.
+- [x] En Chrome se probó el tema claro/oscuro y el panel de acceso
+  cerrar/abrir; /health devolvió status=ok. Se restauró la portada, tema
+  oscuro, ambiente sonoro inicial y panel de acceso abierto. No se ingresaron
+  credenciales ni se usó localhost.
+- [x] Una microcarga loopback en una EC2 dio 100/100 HTTP 200, concurrencia
+  10, p95 139.09 ms; no representa ALB ni 3,000 usuarios.
+- [ ] La carga externa automatizada recibió 403 de Cloudflare y no sirve
+  como medición de capacidad. El intento E2E por hostname directo del ALB
+  encontró mismatch de certificado tras la redirección y no escribió pedidos.
+
+Detalle: [corte cloud y navegador 16:31 UTC](CLOUD-REVALIDATION-2026-10-15-1631UTC.md).
+
+Pendientes vigentes: login manual en la pestaña para inspeccionar Admin,
+Comercial, Operaciones y CSV; conexión privada AWS–Azure (bloqueada por SCP
+en AWS y sin VNet Azure); WebRTC real con dos navegadores; prueba de carga
+transaccional aprobada por ALB; capturas de consola; Multi-AZ/failover RDS.
+El último cambio documental debe volver a pasar por CI antes de publicarse.
 
 ## Revalidación v12 en AWS y Chrome — 15:40–15:58 UTC
 
@@ -134,7 +167,7 @@ Detalle íntegro: [revalidación cloud 05:10 UTC](CLOUD-REVALIDATION-2026-10-15-
   `ec2:CreateCustomerGateway` por SCP; dry-run sin creación. No se instaló la
   extensión Azure solicitada por la CLI ni se generaron cargos.
 
-## Pendiente vigente tras la validación de v12 — 15:58 UTC
+## Pendiente al corte previo — 15:58 UTC (supersedido por corte 16:31 UTC)
 
 - [ ] Conectividad privada AWS–Azure: no desplegada ni verificada; un intento
   Site-to-Site previo fue rechazado por SCP. El E2E usa HTTPS público.
