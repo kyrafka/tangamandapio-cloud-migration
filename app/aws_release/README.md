@@ -1,38 +1,72 @@
 # Paquete de release AWS
 
-> Revalidación de consola 15/10/2026, 19:22 UTC: stack
-> `tangamandapio-live-20261013` en `UPDATE_COMPLETE` (47 recursos), 2/2 targets
-> `Healthy`; el prefijo principal de S3 enumera 10 objetos e incluye el paquete
-> v12. El último release confirmado como desplegado sigue siendo v12 (18:56
-> UTC). El CLI local devuelve `ExpiredToken`; no se hizo drift detection ni se
-> consultó RDS.
+> Corte vigente: 15/10/2026, 21:34 UTC. CloudFormation
+> `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`.
+> ASG 2/2 instancias deseadas y saludables. Portal HTTPS `/`, `/health` y
+> `/ready` respondieron 200; v16 quedó verificado en los dos nodos finales.
+> AWS STS aceptó el token temporal para la cuenta 841113066612; el secreto no se
+> registra en este archivo.
 
-`current/` identifica el candidato local
-`20261015-cloudwatch-wiring-v13-python312`, SHA-256
-`d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57`. La
-plantilla local referencia esa clave inmutable, pero su presencia en S3 y su
-despliegue no están confirmados. El último release conocido en nube es v12,
+## Release v16 desplegado — portada vectorial y caché segura
+
+`current/BUILD_REVISION` identifica
+`20261015-edge-cache-safe-landing-v16-python312`. SHA-256 del artefacto:
+`94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe`. La clave,
+el digest y la revisión coinciden entre plantilla, parámetros vivos y el
+objeto privado en S3 (cifrado SSE-S3). El paquete está excluido de Git; se
+versionan fuentes, plantilla y evidencia, nunca credenciales.
+
+La portada usa el SVG versionado en
+`current/static/images/tangamandapio-operations.svg`, no PNG ni audio local
+ignorado por Git. Las páginas incluyen query de release en los bundles para
+evitar respuestas antiguas del CDN. Los bundles v16 dieron 200 por HTTPS; un
+bundle inexistente dio 404 con `Cache-Control: no-store` tanto en el ALB como en
+Cloudflare (`BYPASS`).
+
+La actualización gradual de CloudFormation terminó correctamente. Las dos
+instancias finales reportaron la revisión v16 y `/health` y `/ready` 200; los
+destinos del balanceador quedaron 2/2 saludables. Detalle y límites en
+[la evidencia del 15/10 a las 21:34 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-15-2134UTC.md).
+
+La puerta local aprobó 181 pruebas Python, 14 Node, 40 transacciones aisladas,
+build/auditorías frontend y dependencias, `cfn-lint`, y Terraform
+`fmt`/`validate`/pruebas con mocks. No se revalidaron Azure ni llamadas WebRTC
+entre dos navegadores, y esta sesión no incluye recorrido visual autenticado.
+
+## Historial — candidato v15 (supersedido por el release v16)
+
+### Candidato local v15 — corte histórico anterior al despliegue
+
+En el corte de las 20:45 UTC, `current/BUILD_REVISION` identificaba
+`20261015-public-safe-landing-v15-python312`. Aquel paquete reproducible tenía SHA-256
+`a0558db0c96bbb0622ec599555795d4a9d3703141c4856b4ac14fe3ecb4a2987`, y la
+plantilla CloudFormation apuntaba entonces a esa revisión y digest. En aquel
+corte no se pudo confirmar su presencia en S3 ni el despliegue porque el CLI
+respondía `ExpiredToken`; ambos puntos quedaron resueltos después con v16.
+
+El paquete reemplaza la portada rasterizada por el vector versionado en el
+repositorio `static/images/tangamandapio-operations.svg`; excluye explícitamente
+los PNG y el audio locales ignorados por Git, y las páginas del portal,
+administración y observabilidad apuntan al CSS con hash SHA-256 actualizado.
+El preload espera a `HTMLImageElement.decode()` antes de revelar la portada y
+mantiene el comportamiento de movimiento reducido. Se conserva el cableado de
+dimensiones CloudWatch que llegó en el candidato anterior.
+
+La puerta local completa aprobó 181 pruebas Python, 14 pruebas Node, build y
+auditoría frontend, auditorías de dependencias Python, CloudFormation con
+`cfn-lint`, y Terraform (formato, validación y pruebas con mocks); el flujo de
+carga simulada aprobó 40 transacciones aisladas. En ese corte, esto validaba el
+candidato local y no un despliegue vivo. La revisión visual del panel admin
+quedó pendiente porque la sesión de control de Chrome se interrumpió antes de
+abrir sus módulos.
+
+El último release confirmado en nube en aquel corte era v12,
 `20261015-login-drawer-a11y-v12-python312`, SHA-256
-`c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`.
-La consola S3 confirma que ese paquete está en el prefijo principal; v13 no
-aparece entre los 10 objetos listados (la subcarpeta `qa/` no se inspeccionó).
+`c884314dd8ec617df90739aeee25d2f912d7e1d70ec1e66d442fbc6720407c13`. Se
+se necesitaba una sesión AWS CLI vigente para publicar v15 con clave inmutable,
+aplicar el cambio gradual y verificar salud; el trabajo posterior desplegó v16.
 
-## Candidato local v13 — dimensiones CloudWatch (no desplegado)
-
-CloudFormation ahora pasa a la aplicación las dimensiones físicas de ALB,
-target group, RDS y ASG; configura las dimensiones del Web ACL solo cuando
-WAF está habilitado. El panel distingue “No desplegado”, “Sin datos recientes”,
-“Sin permiso de lectura” y métricas disponibles, en vez de insinuar que WAF
-está configurado por defecto. Se añadieron pruebas de wiring y de postura; la
-puerta local completa, CloudFormation y Terraform aprobaron. GitHub Actions
-`38792459084` pasó para `977f437`.
-
-Este candidato no se debe considerar publicado: no se subió a S3 ni se aplicó
-CloudFormation en esta revalidación. Primero se necesita una sesión AWS CLI
-vigente y permisos para comprobar el objeto, cargarlo con clave inmutable y
-desplegarlo gradualmente; no usar el template como prueba del estado vivo.
-
-## Último release confirmado v12 — foco seguro del acceso oculto
+## Historial — release v12, foco seguro del acceso oculto
 
 Se añadió `accessibility-drawer-7f1356105ee4.js` al bundle de `current/`.
 Observa el estado del panel de login, marca el contenedor `inert` y

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <radialGradient id="atmosphere" cx="0" cy="0" r="1" gradientTransform="matrix(720 510 -560 790 1110 460)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#87D8AD" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#87D8AD" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="805" x2="1390" y1="345" y2="866" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D3F2DB" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#65B987" stop-opacity=".08"/>
+    </linearGradient>
+    <linearGradient id="warehouse" x1="917" x2="1430" y1="672" y2="954" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8E8C5" stop-opacity=".44"/>
+      <stop offset="1" stop-color="#B8E8C5" stop-opacity=".08"/>
+    </linearGradient>
+    <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
+      <path d="M46 0H0v46" stroke="#C7E9D0" stroke-opacity=".13"/>
+    </pattern>
+    <filter id="soft-glow" x="650" y="80" width="1050" height="1050" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+  </defs>
+  <path fill="url(#atmosphere)" d="M0 0h1600v1000H0z"/>
+  <path fill="url(#grid)" opacity=".36" d="M700 0h900v1000H700z"/>
+  <circle cx="1130" cy="440" r="284" fill="#74C895" fill-opacity=".08" filter="url(#soft-glow)"/>
+  <g stroke="#9EDBB3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="1122" cy="430" r="245" stroke-opacity=".37" stroke-width="2"/>
+    <ellipse cx="1122" cy="430" stroke-opacity=".24" stroke-width="1.5" rx="118" ry="245"/>
+    <ellipse cx="1122" cy="430" stroke-opacity=".22" stroke-width="1.5" rx="245" ry="92"/>
+    <path d="M891 363c72-38 134-27 187-12 40 11 84 9 141-17M919 504c83-22 132-5 188 26 46 26 93 23 142 2" stroke-opacity=".42" stroke-width="3"/>
+    <path d="M955 294c18 34 57 44 72 72 17 32 5 65-14 92m214-181c-16 30-18 63-1 89 13 20 43 35 49 62 6 25-9 48-4 74" stroke-opacity=".3" stroke-width="2"/>
+    <path d="M878 567c93-93 162-145 246-139 88 6 143 69 241 37m-480-163c67 4 111 42 158 76 40 29 91 51 165 52" stroke-dasharray="3 11" stroke-opacity=".8" stroke-width="2"/>
+  </g>
+  <g fill="#B9E9C8" stroke="#163D2D" stroke-width="8">
+    <circle cx="878" cy="567" r="11"/><circle cx="1124" cy="428" r="11"/>
+    <circle cx="1365" cy="465" r="11"/><circle cx="1208" cy="302" r="11"/>
+    <circle cx="962" cy="302" r="9"/><circle cx="1280" cy="603" r="9"/>
+  </g>
+  <g stroke="#B6E4C3" stroke-linejoin="round" stroke-width="2">
+    <path d="m847 716 235-126 288 143-239 132-284-149Z" fill="url(#warehouse)"/>
+    <path d="m847 716 1 113 283 153V865L847 716Z" fill="#5EAA79" fill-opacity=".16"/>
+    <path d="m1131 865 239-132v112l-239 137V865Z" fill="#5EAA79" fill-opacity=".12"/>
+    <path d="m908 748 1 91m58-61 1 91m57-60 1 91m164-166 1 105m57-137 1 105m57-136 1 105" stroke-opacity=".52"/>
+    <path d="m847 773 284 150m-284-103 284 151m-170-297 286 147m-229-178 286 148" stroke-opacity=".28"/>
+    <path d="m1071 675 1 157m-51-185 1 157m-53-184 1 157m260-38 1 120m54-148 1 120m53-149 1 120" stroke-opacity=".38"/>
+  </g>
+  <g fill="#D5F2DE" fill-opacity=".9">
+    <rect x="788" y="585" width="160" height="64" rx="12" opacity=".11"/>
+    <rect x="1306" y="245" width="184" height="72" rx="14" opacity=".12"/>
+    <rect x="1354" y="629" width="134" height="56" rx="12" opacity=".1"/>
+    <circle cx="816" cy="617" r="5"/><path d="M832 613h87v7h-87z" opacity=".65"/>
+    <circle cx="1334" cy="281" r="5"/><path d="M1350 277h104v7h-104z" opacity=".65"/>
+    <circle cx="1380" cy="657" r="5"/><path d="M1396 653h65v7h-65z" opacity=".65"/>
+  </g>
+</svg>

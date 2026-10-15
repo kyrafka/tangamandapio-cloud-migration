@@ -43,6 +43,12 @@ cp "$application_root/requirements.lock" "$staging_directory/requirements.lock"
 cp "$application_root/BUILD_REVISION" "$staging_directory/BUILD_REVISION"
 cp -R "$application_root/static" "$staging_directory/static"
 cp -R "$application_root/migrations" "$staging_directory/migrations"
+# Keep locally supplied, unapproved media out of every published release.
+# The landing page uses the tracked vector replacement instead of these files.
+rm -f "$staging_directory/static/audio/sweet-dove-ambient.mp3"
+if [[ -d "$staging_directory/static/images" ]]; then
+  find "$staging_directory/static/images" -maxdepth 1 -type f -name 'walpurgis-*.png' -delete
+fi
 artifact_files=(app.py erp_service.py requirements.txt requirements.lock static migrations BUILD_REVISION)
 if [[ -f "$application_root/cloud_observability.py" ]]; then
   cp "$application_root/cloud_observability.py" "$staging_directory/cloud_observability.py"

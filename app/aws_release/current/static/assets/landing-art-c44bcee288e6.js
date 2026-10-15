@@ -15,9 +15,9 @@
       preload = document.createElement("link");
       preload.rel = "preload";
       preload.as = "image";
-      preload.type = "image/png";
+      preload.type = "image/svg+xml";
       preload.fetchPriority = "high";
-      preload.href = "/images/walpurgis-rising-pixel-diffused-v1.png";
+      preload.href = "/images/tangamandapio-operations.svg";
       preload.dataset.landingArt = "";
       document.head.append(preload);
     }

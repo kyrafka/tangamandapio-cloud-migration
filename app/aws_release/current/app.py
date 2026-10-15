@@ -563,16 +563,20 @@ def create_app(test_config=None):
         # dispositivos al portal.
         response.headers["Permissions-Policy"] = "microphone=(self), camera=(self)"
         existing_cache_control = response.headers.get("Cache-Control", "").lower()
-        if "no-store" not in existing_cache_control:
-            asset_name = Path(request.path).name
-            is_static_asset = request.path.startswith(("/assets/", "/images/"))
-            is_content_versioned = bool(
-                re.fullmatch(r"index-[A-Za-z0-9_-]{8,}\.(?:js|css)", asset_name)
-                or re.fullmatch(r".+-[0-9a-f]{12}\.[A-Za-z0-9]+", asset_name)
-                or re.fullmatch(
-                    r".+-v[0-9]+\.(?:png|jpe?g|webp|avif|svg)", asset_name
-                )
+        asset_name = Path(request.path).name
+        is_static_asset = request.path.startswith(("/assets/", "/images/"))
+        is_content_versioned = bool(
+            re.fullmatch(r"index-[A-Za-z0-9_-]{8,}\.(?:js|css)", asset_name)
+            or re.fullmatch(r".+-[0-9a-f]{12}\.[A-Za-z0-9]+", asset_name)
+            or re.fullmatch(
+                r".+-v[0-9]+\.(?:png|jpe?g|webp|avif|svg)", asset_name
             )
+        )
+        if is_static_asset and response.status_code >= 400:
+            # A cached 404 for a fingerprinted file can outlive a rolling
+            # deploy. Never let an edge cache an asset miss as immutable.
+            response.headers["Cache-Control"] = "no-store"
+        elif "no-store" not in existing_cache_control:
             if is_static_asset and is_content_versioned:
                 response.headers["Cache-Control"] = (
                     "public, max-age=31536000, immutable"
@@ -763,8 +767,8 @@ def create_app(test_config=None):
             if anonymous:
                 landing_preload = (
                     b'<link rel="preload" as="image" '
-                    b'href="/images/walpurgis-rising-pixel-diffused-v1.png" '
-                    b'type="image/png" fetchpriority="high" data-landing-art />'
+                    b'href="/images/tangamandapio-operations.svg" '
+                    b'type="image/svg+xml" fetchpriority="high" data-landing-art />'
                 )
                 page = page.replace(b"</head>", landing_preload + b"</head>", 1)
             return app.response_class(page, mimetype="text/html")

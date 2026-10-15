@@ -55,6 +55,7 @@ for required_path in \
   BUILD_REVISION \
   static/index.html \
   static/assets/catalogCsv.js \
+  static/images/tangamandapio-operations.svg \
   static/templates/inventario_sintetico.csv \
   static/templates/plantilla_catalogo_sintetico.xlsx; do
   if ! grep -Fxq "$required_path" <<<"$archive_contents"; then
@@ -62,6 +63,22 @@ for required_path in \
     exit 1
   fi
 done
+
+if grep -Eq '^static/audio/sweet-dove-ambient\.mp3$|^static/images/walpurgis-.*\.png$' <<<"$archive_contents"; then
+  echo "El paquete del portal contiene material local no autorizado para redistribución." >&2
+  exit 1
+fi
+
+while IFS= read -r text_path; do
+  case "$text_path" in
+    *.py|*.html|*.css|*.js|*.svg)
+      if tar -xOzf "$artifact_path" "$text_path" | grep -Eq 'walpurgis-|sweet-dove-ambient'; then
+        echo "El paquete conserva referencias a material local excluido: $text_path" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done <<< "$(grep -E '\.(py|html|css|js|svg)$' <<<"$archive_contents")"
 
 if ! grep -Eq '^migrations/.+\.sql$' <<<"$archive_contents"; then
   echo "El paquete del portal no contiene las migraciones." >&2

@@ -40,24 +40,25 @@ class StaticCachePolicyTests(unittest.TestCase):
             "no-cache, max-age=0, must-revalidate",
         )
         self.assertIn(b"data-landing-art", page.data)
-        self.assertIn(b"walpurgis-rising-pixel-diffused-v1.png", page.data)
+        self.assertIn(b"tangamandapio-operations.svg", page.data)
+        self.assertNotIn(b"walpurgis-rising-pixel-diffused-v1.png", page.data)
         self.assertIn(b"accessibility-drawer-7f1356105ee4.js", page.data)
 
         health = self.client.get("/health")
         self.assertEqual(health.headers["Cache-Control"], "no-store")
 
-    def test_hashed_assets_and_semantically_versioned_image_are_immutable(self):
+    def test_hashed_assets_and_landing_vector_are_immutable(self):
         page = self.client.get("/")
         assets = re.findall(rb'(?:src|href)="(/assets/[^\"]+)"', page.data)
         page.close()
         fingerprinted = [
-            path.decode("ascii")
+            path.decode("ascii").split("?", 1)[0]
             for path in assets
             if re.fullmatch(
                 r"/assets/(?:index-[A-Za-z0-9_-]{8,}\.(?:js|css)|"
                 r"landing-art-[0-9a-f]{12}\.(?:css|js)|"
                 r"accessibility-drawer-[0-9a-f]{12}\.js)",
-                path.decode("ascii"),
+                path.decode("ascii").split("?", 1)[0],
             )
         ]
         self.assertGreaterEqual(len(fingerprinted), 4)
@@ -74,12 +75,10 @@ class StaticCachePolicyTests(unittest.TestCase):
                 finally:
                     response.close()
 
-        image = self.client.head(
-            "/images/walpurgis-rising-pixel-diffused-v1.png"
-        )
+        image = self.client.head("/images/tangamandapio-operations.svg")
         try:
             self.assertEqual(image.status_code, 200)
-            self.assertTrue(image.headers["Content-Type"].startswith("image/png"))
+            self.assertTrue(image.headers["Content-Type"].startswith("image/svg+xml"))
             self.assertEqual(
                 image.headers["Cache-Control"],
                 "public, max-age=31536000, immutable",
@@ -148,6 +147,19 @@ class StaticCachePolicyTests(unittest.TestCase):
             self.assertEqual(response.headers["Cache-Control"], "no-store")
         finally:
             response.close()
+
+    def test_missing_static_assets_are_never_cached(self):
+        for asset_path in (
+            "/assets/index-missing-build-2026.js",
+            "/images/tangamandapio-missing-v16.svg",
+        ):
+            with self.subTest(asset=asset_path):
+                response = self.client.get(asset_path)
+                try:
+                    self.assertEqual(response.status_code, 404)
+                    self.assertEqual(response.headers["Cache-Control"], "no-store")
+                finally:
+                    response.close()
 
 
 if __name__ == "__main__":
