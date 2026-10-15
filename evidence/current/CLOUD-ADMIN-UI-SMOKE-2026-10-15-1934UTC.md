@@ -51,15 +51,26 @@ inventario, pagos, compras, ventas, mensajes o configuración cloud.
 
 - La consulta de errores y advertencias de la consola Chrome devolvió una lista
   vacía durante la revisión.
+- Las pruebas locales terminaron con éxito: 17 pruebas API/flujo, 46 pruebas
+  del release AWS y 23 pruebas de preflight cloud. La suite de Azure Function
+  no se pudo ejecutar en este Windows porque falta el módulo `azure.functions`;
+  el CI de GitHub para el commit `8a1fe81` sí terminó verde en sus tres jobs
+  (backend/Azure, frontend y validación de infraestructura).
 - A las 19:35 UTC, portal `/health` devolvió HTTP 200 (`status=ok`), `/ready`
   devolvió HTTP 200 (`status=ready`) y Azure Function `/api/health` devolvió
   HTTP 200 (`status=ok`).
-- A la misma hora, `aws sts get-caller-identity` devolvió `ExpiredToken`; no se
-  validaron RDS, drift ni configuración vigente por API de AWS.
-- El código local identifica el candidato como
-  `20261015-cloudwatch-wiring-v13-python312`; la revalidación S3 de las 19:23
-  UTC solo había observado publicado el paquete v12. No se desplegó v13 en
-  esta pasada. La consola en producción sigue indicando que CloudWatch no tiene
-  identificadores configurados, pendiente de corregir y volver a verificar.
+- A las 19:39 UTC, `aws sts get-caller-identity` volvió a devolver
+  `ExpiredToken`; no se validaron RDS, drift ni configuración vigente por API
+  de AWS.
+- La plantilla en CloudFormation muestra explícitamente el artefacto v12 y no
+  contiene las variables de entorno que necesita la integración CloudWatch
+  (`CLOUDWATCH_LOAD_BALANCER_FULL_NAME`, `CLOUDWATCH_RDS_INSTANCE_ID` y
+  `CLOUDWATCH_REGION_NAME`). Esto coincide con el panel publicado que muestra
+  las métricas como no configuradas.
+- El candidato local v13 es reproducible por identidad: el artefacto
+  `artifacts/portal-b2b-20261015-cloudwatch-wiring-v13-python312-d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57.tar.gz`
+  existe (18,191,553 bytes) y su SHA-256 coincide con el sufijo de su nombre.
+  El listado visible del prefijo productivo S3 contiene 10 objetos, incluido
+  v12, pero no v13. No se subió ni desplegó nada en esta pasada.
 - Es un smoke visual del usuario administrador, no una prueba exhaustiva de
   todos los roles, flujos de escritura, entrega SMTP ni llamada WebRTC real.
