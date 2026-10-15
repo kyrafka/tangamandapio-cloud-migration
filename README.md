@@ -12,14 +12,20 @@ El proyecto hermano se usa como referencia del problema del datacenter corporati
 
 ## Estado vigente
 
-**Última revalidación: 15/10/2026, 04:10 UTC.** AWS autenticó el perfil local;
-el ALB y sus dos destinos están saludables, y la portada y /health responden
-200. Azure /api/health responde HTTPS 200. El E2E portal→RDS/outbox→Azure
-completó una venta y recepción sintéticas, con ledger 10→10 y autorización API
-de roles verificada. Los planes Terraform contra el backend remoto Azure dieron
-No changes; el gate local y GitHub Actions están aprobados en commit 39617c9.
-El [corte detallado](evidence/current/CLOUD-REVALIDATION-2026-10-15-0410UTC.md)
-incluye límites y pendientes.
+**Última revalidación: 15/10/2026, 14:30 UTC.** El perfil AWS autenticó en la
+cuenta académica; CloudFormation está `UPDATE_COMPLETE`, el ALB está activo,
+HTTPS/443 sirve la aplicación y HTTP/80 redirige a HTTPS. Sus dos destinos y
+las dos instancias EC2 están saludables; `/health` y `/ready` respondieron 200.
+RDS está disponible, cifrada y privada, pero sigue Single-AZ con un día de
+retención. La Function de Azure está `Running`, `httpsOnly=true` y
+`/api/health` respondió 200. En Chrome se probó la portada, el acceso, la
+validación de campos, el rechazo de un usuario sintético inexistente, el
+teclado y el ancho móvil de 390 px; no se observaron errores de consola. La
+sesión no se autenticó, por lo que las vistas internas y los roles no se
+marcan como probados visualmente. La compuerta local pasó 173 pruebas Python,
+14 Node y validaciones de build/IaC, sin aplicar cambios cloud. El
+[corte detallado](evidence/current/CLOUD-REVALIDATION-2026-10-15-1430UTC.md)
+separa resultados de límites pendientes.
 
 ### Corte histórico anterior (02:58 UTC)
 
