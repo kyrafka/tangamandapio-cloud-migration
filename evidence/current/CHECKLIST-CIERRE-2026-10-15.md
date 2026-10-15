@@ -109,3 +109,12 @@ discrepancia de puntaje siguen en
 - Son comprobaciones puntuales de disponibilidad; no equivalen a un nuevo
   inventario completo, detección de drift, recorrido autenticado ni prueba
   transaccional.
+
+## Listener HTTPS — 15/10/2026, 01:56 UTC
+
+- `DescribeListeners` del ALB muestra únicamente HTTP/80, sin certificado ni
+  listener HTTPS/443. Una sonda HTTPS al ALB expiró al conectar; no hay una URL
+  TLS funcional en el balanceador actual.
+- El navegador no puede adquirir micrófono/cámara desde el HTTP público. No se
+  puede habilitarlo desde el frontend sin debilitar la seguridad del navegador;
+  la corrección de producción es añadir HTTPS confiable y redirigir HTTP.
