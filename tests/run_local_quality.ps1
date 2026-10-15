@@ -324,6 +324,7 @@ Write-Host 'LIVE_AZURE_SMOKE=SYNTAX_AND_OPT_IN_GUARD_APPROVED (sin operaciones d
 Invoke-UnitSuite -Name 'API base' -WorkingDirectory $appPath -TestDirectory 'tests'
 Invoke-UnitSuite -Name 'Azure Functions' -WorkingDirectory $workspacePath -TestDirectory 'app\azure_function_tests'
 Invoke-UnitSuite -Name 'Release AWS' -WorkingDirectory (Join-Path $appPath 'aws_release') -TestDirectory 'tests'
+Invoke-UnitSuite -Name 'AWS current package' -WorkingDirectory (Join-Path $appPath 'aws_release\current') -TestDirectory 'tests'
 
 $transactionLoadPath = Join-Path $workspacePath 'tests\performance\transactional_load_test.py'
 $previousErrorActionPreference = $ErrorActionPreference
