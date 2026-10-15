@@ -1,12 +1,14 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 04:48 UTC
+## Revalidación puntual más reciente — 15/10/2026, 04:53 UTC
 
 AWS tiene el stack activo, 2/2 targets sanos y `/health`/`/ready` HTTP 200; el
 listener sigue solo HTTP/80. Azure Function está `Running`, `httpsOnly=true` y
 su health respondió 200. Se verificó que la plantilla HTTPS acepta un
 subdominio y que el preflight protege el despliegue, pero aún falta DNS
-controlado y certificado emitido para habilitarlo. Detalle: [revalidación
+controlado y certificado emitido para habilitarlo. El smoke público obtuvo 200
+en portada y ocho recursos estáticos; una prueba `--dry-run` confirmó que la SCP
+de AWS Academy aún bloquea crear la conexión privada AWS–Azure. Detalle: [revalidación
 puntual de nube](current/CLOUD-REVALIDATION-2026-10-15-0448UTC.md).
 
 ## Corte vigente — 15/10/2026, 00:34 UTC

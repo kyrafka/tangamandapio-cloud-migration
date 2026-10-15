@@ -41,3 +41,19 @@ transacciones de negocio.
 Esta verificación confirma disponibilidad técnica básica, no el cierre total de
 la rúbrica. VPN privada AWS–Azure, HTTPS con hostname propio, pruebas WebRTC de
 dos navegadores y una carga representativa siguen siendo criterios separados.
+
+## Portada pública, VPN y CI — 15/10/2026, 04:53 UTC
+
+- La portada pública respondió HTTP 200 en 913 ms y los ocho recursos JavaScript
+  y CSS referenciados directamente respondieron HTTP 200. Es un smoke HTTP de
+  entrega de archivos, no una evaluación visual autenticada ni una medición de
+  animaciones/renderizado en navegador.
+- AWS EC2 `CreateCustomerGateway --dry-run` devolvió `UnauthorizedOperation` por
+  un `explicit deny` en una SCP de AWS Organizations. No se creó ningún recurso;
+  el inventario sigue sin customer gateway, VPN gateway o VPN connection.
+- Azure no tiene un VPN gateway en el grupo vigente. La conexión multinube no
+  puede probarse hasta que el administrador de AWS Academy habilite el permiso
+  denegado; no se intentará eludir esa política.
+- El commit `ef006a9` quedó sincronizado en `origin/codex/aws-v11-deploy-sync` y
+  GitHub Actions terminó `success`:
+  https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38683627882

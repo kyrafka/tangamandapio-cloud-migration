@@ -242,3 +242,22 @@ discrepancia de puntaje siguen en
   `/health` 200 después de las sondas.
 - [x] Azure Function `/api/health` HTTPS 200 (`status: ok`). No se hicieron
   cambios de infraestructura ni escrituras en ninguno de los dos proveedores.
+
+## Revalidación posterior — 15/10/2026, 04:48–04:53 UTC
+
+- [x] AWS stack `UPDATE_COMPLETE`, ALB activo, dos targets `healthy` y `/health`
+  y `/ready` HTTP 200. Listener comprobado: HTTP/80 únicamente.
+- [x] Azure Function en `rg-tangamandapio-rebuild-wus` está `Running`,
+  `httpsOnly=true`, con `/api/health` HTTPS 200. Se corrigió la referencia
+  histórica del root `azure-demo`; no se aplicó ese root heredado.
+- [x] Portada HTTP 200 y ocho recursos estáticos JS/CSS HTTP 200. Esto no
+  sustituye la inspección visual autenticada ni el test WebRTC real.
+- [ ] VPN privada pendiente: el `--dry-run` actual de `CreateCustomerGateway`
+  fue denegado por una SCP explícita de AWS Organizations; no se creó nada. Se
+  necesita permiso del administrador de AWS Academy antes de la prueba temporal.
+- [ ] HTTPS pendiente: el ALB aún no tiene listener 443. El preflight de ACM
+  pasa con mocks; falta subdominio bajo DNS controlado, certificado `ISSUED` y
+  change set aprobado.
+- [x] Commit `ef006a9` sincronizado con el remoto; GitHub Actions terminó
+  `success`. La evidencia de este nuevo corte se detalla en
+  [CLOUD-REVALIDATION-2026-10-15-0448UTC.md](CLOUD-REVALIDATION-2026-10-15-0448UTC.md).
