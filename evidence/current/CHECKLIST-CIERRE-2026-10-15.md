@@ -80,3 +80,20 @@ SMTP público. La expansión internacional y 3,000 usuarios concurrentes son
 objetivos de arquitectura, no capacidad ya demostrada. La rúbrica y su
 discrepancia de puntaje siguen en
 [`../../core/04_matriz_rubrica.md`](../../core/04_matriz_rubrica.md).
+
+## Revisión puntual de telefonía — 15/10/2026, 01:43 UTC
+
+- La URL pública del ALB `/` y el bundle desplegado
+  `/assets/index-DMS--gIU.js` respondieron HTTP 200.
+- El bundle contiene una guarda que aborta con `webrtc_not_supported` antes de
+  pedir el micrófono cuando falta `navigator.mediaDevices.getUserMedia` o
+  `RTCPeerConnection`; la interfaz muestra ese código técnico sin traducirlo.
+- La página se sirve por HTTP. En un origen HTTP público, el navegador no expone
+  `navigator.mediaDevices`; micrófono/cámara requieren contexto seguro (HTTPS o
+  `localhost`). Esto concuerda con el error visto y es la causa más probable;
+  no se comprobó desde una sesión de navegador instrumentada.
+- Este fallo ocurre antes de la captura de medios y la negociación ICE: no
+  demuestra que TURN o la señalización estén fallando. Tampoco demuestra que la
+  llamada funcione. La prueba bidireccional A/V con dos navegadores sigue
+  pendiente hasta disponer de HTTPS confiable.
+- Referencia: [MDN, `getUserMedia()` y contextos seguros](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia).
