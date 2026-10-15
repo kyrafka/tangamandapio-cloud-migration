@@ -1,4 +1,4 @@
-# Checklist de cierre — actualizado 15/10/2026, 02:47 UTC
+# Checklist de cierre — actualizado 15/10/2026, 02:58 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -36,9 +36,9 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
   versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, commit publicado `7c96f36`; `main` no se modificó.
+  `codex/aws-v11-deploy-sync`, commit publicado `fa8224e`; `main` no se modificó.
   El token AWS y las contraseñas no forman parte del commit.
-- [x] GitHub Actions en `7c96f36`: backend/flujo, frontend e infraestructura
+- [x] GitHub Actions en `fa8224e`: backend/flujo, frontend e infraestructura
   AWS/Azure, los tres `success`.
 - [x] Revalidación tras actualizar el token: Azure Function `Running`,
   HTTPS-only y health 200; la consulta de VNets devolvió lista vacía.
@@ -56,8 +56,9 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   enviaron contraseñas al ALB HTTP; falta una sesión de navegador segura para
   comprobar vistas visuales, no solo la matriz de permisos API.
 - [ ] Carga transaccional de ventas a través del ALB/RDS y análisis de capacidad
-  para 3,000 usuarios. Las sondas de `/health` y las lecturas loopback no prueban
-  esa capacidad.
+  para 3,000 usuarios. Se completaron 120 GET de `/health` por el ALB con
+  concurrencia 8; esa ruta solo ejecuta `SELECT 1` en RDS, no prueba escrituras,
+  compras/ventas ni capacidad para 3,000 usuarios.
 - [ ] Entrega extremo a extremo de alertas Azure. La telemetría de invocaciones
   confirma actividad, no notificación.
 - [ ] State remoto y privado de Terraform Azure. Los state y respaldos actuales
@@ -186,3 +187,26 @@ discrepancia de puntaje siguen en
 - [x] Los tres checks GitHub Actions de `7c96f36` terminaron `success`;
   `git ls-remote` confirmó la publicación de ese commit antes de este
   complemento de evidencia.
+
+## Página pública y sondas ALB/RDS — 15/10/2026, 02:50–02:57 UTC
+
+- [x] En una pestaña aislada del navegador cargó el título y la estructura
+  accesible de la portada pública de AWS; no se inició sesión ni se transmitieron
+  credenciales. La página presenta el acceso y sus controles.
+- [x] GET de portada, JavaScript, CSS y póster pixelado: todos HTTP 200. El HTML
+  incluye preload de imagen; el PNG de 2,081,152 bytes devuelve
+  `public, max-age=31536000, immutable`.
+- [x] Dos corridas de solo lectura a `/health`, cada una con 60 solicitudes y
+  concurrencia máxima 8: 120/120 HTTP 200 y `status=ok`. La ruta ejecuta `SELECT
+  1` en la base. Run 1: p50 230.4 ms, p95 1,719.7 ms, máximo 1,726.3 ms; run 2:
+  p50 232.2 ms, p95 1,194.1 ms, máximo 1,226.4 ms. Dos destinos permanecieron
+  `healthy` después de la prueba.
+- El sondeo valida disponibilidad básica ALB→aplicación→RDS, no transacciones,
+  distribución efectiva entre ambas instancias ni el objetivo de 3,000 usuarios.
+
+## Revalidación final de salud — 15/10/2026, 02:58 UTC
+
+- [x] AWS STS en la cuenta académica, ALB `active`, ambos destinos `healthy` y
+  `/health` 200 después de las sondas.
+- [x] Azure Function `/api/health` HTTPS 200 (`status: ok`). No se hicieron
+  cambios de infraestructura ni escrituras en ninguno de los dos proveedores.

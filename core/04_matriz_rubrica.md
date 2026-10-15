@@ -1,4 +1,4 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 02:47 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 02:58 UTC
 
 ## Conclusión de calificación
 
@@ -24,8 +24,10 @@ Los cortes sanos anteriores se conservan en el
 [revalidación Azure](../evidence/current/azure/AZURE-PLAN-PAQUETE-2026-10-13.md)
 y la [revalidación anterior a v11](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
 
-Revalidación vigente al 15/10/2026 02:47 UTC: AWS STS autenticó en la cuenta
-Academy `841113066612`; ALB `active` y health 200 a las 02:45 UTC. CloudFormation
+Revalidación vigente al 15/10/2026 02:58 UTC: AWS STS autenticó en la cuenta
+Academy `841113066612`; ALB `active`, 2/2 destinos `healthy` y una microcarga
+de 120 sondas `/health` 200 a concurrencia 8; Azure `/api/health` también dio
+200 en la misma revalidación. CloudFormation
 continúa `UPDATE_COMPLETE`; la detección de las 02:36 UTC terminó `IN_SYNC` con
 cero recursos discrepantes. El target group conserva 2/2 destinos
 `healthy`; ALB `/health` respondió 200 a las 02:45. RDS `tangamandapio-postgres`
@@ -40,9 +42,9 @@ los 200/403 esperados. Veinticuatro lecturas autenticadas fueron 24/24 HTTP
 usuarios). Azure Function continúa `Running`, HTTPS-only y health 200. La
 conectividad privada sigue sin VNet/VPN: AWS Academy denegó
 `CreateCustomerGateway` por SCP. El branch `codex/aws-v11-deploy-sync` está
-publicado en `7c96f36`; la puerta local aprobó 165 Python, 14 Node, 40
+publicado en `fa8224e`; la puerta local aprobó 165 Python, 14 Node, 40
 transacciones aisladas, build, auditorías, CloudFormation y Terraform. GitHub
-Actions para `7c96f36` completó con éxito sus tres jobs: backend/flujo,
+Actions para `fa8224e` completó con éxito sus tres jobs: backend/flujo,
 frontend e infraestructura AWS/Azure. CSV desde
 archivo/UI, recorrido visual de roles, carga por ALB, entrega Azure alertas,
 state remoto privado, VPN, WebRTC y HTTPS siguen sin evidencia completa. No se
@@ -62,7 +64,7 @@ primera sección reflejan la última evidencia disponible.
 | 3 | Redes VPC/VCN · 2.0 | VPC AWS `10.10.0.0/16`, subredes públicas/privadas/aisladas en dos AZ y security groups encadenados ALB:80→app:8080→DB:5432; lectura viva posterior con los destinos saludables. | No hay VNet ni rutas/VPN privadas AWS–Azure. Con el token nuevo, `CreateCustomerGateway --dry-run` fue denegado por un `explicit deny` SCP; tampoco existe VNet en la suscripción Azure. Requiere habilitación del administrador de la cuenta AWS y provisionar la red Azure; no sortear la política. HTTPS público no sustituye conectividad privada. Ver [preflight](../evidence/current/aws/AWS-AZURE-VPN-PREFLIGHT-2026-10-14.md). |
 | 4 | Cómputo, almacenamiento y BD · 1.5 | v11 desplegado: dos EC2 `InService`, dos destinos ALB `healthy`, ASG mínimo/deseado 2 máximo 5; RDS disponible/cifrada/privada, Single-AZ, backup un día. Restore SQL aislado del 15/10 comprobó marcador e integridad con RTO 260 s y RPO superior observado de 8 s. | No se ha demostrado Multi-AZ ni failover automático; el ledger Azure es ficticio. |
 | 5 | Seguridad cloud · 2.5 | E2E del 15/10: Admin autenticó; matriz viva API Comercial/Operaciones verificó rutas 200/403; `/api/admin/users` anónimo devolvió 401 en corte previo. Security groups no exponen EC2/RDS a Internet; Azure exige Function key y rechazó origen no autorizado sin persistencia. | Falta revisión visual autenticada en navegador. ALB continúa sin HTTPS confiable; dominio/certificado siguen diferidos. |
-| 6 | Alta disponibilidad y escalabilidad · 1.5 | Prueba histórica de Target Tracking 2→3 y microprueba ALB 60/60; despliegue gradual v11 conservó dos instancias y destinos saludables. La corrida del 15/10 ejecutó 24 lecturas autenticadas 24/24 (p95 476.1 ms, concurrencia 6) dentro de una EC2. | Esa microcarga no atravesó el ALB, no mide ventas bajo carga ni demuestra capacidad para 3,000 usuarios; falta una prueba transaccional acotada a través de ALB/RDS. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | Prueba histórica de Target Tracking 2→3 y microprueba ALB 60/60; despliegue gradual v11 conservó dos instancias y destinos saludables. La corrida del 15/10 tuvo 24 lecturas autenticadas loopback 24/24 y, posteriormente, 120 sondas `/health` por ALB/RDS 120/120 con concurrencia 8 (p95 1,194–1,720 ms). | La sonda no crea transacciones de venta, no mide escritura/concurrencia de negocio ni demuestra capacidad para 3,000 usuarios; falta prueba transaccional acotada por ALB/RDS y dimensionamiento. |
 | 7 | Monitoreo y observabilidad · 1.0 | Cinco alarmas CloudWatch `OK` con acciones habilitadas y dos suscripciones SNS confirmadas; el Action Group Azure y sus dos receptores están habilitados, así como las reglas de 5xx/latencia. Application Insights reportó 17 solicitudes/24 h, cero fallidas; el E2E reciente confirma procesamiento real de dos eventos demo. | No se envió/observó un correo nuevo en este corte ni hay captura independiente de la bandeja; faltan capturas visuales de los dashboards. Contadores agregados no sustituyen correlación de negocio. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation desplegó la política `AutoScalingRollingUpdate`; stack `UPDATE_COMPLETE` y nueva detección `IN_SYNC`, cero discrepancias, 15/10 02:36 UTC. Terraform Azure terminó `No changes` en el corte anterior y pasó fmt/validate/tests locales; no se ejecutó apply. | No hay IaC aplicada para red privada. El state Terraform de Azure permanece solo local y excluido de Git; antes de reconstruir desde otra máquina, migrarlo a backend remoto privado y comprobar el plan. Nunca versionar state ni secretos. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado del 15/10 validó marcador y conteos de tablas de negocio; RTO 260 s, RPO superior observado 8 s, instancia privada/cifrada y limpieza temporal verificada. | Presentar que RPO es un límite observado de esta prueba, no garantía; RDS está en Single-AZ y no se probó failover Multi-AZ. |
