@@ -86,3 +86,26 @@ capacidad para 3,000 usuarios, entrega de alertas ni una VPN privada AWS–Azure
 - Los tres checks de GitHub Actions del commit `9dc9a4b` terminaron
   `completed/success` antes de esta nueva actualización de evidencia.
 - Evidencia sanitizada: [resultado E2E](aws/AWS-PORTAL-ERP-AZURE-E2E-2026-10-15-0515UTC.json).
+
+## Revalidación posterior — 05:18–05:26 UTC
+
+- AWS STS autenticó en la cuenta Academy `841113066612`. CloudFormation sigue
+  `UPDATE_COMPLETE`; ambos destinos siguen `healthy`; el ALB solo expone el
+  listener HTTP/80. El health HTTP del portal respondió 200 a las 05:26:20 UTC.
+- Azure for Students sigue `Enabled` y el endpoint HTTPS `/api/health` respondió
+  `{"status":"ok","service":"tangamandapio-wms"}`. La lectura de inventario
+  ARM mediante Azure CLI y REST expiró tras 20 s; no se afirma que el estado
+  completo de recursos haya sido inspeccionado.
+- El certificado ACM `tangamandapio.kendellnm.me` continúa
+  `PENDING_VALIDATION`. El resolver público no encuentra el CNAME esperado
+  `_9568d15842cb7c5bd79e0208316e57af.tangamandapio.kendellnm.me`.
+  Las capturas recientes muestran el CNAME del subdominio hacia el ALB con proxy
+  Cloudflare y otros CNAME de validación; ninguno visible coincide con el
+  token de validación actual. Mantener el registro ACM en DNS only.
+- Suite local repetida: 152 pruebas Python (157 subtests), 8 pruebas de permisos,
+  6 pruebas CSV, build Vite y `cfn-lint`, todo aprobado. GitHub Actions del
+  commit `a1c1596f77071a2b821558cce3d0a05a6b70dba8` terminó `success`; local y
+  remoto coinciden.
+- No hubo despliegue ni cambio de recursos en esta revalidación. HTTPS y la
+  prueba WebRTC de dos navegadores siguen pendientes del CNAME ACM y del
+  listener 443.

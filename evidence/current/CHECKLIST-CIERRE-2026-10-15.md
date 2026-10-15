@@ -286,3 +286,23 @@ discrepancia de puntaje siguen en
 - [x] Commit `ef006a9` sincronizado con el remoto; GitHub Actions terminó
   `success`. La evidencia de este nuevo corte se detalla en
   [CLOUD-REVALIDATION-2026-10-15-0448UTC.md](CLOUD-REVALIDATION-2026-10-15-0448UTC.md).
+
+## Revalidación posterior — 15/10/2026, 05:18–05:26 UTC
+
+- [x] AWS STS autenticó en la cuenta Academy `841113066612`; CloudFormation
+  `tangamandapio-live-20261013` sigue `UPDATE_COMPLETE`, ambos destinos del ALB
+  `healthy` y `/health` del portal HTTP 200 (05:26:20 UTC). El único listener
+  continúa en HTTP/80.
+- [x] Azure for Students sigue `Enabled`; `/api/health` de la Function devolvió
+  HTTPS 200. La consulta de inventario ARM con Azure CLI y REST excedió 20 s;
+  por eso no se certifica el inventario/control plane completo en este corte.
+- [x] Pruebas locales repetidas: Python 152 aprobadas (157 subtests), Node 8
+  permisos + 6 CSV, build Vite y `cfn-lint` aprobados. GitHub Actions del tip
+  `a1c1596` terminó `success` y el remoto apunta al mismo commit.
+- [ ] HTTPS sigue pendiente: ACM reporta `PENDING_VALIDATION` y el CNAME
+  `_9568d15842cb7c5bd79e0208316e57af.tangamandapio.kendellnm.me` aún no resuelve
+  públicamente. Las capturas de Cloudflare muestran otros CNAME de validación,
+  no el nombre que espera este certificado. No se desplegó listener 443.
+- [ ] Falta que Kendell publique el CNAME exacto de ACM como DNS only; al pasar
+  ACM a `ISSUED`, desplegar el listener/redirect y probar HTTPS externamente.
+  Después se podrá comprobar WebRTC desde navegadores seguros.
