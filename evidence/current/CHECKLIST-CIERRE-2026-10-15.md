@@ -6,7 +6,9 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 ## Revalidación HTTPS, Azure y acceso AWS — 15/10/2026, 19:12–19:13 UTC
 
 - [x] El portal público HTTPS, `/health`, `/ready` y nueve recursos JavaScript/CSS
-  cargaron con HTTP 200; esto no prueba las rutas privadas de los módulos.
+  cargaron con HTTP 200; HTTP redirige a HTTPS con 301. Se observaron HSTS,
+  CSP, `nosniff`, `X-Frame-Options: DENY`, `no-referrer` y Permissions-Policy;
+  esto no prueba las rutas privadas de los módulos.
 - [x] Azure CLI confirmó `Azure for Students` Enabled, el grupo
   `rg-tangamandapio-rebuild-wus` `Succeeded` en West US y la Function
   `tangama-wms-261008` `Running`/HTTPS-only. Su endpoint público `/api/health`

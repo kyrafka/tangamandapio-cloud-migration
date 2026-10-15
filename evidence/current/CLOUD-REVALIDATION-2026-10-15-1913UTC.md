@@ -6,8 +6,12 @@ sesión. No se modificaron recursos de nube durante estas comprobaciones.
 ## Portal HTTPS
 
 - `https://tangamandapio.kendellnm.me/`: HTTP 200, título `Tangamandapio Cloud`.
+- HTTP sin cifrar redirige a HTTPS con 301 y `Location` al mismo dominio.
 - `/health` y `/ready`: HTTP 200.
 - Nueve recursos JavaScript/CSS referenciados por la portada: HTTP 200.
+- La portada entrega HSTS por un año, CSP restrictiva, `X-Content-Type-Options:
+  nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` y una
+  Permissions-Policy que limita cámara/micrófono al mismo origen.
 - La pestaña Chrome sigue en el formulario de acceso. No se ingresaron
   credenciales y no se comprobaron las vistas privadas.
 
