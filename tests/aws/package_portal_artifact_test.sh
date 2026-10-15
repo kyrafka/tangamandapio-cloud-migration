@@ -38,6 +38,14 @@ if ! tar -tvzf "$artifact_path" | awk '
   exit 1
 fi
 
+text_paths="$(tar -tzf "$artifact_path" | grep -E '(\.(py|txt|lock|html|css|js|sql|csv|json|svg|xml|map)|/BUILD_REVISION)$')"
+while IFS= read -r text_path; do
+  if tar -xOzf "$artifact_path" "$text_path" | LC_ALL=C grep -F $'\r' >/dev/null; then
+    echo "El archivo de texto del paquete conserva CRLF: $text_path" >&2
+    exit 1
+  fi
+done <<< "$text_paths"
+
 archive_contents="$(tar -tzf "$artifact_path")"
 for required_path in \
   app.py \

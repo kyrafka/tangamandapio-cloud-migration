@@ -71,10 +71,36 @@ inventario, pagos, compras, ventas, mensajes o configuración cloud.
   (`CLOUDWATCH_LOAD_BALANCER_FULL_NAME`, `CLOUDWATCH_RDS_INSTANCE_ID` y
   `CLOUDWATCH_REGION_NAME`). Esto coincide con el panel publicado que muestra
   las métricas como no configuradas.
-- El candidato local v13 es reproducible por identidad: el artefacto
-  `artifacts/portal-b2b-20261015-cloudwatch-wiring-v13-python312-d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57.tar.gz`
-  existe (18,191,553 bytes) y su SHA-256 coincide con el sufijo de su nombre.
-  El listado visible del prefijo productivo S3 contiene 10 objetos, incluido
-  v12, pero no v13. No se subió ni desplegó nada en esta pasada.
+- El artefacto local v13 existía (18,191,553 bytes) y su SHA-256 coincidía con
+  el sufijo; una revisión posterior desde el checkout Linux detectó que la
+  empaquetación no era reproducible entre Windows (CRLF) y Linux (LF). Por
+  eso no se publicó v13. La corrección de normalización está incluida en v14
+  abajo; se debe contrastar también desde CloudShell antes de subirlo.
 - Es un smoke visual del usuario administrador, no una prueba exhaustiva de
   todos los roles, flujos de escritura, entrega SMTP ni llamada WebRTC real.
+
+## Revisión interactiva adicional — 15/10/2026, 20:00 UTC
+
+El administrador inició sesión y se recorrieron las vistas en Chrome. Se usó
+solo lectura y navegación; no se crearon ventas/compras, no se registraron
+cobros, no se editaron permisos y no se agregaron alarmas.
+
+- **Pedidos:** la tabla cargó 1 pedido sintético. El detalle abrió y mostró la
+  línea de tiempo del outbox y del WMS.
+- **WMS:** directorio con 39 eventos entregados y 0 pendientes; las 3 páginas
+  avanzaron correctamente. El centro de plataforma cargó 14 SKU con saldos
+  sintéticos y aclaró que el ledger de Azure no es un inventario ERP real.
+- **ERP:** resumen, maestros (6 socios y 13 SKU), ventas (20), compras (18),
+  finanzas (38 documentos) y accesos (3 cuentas) cargaron. El buzón mostró el
+  mensaje interno existente; no se probó envío ni entrega SMTP.
+- **Administración:** 3 cuentas activas, 1 empresa y 2 destinatarios SNS
+  confirmados. La auditoría mostró 100 eventos recientes. No se probaron
+  cambios ni restablecimientos.
+- **Telefonía:** admin y dos extensiones autorizadas aparecen disponibles; no
+  se inició llamada porque no había otro navegador con sesión autenticada para
+  contestar.
+- **Hallazgo confirmado:** la portada de «Nube, seguridad y capacidad» muestra
+  las 8 series CloudWatch como «No configurado» aunque las consultas
+  administrativas de AWS CloudShell sí encontraron métricas del ALB, RDS y
+  ASG. La plantilla local se está actualizando para pasar los identificadores
+  reales de esos recursos al panel.

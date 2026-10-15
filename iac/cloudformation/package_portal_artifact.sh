@@ -49,6 +49,16 @@ if [[ -f "$application_root/cloud_observability.py" ]]; then
   artifact_files+=(cloud_observability.py)
 fi
 
+# Git for Windows may materialize tracked text files with CRLF while Linux
+# checkouts use LF. Normalize only known text assets so the release hash is
+# identical across those environments; leave images, audio, and XLSX untouched.
+find "$staging_directory" -type f \
+  \( -name '*.py' -o -name '*.txt' -o -name '*.lock' -o -name '*.html' \
+     -o -name '*.css' -o -name '*.js' -o -name '*.sql' -o -name '*.csv' \
+     -o -name '*.json' -o -name '*.svg' -o -name '*.xml' -o -name '*.map' \
+     -o -name 'BUILD_REVISION' \) \
+  -exec perl -pi -e 's/\r\n?/\n/g' {} +
+
 source_date_epoch="${SOURCE_DATE_EPOCH:-0}"
 if [[ ! "$source_date_epoch" =~ ^[0-9]+$ ]]; then
   echo 'SOURCE_DATE_EPOCH debe ser un entero no negativo.' >&2

@@ -23,17 +23,17 @@ Parameters:
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-b2b-20261015-cloudwatch-wiring-v13-python312-d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261015-cloudwatch-wiring-v14-python312-ee73fde6678ac7b556b3002d8ed0be3d2f0e99af9c7c96d3481b7a36e741d7cd.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261015-cloudwatch-wiring-v13-python312
+    Default: 20261015-cloudwatch-wiring-v14-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: d0e4f6b6ccadff7eb1edac2026211d081c2f1df941c6884e64ff0cab2e2c9c57
+    Default: ee73fde6678ac7b556b3002d8ed0be3d2f0e99af9c7c96d3481b7a36e741d7cd
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
