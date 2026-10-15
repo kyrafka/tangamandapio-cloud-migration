@@ -136,7 +136,7 @@ lecturas autenticadas tuvieron 24/24 HTTP 200 (concurrencia 6, p95 476.1 ms),
 en una EC2, no a través del ALB. El reporte con límites y hora está en
 [`CHECKLIST-CIERRE-2026-10-15.md`](../evidence/current/CHECKLIST-CIERRE-2026-10-15.md).
 
-El workflow GitHub Actions correspondiente al commit `4420767` completó con
+El workflow GitHub Actions correspondiente al commit `7c96f36` completó con
 éxito sus tres jobs (backend/flujo, frontend y validación de infraestructura).
 Esto certifica ese commit, no reemplaza las pruebas de navegador, carga del ALB,
 conectividad privada ni HTTPS que siguen pendientes.

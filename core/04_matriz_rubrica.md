@@ -1,4 +1,4 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 02:36 UTC
+# Matriz de evidencia por criterio — actualización 15/10/2026, 02:47 UTC
 
 ## Conclusión de calificación
 
@@ -24,10 +24,11 @@ Los cortes sanos anteriores se conservan en el
 [revalidación Azure](../evidence/current/azure/AZURE-PLAN-PAQUETE-2026-10-13.md)
 y la [revalidación anterior a v11](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md).
 
-Revalidación vigente al 15/10/2026 02:36 UTC: AWS STS autenticó en la cuenta
-Academy `841113066612`; CloudFormation continúa `UPDATE_COMPLETE`, y una nueva
-detección de las 02:36 UTC terminó `IN_SYNC` con cero recursos discrepantes. El target group conserva 2/2 destinos
-`healthy`; ALB `/health` respondió 200 a las 02:22. RDS `tangamandapio-postgres`
+Revalidación vigente al 15/10/2026 02:47 UTC: AWS STS autenticó en la cuenta
+Academy `841113066612`; ALB `active` y health 200 a las 02:45 UTC. CloudFormation
+continúa `UPDATE_COMPLETE`; la detección de las 02:36 UTC terminó `IN_SYNC` con
+cero recursos discrepantes. El target group conserva 2/2 destinos
+`healthy`; ALB `/health` respondió 200 a las 02:45. RDS `tangamandapio-postgres`
 sigue `available`, privada y cifrada. El ejercicio PT-DR-01 aislado restauró
 una copia SQL, verificó marcador y tablas, midió RTO 260 s/RPO superior
 observado 8 s y confirmó la limpieza de instancia/snapshot temporales.
@@ -39,9 +40,9 @@ los 200/403 esperados. Veinticuatro lecturas autenticadas fueron 24/24 HTTP
 usuarios). Azure Function continúa `Running`, HTTPS-only y health 200. La
 conectividad privada sigue sin VNet/VPN: AWS Academy denegó
 `CreateCustomerGateway` por SCP. El branch `codex/aws-v11-deploy-sync` está
-publicado en `4420767`; la puerta local aprobó 165 Python, 14 Node, 40
+publicado en `7c96f36`; la puerta local aprobó 165 Python, 14 Node, 40
 transacciones aisladas, build, auditorías, CloudFormation y Terraform. GitHub
-Actions para `4420767` completó con éxito sus tres jobs: backend/flujo,
+Actions para `7c96f36` completó con éxito sus tres jobs: backend/flujo,
 frontend e infraestructura AWS/Azure. CSV desde
 archivo/UI, recorrido visual de roles, carga por ALB, entrega Azure alertas,
 state remoto privado, VPN, WebRTC y HTTPS siguen sin evidencia completa. No se

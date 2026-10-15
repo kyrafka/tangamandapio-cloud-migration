@@ -1,4 +1,4 @@
-# Checklist de cierre — actualizado 15/10/2026, 02:36 UTC
+# Checklist de cierre — actualizado 15/10/2026, 02:47 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -36,9 +36,9 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
   versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, commit publicado `4420767`; `main` no se modificó.
+  `codex/aws-v11-deploy-sync`, commit publicado `7c96f36`; `main` no se modificó.
   El token AWS y las contraseñas no forman parte del commit.
-- [x] GitHub Actions en `4420767`: backend/flujo, frontend e infraestructura
+- [x] GitHub Actions en `7c96f36`: backend/flujo, frontend e infraestructura
   AWS/Azure, los tres `success`.
 - [x] Revalidación tras actualizar el token: Azure Function `Running`,
   HTTPS-only y health 200; la consulta de VNets devolvió lista vacía.
@@ -176,3 +176,13 @@ discrepancia de puntaje siguen en
 - [x] Nueva detección CloudFormation de `tangamandapio-live-20261013`:
   `DETECTION_COMPLETE`, `IN_SYNC`, cero recursos discrepantes. No quedó RDS
   temporal del ejercicio PT-DR-01.
+
+## Smoke check posterior a la publicación — 15/10/2026, 02:45–02:47 UTC
+
+- [x] AWS STS autenticó en la cuenta `841113066612`; el ALB `tangamandapio-alb`
+  aparece `active` y `/health` respondió 200.
+- [x] Azure for Students figura `Enabled`; Function `tangama-wms-261008`
+  `Running`, `httpsOnly=true`, y `/api/health` respondió HTTPS 200.
+- [x] Los tres checks GitHub Actions de `7c96f36` terminaron `success`;
+  `git ls-remote` confirmó la publicación de ese commit antes de este
+  complemento de evidencia.

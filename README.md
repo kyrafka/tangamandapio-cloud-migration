@@ -12,7 +12,7 @@ El proyecto hermano se usa como referencia del problema del datacenter corporati
 
 ## Estado del proyecto
 
-**Corte vigente: 15/10/2026, 02:36 UTC.** AWS `default` autenticó por STS en la cuenta académica `841113066612`. CloudFormation `tangamandapio-live-20261013` está `UPDATE_COMPLETE`; la nueva detección de drift terminó `IN_SYNC` con cero diferencias. El release `20261014-landing-loading-v11-python312` está activo en dos instancias `InService`, y ambos destinos del target group siguen `healthy`. El ALB `/health` respondió HTTP 200; `/api/admin/users` anónimo devolvió 401 en una comprobación previa. La VPC separa ALB público, aplicación privada y RDS aislada, con reglas ALB:80→app:8080→DB:5432. RDS está `available`, cifrada, privada, 20 GB, Single-AZ y con backup de un día. Las cinco alarmas CloudWatch están `OK` con acciones habilitadas; Azure conserva activas dos reglas métricas y su Action Group de correo. El [corte completo](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) distingue comprobaciones de pendientes.
+**Corte vigente: 15/10/2026, 02:47 UTC.** AWS `default` autenticó por STS en la cuenta académica `841113066612`; el ALB está `active` y `/health` respondió HTTP 200 a las 02:45 UTC. CloudFormation `tangamandapio-live-20261013` está `UPDATE_COMPLETE`; la última detección de drift (02:36 UTC) terminó `IN_SYNC`, cero diferencias. El release `20261014-landing-loading-v11-python312` está activo en dos instancias `InService`, y ambos destinos del target group siguen `healthy`. La VPC separa ALB público, aplicación privada y RDS aislada, con reglas ALB:80→app:8080→DB:5432. RDS está `available`, cifrada, privada, 20 GB, Single-AZ y con backup de un día. Las cinco alarmas CloudWatch están `OK` con acciones habilitadas. Azure for Students está `Enabled`; la Function está `Running`, `httpsOnly=true` y `/api/health` respondió 200 a las 02:45 UTC. El [corte completo](evidence/current/CHECKLIST-CIERRE-2026-10-15.md) distingue comprobaciones de pendientes.
 
 El artefacto v11 fue publicado en el bucket privado versionado con cifrado SSE-S3, y la actualización se aplicó con la política CloudFormation `AutoScalingRollingUpdate` de lote uno y dos instancias mínimas en servicio. El primer método de refresh fue denegado por la SCP del laboratorio; se revirtió y sustituyó por el mecanismo gradual permitido, que completó correctamente. No se modificaron RDS ni la red.
 
@@ -22,9 +22,9 @@ El E2E vivo del 15/10 autenticó Admin, importó un SKU QA, registró venta y re
 
 La puerta local más reciente terminó aprobada: **165 pruebas Python, 14 Node, 40 transacciones aisladas**, auditoría de dependencias sin vulnerabilidades conocidas, build Vite, `cfn-lint` y Terraform `fmt`/`validate`/tests; no hizo `apply` ni escrituras cloud. Las pruebas aisladas no miden capacidad para 3,000 usuarios. Repetición: `.\tests\run_local_quality.ps1 -ValidateTerraform`; [QA local del 15/10](evidence/current/QA-LOCAL-2026-10-15.md).
 
-El commit vigente `4420767` está publicado en `codex/aws-v11-deploy-sync`; los
-tres checks de GitHub Actions (backend/flujo, frontend e infraestructura
-AWS/Azure) terminaron `success`. `main` no se modificó.
+El commit `7c96f36` fue publicado en `codex/aws-v11-deploy-sync` y sus tres
+checks de GitHub Actions (backend/flujo, frontend e infraestructura AWS/Azure)
+terminaron `success`. `main` no se modificó.
 
 ## Estructura
 
