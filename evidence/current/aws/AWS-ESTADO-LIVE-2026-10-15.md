@@ -2,7 +2,7 @@
 
 ## Verificación viva
 
-Corte consultado aproximadamente a las 13:47 UTC. No se guardan credenciales ni
+Corte consultado aproximadamente a las 13:56 UTC. No se guardan credenciales ni
 secretos en esta evidencia.
 
 - El CNAME de validación de ACM resuelve públicamente:
@@ -23,21 +23,31 @@ secretos en esta evidencia.
   `/health` respondió 301 a la URL HTTPS.
 - `/api/auth/session` entregó cookie con `Secure`, `HttpOnly` y `SameSite=Lax`.
 - ASG `tangamandapio-asg`: mínimo/deseado 2, máximo 5; dos instancias
-  `InService` y saludables. Durante la actualización hubo un destino drenando;
-  no forma parte de la capacidad deseada final.
+  `InService` y saludables. El reemplazo gradual terminó.
 - RDS PostgreSQL está `available`, cifrada, Single-AZ y conserva un día de
   retención de backups. No se cambió su topología en esta actualización.
 
-## Límite observado en la prueba funcional
+## Pruebas funcionales y límite pendiente
 
-Se intentó la prueba integral existente usando el dominio HTTPS. En ambos
-intentos el runner se detuvo en el login admin antes de crear pedidos o alterar
-el inventario sintético; informó `POST /api/auth/login` HTTP 403 y
-`compensation=not_needed`. En el mismo periodo, los registros de aplicación
-incluyeron un rechazo de login HTTP 401. La causa de la diferencia entre el
-estado visto por el runner y el registro del origen no quedó aislada. Por eso
-no se declara pasada la prueba de login/roles/venta por el dominio; hace falta
-revisar el origen de la credencial QA y repetir una sola vez tras diagnosticar.
+La prueba integral ejecutada dentro de la instancia EC2 contra `127.0.0.1:8080`
+terminó `LIVE_E2E_PASSED`. El login de admin y los controles de rol pasaron:
+Comercial obtuvo 200 en ventas y 403 en rutas restringidas; Operaciones obtuvo
+200 en outbox/inventario y 403 en ventas/admin. La prueba envió dos eventos a
+Azure y reconcilió venta `completed_demo` y recepción `received_demo`; el saldo
+del SKU sintético volvió exactamente de 10 a 10. La base respondió `ok`, las
+dos suscripciones de alarma estaban confirmadas y 24/24 lecturas autenticadas
+de pedidos/outbox dieron 200 con concurrencia 6 (p95 264.37 ms).
 
-Las pruebas unitarias locales de `tests/cloud` sí pasaron: 16/16. La prueba
-anterior contra el ALB antes de HTTPS no sustituye esta prueba del hostname.
+La variante que pasa por el dominio HTTPS no logró iniciar sesión. Un probe
+sanitizado devolvió HTTP 403 con `Server: cloudflare`, un `CF-Ray` y sin
+`X-Request-ID` del portal; el mismo secreto QA funciona en la prueba de
+loopback. Esto señala un rechazo en la ruta proxied de Cloudflare, no un
+problema de certificado ni una credencial de admin inválida. No se crearon
+pedidos en los intentos HTTPS fallidos. Falta revisar el evento Cloudflare
+asociado al Ray ID y permitir el POST legítimo a `/api/auth/login` sin
+desactivar el proxy ni abrir el origen públicamente. No se afirma que el login
+de navegador real ya se haya verificado.
+
+Las pruebas unitarias locales de `tests/cloud` pasaron: 16/16. La integración
+productiva EC2→Azure se verificó por loopback de la app EC2; el paso por el
+dominio público queda pendiente por el bloqueo anterior.
