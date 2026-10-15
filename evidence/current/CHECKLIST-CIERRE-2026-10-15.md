@@ -1,4 +1,4 @@
-# Checklist de cierre — corte 15/10/2026, 00:49 UTC
+# Checklist de cierre — corte 15/10/2026, 01:21 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -31,8 +31,12 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [x] Gate local del 15/10: 165 pruebas Python, 14 Node, 40 transacciones
   aisladas, build, auditorías de dependencias, validaciones CloudFormation y
   Terraform `fmt`/`validate`/mocks; sin cambios cloud.
+- [x] Terraform 1.16.0 Linux, igual a GitHub Actions: los cinco entornos pasan
+  `fmt`, `init -backend=false -lockfile=readonly` y `validate`; pruebas mock
+  5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
+  versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, commit `9a6799b`; `main` no se modificó. El token
+  `codex/aws-v11-deploy-sync`, último commit publicado `524b754`; `main` no se modificó. El token
   AWS y las contraseñas no forman parte del commit.
 
 ## Pendiente, sin marcar como completado
@@ -58,10 +62,11 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [ ] Capturas visuales crudas actuales para inventario AWS y monitor Azure; la
   evidencia de este corte es salida estructurada/registro, no captura de
   consola.
-- [ ] CI remoto del primer commit `9a6799b` no quedó verde: Backend pasó; falló
-  el setup frontend por el orden pnpm/Node y falló la fase Terraform sin log
-  público detallado. El workflow se corrigió/amplió en el siguiente cambio; no
-  marcar CI como cerrado hasta observar sus checks remotos nuevos.
+- [ ] CI remoto del commit `524b754` tuvo backend y frontend aprobados, pero
+  falló Terraform por hashes de proveedores Linux ausentes en los lockfiles.
+  Se corrigieron localmente y pasaron en Linux con el toolchain exacto de CI;
+  todavía falta publicar ese arreglo y verificar todos los checks del nuevo
+  commit remoto.
 
 ## Límites del prototipo
 
