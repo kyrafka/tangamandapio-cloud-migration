@@ -1,4 +1,4 @@
-# Checklist de cierre — actualizado 15/10/2026, 02:29 UTC
+# Checklist de cierre — actualizado 15/10/2026, 02:36 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -36,10 +36,10 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
   versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, commit publicado `327549f`; `main` no se modificó. El token
-  AWS y las contraseñas no forman parte del commit.
-- [x] Checks de GitHub Actions en `327549f`: backend/flujo, frontend e
-  infraestructura AWS/Azure, los tres `success`.
+  `codex/aws-v11-deploy-sync`, commit publicado `4420767`; `main` no se modificó.
+  El token AWS y las contraseñas no forman parte del commit.
+- [x] GitHub Actions en `4420767`: backend/flujo, frontend e infraestructura
+  AWS/Azure, los tres `success`.
 - [x] Revalidación tras actualizar el token: Azure Function `Running`,
   HTTPS-only y health 200; la consulta de VNets devolvió lista vacía.
 - [x] Preflight VPN repetido: AWS Academy deniega explícitamente
@@ -48,14 +48,6 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 
 ## Pendiente, sin marcar como completado
 
-- [x] Prueba funcional viva desde EC2 del portal desplegado: autenticación Admin,
-  importación del SKU de QA por la API, venta/recepción compensatoria hacia
-  Azure, ambos outbox `delivered` y saldo sintético 10→10; 24/24 lecturas
-  autenticadas HTTP 200 (concurrencia 6, p95 476.1 ms). Ver detalle abajo.
-- [x] Matriz de autorización por API desde EC2: Comercial venta 200 y outbox,
-  inventario WMS y administración 403; Operaciones venta 403, outbox e
-  inventario 200 y administración 403. El E2E Admin pudo importar y completar
-  el ciclo sintético.
 - [ ] Importar un archivo CSV desde el navegador y verificar previsualización y
   persistencia visual. La corrida viva anterior importó un producto mediante
   JSON a la API; parser, plantilla y límites pasan pruebas automatizadas, pero
@@ -170,3 +162,17 @@ discrepancia de puntaje siguen en
 - La matriz API confirmó los permisos de Comercial y Operaciones descritos en
   el checklist. Esto no sustituye el recorrido visual en navegador ni la prueba
   de CSV desde archivo.
+
+## Monitoreo y drift — 15/10/2026, 02:36 UTC
+
+- [x] Las cinco alarmas CloudWatch del stack están `OK` y `ActionsEnabled=true`;
+  el topic SNS tiene dos suscripciones `email` confirmadas (ARN no pendiente).
+- [x] Azure Action Group `tangama-ops-ag` está habilitado y ambos receptores
+  de email figuran `Enabled`; las reglas `tangama-wms-fn-5xx` (severidad 2) y
+  `tangama-wms-fn-latency` (severidad 3) están habilitadas.
+- No se forzó otra alarma ni se envió correo durante esta revisión. Esto
+  confirma configuración viva; para evidencia independiente de entrega se
+  conserva la confirmación del usuario y queda pendiente una captura del buzón.
+- [x] Nueva detección CloudFormation de `tangamandapio-live-20261013`:
+  `DETECTION_COMPLETE`, `IN_SYNC`, cero recursos discrepantes. No quedó RDS
+  temporal del ejercicio PT-DR-01.
