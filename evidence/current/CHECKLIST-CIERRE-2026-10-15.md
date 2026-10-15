@@ -1,4 +1,4 @@
-# Checklist de cierre — corte 15/10/2026, 01:21 UTC
+# Checklist de cierre — corte 15/10/2026, 01:26 UTC
 
 Esta hoja sustituye como estado vigente al checklist del 14/10; los informes
 anteriores se conservan como evidencia histórica. No asigna una nota.
@@ -36,8 +36,10 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
   5/5. Lockfiles completados con los hashes Linux faltantes sin cambiar
   versiones de proveedores.
 - [x] Código, IaC y evidencia del corte publicados en GitHub, branch
-  `codex/aws-v11-deploy-sync`, último commit publicado `524b754`; `main` no se modificó. El token
+  `codex/aws-v11-deploy-sync`, commit publicado `e6f7a95`; `main` no se modificó. El token
   AWS y las contraseñas no forman parte del commit.
+- [x] Checks de GitHub Actions en `e6f7a95`: backend/flujo, frontend e
+  infraestructura AWS/Azure, los tres `success`.
 
 ## Pendiente, sin marcar como completado
 
@@ -62,11 +64,8 @@ anteriores se conservan como evidencia histórica. No asigna una nota.
 - [ ] Capturas visuales crudas actuales para inventario AWS y monitor Azure; la
   evidencia de este corte es salida estructurada/registro, no captura de
   consola.
-- [ ] CI remoto del commit `524b754` tuvo backend y frontend aprobados, pero
-  falló Terraform por hashes de proveedores Linux ausentes en los lockfiles.
-  Se corrigieron localmente y pasaron en Linux con el toolchain exacto de CI;
-  todavía falta publicar ese arreglo y verificar todos los checks del nuevo
-  commit remoto.
+- [ ] Los checks verdes corresponden al commit `e6f7a95`; cualquier cambio
+  posterior en el branch debe volver a pasar CI antes de considerarse validado.
 
 ## Límites del prototipo
 
