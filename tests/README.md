@@ -120,6 +120,13 @@ La carga local o contra el ALB se ejecuta con:
 python .\tests\performance\load_test.py --url http://HOST/health --requests 100 --concurrency 10 --output evidencia-perf.json
 ```
 
+El reporte incluye `status_counts` y `error_types`: un `403` del proxy no se
+confunde con un timeout ni con un error `5xx` del portal. El 16/10, una sonda
+pequeña desde Python al dominio devolvió `403` en Cloudflare; `curl` y
+`Invoke-WebRequest` al mismo `/health` dieron `200`. Esa sonda no mide capacidad
+del origen ni justifica cambiar reglas del proxy. Revisar el origen y la ruta
+autorizada antes de interpretar resultados automatizados.
+
 El 13/10 se ejecutó en Docker local contra `/health`: 100 solicitudes con
 concurrencia 10 (p95 303.93 ms, 0 errores) y 1000 con concurrencia 50 (p95
 68.34 ms, 0 errores). Los resultados brutos están en

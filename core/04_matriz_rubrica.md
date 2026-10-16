@@ -1,4 +1,13 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 03:41 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 04:00 UTC
+
+## Suplemento vivo — 16/10/2026, 03:53–03:58 UTC
+
+El dominio HTTPS y Azure WMS health respondieron 200; ACM está `ISSUED`, HTTP
+redirige a HTTPS y los dos targets del ALB/ASG siguen sanos. RDS continúa
+Single-AZ con un día de backup. Un test pequeño con Python recibió 403 del
+proxy Cloudflare, pero `curl`/`Invoke-WebRequest` al mismo health recibieron
+200; no se atribuye ese rechazo al portal ni se cambió la regla del proxy. Ver
+[revalidación de 04:00 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md).
 
 ## Revalidación vigente — 16/10/2026, 03:41 UTC
 

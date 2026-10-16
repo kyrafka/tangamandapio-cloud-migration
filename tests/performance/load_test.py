@@ -2,6 +2,7 @@
 """Carga HTTP académica, sin dependencias, con umbrales reproducibles."""
 
 import argparse
+from collections import Counter
 import json
 import math
 import statistics
@@ -34,6 +35,18 @@ def request_once(url, timeout):
     except (URLError, TimeoutError, OSError) as exc:
         error = type(exc).__name__
     return (time.perf_counter() - started) * 1000, status, error
+
+
+def summarize_outcomes(results):
+    """Expose HTTP and transport failure classes without storing response bodies."""
+    status_counts = Counter(
+        str(status) if status else "network_error" for _, status, _ in results
+    )
+    error_types = Counter(error for _, _, error in results if error is not None)
+    return {
+        "status_counts": dict(sorted(status_counts.items())),
+        "error_types": dict(sorted(error_types.items())),
+    }
 
 
 def main():
@@ -76,6 +89,7 @@ def main():
             "max_error_rate": args.max_error_rate,
         },
     }
+    result.update(summarize_outcomes(results))
     result["passed"] = (
         result["latency_ms"]["p95"] <= args.max_p95_ms
         and result["error_rate"] <= args.max_error_rate

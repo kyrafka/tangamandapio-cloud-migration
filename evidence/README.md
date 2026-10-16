@@ -1,15 +1,17 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 16/10/2026, 03:41 UTC
+## Revalidación puntual más reciente — 16/10/2026, 04:00 UTC
 
-AWS Academy autenticó en `default`; CloudFormation sigue `UPDATE_COMPLETE`, la
-última detección reportó `IN_SYNC`, HTTPS/ACM funciona y el ASG/target group
-están 2/2 sanos. Azure health respondió 200. El smoke autenticado de solo
-lectura por TLS directo al ALB pasó para Admin, Comercial y Operaciones y
-reconcilió 49/49 eventos. El job de GitHub para el commit `84b97bf` completó
-los tres controles en verde. Consulta la [revalidación viva y las brechas
-vigentes](current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md) y la
-[matriz cualitativa](../core/04_matriz_rubrica.md).
+HTTPS/ACM, ALB, targets AWS y health Azure se confirmaron vivos a las 03:53–03:58
+UTC; RDS sigue Single-AZ y con retención de un día. Una sonda Python al dominio
+recibió 403 de Cloudflare mientras `curl` e `Invoke-WebRequest` al health
+recibieron 200. El runner ahora distingue códigos HTTP de errores de transporte.
+Véase el [corte vivo de 04:00](current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md).
+
+La última revalidación autenticada completa de roles y outbox es la de 03:41
+UTC: Admin/Comercial/Operaciones pasaron el smoke de solo lectura y se
+conciliaron 49/49 eventos. Consulta la [revalidación de roles](current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md)
+y la [matriz cualitativa](../core/04_matriz_rubrica.md).
 
 Siguen pendientes la ruta privada AWS–Azure (bloqueada por SCP y sin VNet),
 failover/RDS Multi-AZ, carga transaccional que mida capacidad por ALB, WAF,
