@@ -1,4 +1,42 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 08:08 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 08:30 UTC
+
+## Suplemento vigente — revalidación 16/10/2026, 08:18–08:30 UTC
+
+El servicio se recuperó tras la prueba de capacidad temporal: CloudFormation
+`UPDATE_COMPLETE`, detección fresca `IN_SYNC` (0 drift), ASG 2/2 y ALB 2/2
+saludables; ambas raíces EBS siguen cifradas. HTTPS público `/health` respondió
+200 con HSTS y HTTP redirigió 301. RDS permanece privada/cifrada, Single-AZ y
+retención de un día. La alarma low de target tracking está en `ALARM` por CPU
+baja bajo el mínimo 2; la alarma 5xx no tenía datapoints y trata faltantes como
+`notBreaching`.
+
+Pasaron tres verificaciones vivas desde AWS: E2E AWS→Azure (venta/recepción
+sintéticas, dos eventos entregados, ledger 10→10, catálogo y matriz API de
+roles); `admin-modules` (finanzas sintética, mensajería portal-only, poison
+queue 0); y `admin-readonly` (59/59 outbox, 0 pendientes, 24/24 lecturas,
+permisos 200/403). Application Insights registró cuatro ejecuciones del worker
+sin fallas en 30 minutos. El intento inicial por el dominio público recibió
+403 de Cloudflare; el test no mutó datos y la repetición al ALB por HTTPS con
+TLS verificado pasó. Terraform Azure `plan -refresh-only` dio `No changes`, sin
+`apply`. La puerta local aprobó 222 pruebas Python, 14 Node, build, auditoría,
+CloudFormation y Terraform (formato, init, validate y 5 pruebas mock). No
+presentar el scale manual 2→3 como autoscaling por carga.
+
+La revisión posterior encontró defaults de artefacto v16 en el template
+almacenado por CloudFormation, aunque sus parámetros activos apuntan a v18 y la
+fuente local también tiene defaults v18. Un change set sin parámetros proponía
+13 cambios por tomar defaults y fue eliminado sin ejecutar. Al conservar los
+27 parámetros vivos con `UsePreviousValue`, no hubo cambios efectivos y ese
+change set también se eliminó. `iac/cloudformation/deploy.sh` sí conserva los
+parámetros; la diferencia de defaults queda documentada para el siguiente
+cambio real. No se alteraron el release ni los recursos por esos change sets.
+
+Persisten brechas: Cloudflare bloqueó el login automatizado desde EC2, por lo
+que falta la inspección visual en navegador; tampoco se probó WebRTC con dos
+navegadores reales ni reintento tras falla inducida en nube. La ruta privada
+AWS–Azure está bloqueada por SCP y no hay VNet Azure; no hay WAF regional,
+failover Multi-AZ, carga sostenida/3,000 usuarios ni costo Azure atribuible.
+Evidencia detallada: [revalidación 08:30 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0830UTC.md).
 
 ## Estado operativo vigente — 16/10/2026, 07:59–08:08 UTC
 
