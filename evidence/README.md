@@ -1,6 +1,19 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 16/10/2026, 04:22–04:24 UTC
+## E2E AWS–Azure, recuperación y HTTPS — 16/10/2026, 04:42–05:02 UTC
+
+El E2E desplegado AWS→Azure completó venta/compra sintéticas con ledger demo
+10→10 y outbox 51/51 entregado; el smoke de roles devolvió los 200/403
+esperados. PT-DR-01 restauró una base cifrada y privada (RTO 289 s, RPO
+observado ≤10 s) y se verificó la limpieza; el origen RDS continúa Single-AZ
+con un día de backup. La detección fresca de CloudFormation fue `IN_SYNC` a las
+05:00:46 UTC. HTTPS `/health` devolvió 200 a las 05:02:29 UTC con HSTS.
+
+El token AWS pegado en este corte fue rechazado por STS; por ello el inventario
+CLI no se pudo revalidar después de esa hora. No hubo cambios de infraestructura
+en el corte. Véase la [evidencia detallada](current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
+
+## Revalidación puntual previa — 16/10/2026, 04:22–04:24 UTC
 
 El perfil AWS autenticó; el stack quedó `UPDATE_COMPLETE` y la detección fresca
 de drift terminó `IN_SYNC`. HTTPS `/health` devolvió 200, HTTP redirigió con
@@ -21,10 +34,11 @@ Véase el [corte vivo de 04:00](current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md
 El commit `b1d36a9` que incorpora la sonda autenticada también pasó los tres
 trabajos de GitHub Actions ([run 38851449937](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38851449937)).
 
-La última revalidación autenticada completa de roles y outbox es la de 03:41
-UTC: Admin/Comercial/Operaciones pasaron el smoke de solo lectura y se
-conciliaron 49/49 eventos. Consulta la [revalidación de roles](current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md)
-y la [matriz cualitativa](../core/04_matriz_rubrica.md).
+La revalidación autenticada previa de roles y outbox se hizo a las 04:22–04:24
+UTC: el smoke solo lectura pasó y se conciliaron 49/49 eventos. Después, el
+E2E/restore de 04:42–05:00 dejó el outbox en 51/51. Véase la
+[sonda previa](current/aws/AWS-READONLY-LOAD-2026-10-16-0424UTC.md) y la
+[matriz cualitativa](../core/04_matriz_rubrica.md).
 
 Siguen pendientes la ruta privada AWS–Azure (bloqueada por SCP y sin VNet),
 failover/RDS Multi-AZ, carga transaccional que mida capacidad por ALB, WAF,

@@ -1,4 +1,29 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 04:24 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 05:02 UTC
+
+## Suplemento vivo — 16/10/2026, 04:42–05:02 UTC
+
+El E2E desplegado recorrió AWS/RDS/outbox → Azure Queue/Function → conciliación
+ERP con datos sintéticos: venta `completed_demo`, compra compensatoria
+`received_demo` y ledger ficticio 10→10. El outbox terminó 51/51 entregado, sin
+pendientes. El smoke autenticado Admin realizó 24 GET (24/24 HTTP 200,
+concurrencia 6, p95 217.69 ms); Comercial y Operaciones conservaron sus límites
+200/403. Azure mostró 4 recepciones 202 y 4 ejecuciones correctas agregadas en
+una hora, un 400 esperado para origen inválido y cero fallos observados. El
+poison queue se consultó solo por metadatos y quedó en cero.
+
+PT-DR-01 pasó con restauración temporal aislada: RTO 289 s, RPO observado ≤10 s,
+marcador verificado y recursos temporales limpiados. El origen RDS permanece
+disponible, cifrado, privado, Single-AZ y con retención de un día; no se probó
+failover. CloudFormation terminó una detección fresca `IN_SYNC` a las 05:00:46
+UTC. La revalidación pública de HTTPS `/health` devolvió 200 a las 05:02:29 UTC
+con HSTS.
+
+El token compartido en este corte fue escrito en `default`, pero STS respondió
+`InvalidClientTokenId`; por tanto, no se pudo hacer una lectura CLI posterior.
+El control del navegador se detuvo con Escape durante la revisión de AWS
+Academy. No se modificó infraestructura; el E2E y el restore sí generaron y
+limpiaron datos/recursos temporales de prueba como detalla la
+[evidencia del corte](../evidence/current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
 
 ## Suplemento vivo — 16/10/2026, 04:22–04:24 UTC
 
@@ -78,16 +103,16 @@ recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/curre
 | # | Criterio | Brecha que queda tras esta revalidación |
 |---:|---|---|
 | 3 | Redes VPC/VCN | Dry-run de Customer Gateway denegado por SCP `p-qa2qn8qf`; la suscripción Azure no tiene VNet. No hay ruta privada AWS–Azure. |
-| 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; historial de inicio incluye `Client.InternalError` transitorios, seguido por recuperación; causa inicial no atribuida. RDS sigue Single-AZ con backup de 1 día. |
-| 5 | Seguridad cloud | HTTPS/redirect y matriz API pasan por TLS directo al ALB. Cloudflare devolvió 403 en automatización antes de Flask; causa exacta pendiente. Falta recorrido visual; no hay WAF. |
+| 4 | Cómputo, almacenamiento y BD | Última lectura autenticada: 2/2 targets sanos; RDS privado/cifrado y restore aislado probado (RTO 289 s, RPO ≤10 s). RDS sigue Single-AZ con backup de 1 día; causa de `Client.InternalError` histórico no atribuida. |
+| 5 | Seguridad cloud | HTTPS/HSTS, redirect y matriz API pasan; Cloudflare devolvió 403 a una sonda Python, mientras curl/Invoke-WebRequest y origen ALB dieron 200. Falta recorrido visual; no hay WAF. |
 | 6 | Alta disponibilidad y escalabilidad | ASG 2/2, máximo 5 y target tracking CPU 60%. Pruebas históricas lograron scale-out 2→3 y scale-in 3→2; falta carga transaccional por ALB y capacidad para 3,000 usuarios. La alarma baja actual refleja CPU reducida con mínimo 2. |
-| 7 | Monitoreo y observabilidad | Dos suscripciones SNS confirmadas; el test sintético 14/10 hizo `OK→ALARM→OK`, ejecutó acciones y el usuario confirmó recepción. Falta vincular una alerta a un umbral de métrica real y telemetría de entrega. |
-| 8 | Infrastructure as Code | Detección fresca `IN_SYNC`, 0 recursos desviados; CloudFormation/Terraform local validados. La plantilla original del stack conserva defaults de artefacto v16 mientras los parámetros efectivos usan v18. AWS rechazó el change set vacío, así que este detalle de plantilla no se actualizó. |
-| 9 | Backup y recuperación | PT-DR-01 restauró con sonda SQL el 15/10 (RTO 260 s, RPO observado ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin prueba de failover. |
-| 10 | Multicloud AWS–Azure | E2E desde portal AWS a Azure pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
+| 7 | Monitoreo y observabilidad | Dos suscripciones SNS confirmadas; en la consulta 04:24 las cinco alarmas estaban `OK`, pero 5xx no tenía datapoints. El test sintético 14/10 hizo `OK→ALARM→OK` y el usuario confirmó recepción. Falta vincular una alerta a un umbral de métrica real y telemetría de entrega. |
+| 8 | Infrastructure as Code | Detección fresca `IN_SYNC` a las 05:00:46 UTC, 0 drift; CloudFormation/Terraform local validados. La plantilla guardada conserva defaults v16 mientras el release efectivo usa v18; el change set sin cambios se eliminó y no se forzó. |
+| 9 | Backup y recuperación | PT-DR-01 restauró el 16/10 con marcador y limpieza verificados (RTO 289 s, RPO ≤10 s); RDS sigue Single-AZ y retención de 1 día, sin failover. |
+| 10 | Multicloud AWS–Azure | E2E desplegado AWS→Azure Queue/Function y conciliación ERP pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
 | 11 | Costos | AWS CE: US$26.0033 uso y −US$26.0033 créditos en la cuenta Academy, no atribuible solo al proyecto; Azure entregó 255 filas pero `pretaxCost=None`. Falta el gasto Azure y atribución por proyecto. |
-| 12 | Pruebas técnicas | E2E AWS→Azure, Admin/Finanzas/correo portal-only/poison y permisos API de los tres roles pasaron; faltan recorrido visual completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
-| 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure; faltan capturas recientes de las consolas y del monitor/invocación. |
+| 12 | Pruebas técnicas | E2E AWS→Azure, roles, restore aislado, Admin/Finanzas/correo portal-only y consulta poison pasaron; faltan recorrido visual completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
+| 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure y restore; faltan capturas recientes de las consolas y del monitor/invocación. |
 | 14 | Sustentación | No evaluable desde el repositorio; requiere demostración y defensa oral. |
 
 El estado anterior de v18, incluidas las métricas y capturas autenticadas, se
