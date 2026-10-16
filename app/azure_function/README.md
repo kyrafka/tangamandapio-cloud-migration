@@ -18,7 +18,10 @@ Esta Function App recibe eventos sintéticos del portal, conserva evidencia y lo
 
 El catálogo seed trae 12 SKU de alimentos, con precios y saldos sintéticos de propósito académico. Administración y los roles con permiso `master:write` pueden mantenerlo en ERP → Maestros e importar CSV UTF-8 preparado con la plantilla Excel, hasta 500 SKU por carga. La validación completa sucede antes de guardar; el saldo inicial solo se usa para códigos nuevos. Ventas descuentan y recepciones incrementan este ledger sintético una vez por evento. No representa existencias físicas ni un WMS externo.
 
-`GET /api/health` es una sonda pública mínima. La Function usa Managed Identity para Blob y Queue; no se deben colocar claves de Storage ni claves Function en el código o en Git.
+`GET` y `HEAD /api/health` son sondas públicas mínimas: ambas responden 200,
+pero HEAD no devuelve cuerpo. La Function usa Managed Identity para Blob y
+Queue; no se deben colocar claves de Storage ni claves Function en el código o
+en Git.
 
 ## Configuración
 

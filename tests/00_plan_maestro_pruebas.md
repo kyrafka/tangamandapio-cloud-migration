@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:09 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 05:19 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -17,8 +17,10 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 - A las 05:02:29 UTC el dominio HTTPS `/health` devolvió `200`; la respuesta
   pública mostró HSTS. La última lectura AWS autenticada verificó HTTP→HTTPS
   (`301`). Azure CLI reporta el grupo `Succeeded` y la Function `Running` /
-  HTTPS-only; GET `/api/health` devolvió 200 con TLS verificado. HEAD devolvió
-  404 porque esa ruta declara GET, no HEAD.
+  HTTPS-only; GET `/api/health` devolvió 200 con TLS verificado. HEAD dio 404
+  en el corte 05:09; se corrigió y publicó a las 05:15. A las 05:18 GET y HEAD
+  devolvieron 200 con TLS verificado y HEAD sin cuerpo. Terraform posterior:
+  `No changes`.
 - El E2E desplegado AWS→Azure completó venta/compra sintéticas y dejó el saldo
   demo 10→10; el outbox quedó 51/51 entregado, cero pendiente. La prueba Admin
   de solo lectura ejecutó 24 GET autenticados, concurrencia 6, p95 217.69 ms;
@@ -105,6 +107,8 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 La validación E2E, recuperación, HTTPS y estado de Function de este corte se registra en
 [`CLOUD-E2E-DR-2026-10-16-0500UTC.md`](../evidence/current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
+La corrección de la sonda y su validación viva se registra en
+[`AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md`](../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
 La revalidación previa y el smoke de lectura siguen en
 [`CLOUD-REVALIDATION-2026-10-16-0400UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md).
 El smoke autenticado y la sonda de lectura del 16/10 se registran en

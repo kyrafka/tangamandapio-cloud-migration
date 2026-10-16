@@ -1,8 +1,9 @@
 # Reconstrucción del WMS de demostración en Azure
 
-La comprobación más reciente, 16/10/2026 02:55 UTC, confirma la suscripción
-`Azure for Students` `Enabled` y `/api/health` con HTTP 200. La Function y su
-telemetría agregada se documentan en el [corte de revalidación 02:55](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
+La comprobación más reciente, 16/10/2026 05:19 UTC, confirma la Function
+`Running`/HTTPS-only, siete Functions indexadas, GET y HEAD `/api/health` con
+HTTP 200/TLS verificado, y un plan Terraform posterior al despliegue en
+`No changes`. Véase la [evidencia de despliegue y sondas](../../../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
 
 ## Revalidación viva — 16/10/2026, 02:40 UTC
 

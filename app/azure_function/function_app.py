@@ -692,9 +692,11 @@ def process_fulfillment_message(message: func.QueueMessage) -> None:
     )
 
 
-@app.route(route="health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="health", methods=["GET", "HEAD"], auth_level=func.AuthLevel.ANONYMOUS)
 def health(req: func.HttpRequest) -> func.HttpResponse:
-    """Sonda pública mínima: confirma que el runtime indexó la aplicación."""
+    """Sonda pública mínima para clientes GET y comprobaciones HEAD."""
+    if req.method == "HEAD":
+        return func.HttpResponse(status_code=200, mimetype="application/json")
     return func.HttpResponse(
         json.dumps({"status": "ok", "service": "tangamandapio-wms"}),
         status_code=200,

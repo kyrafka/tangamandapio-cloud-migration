@@ -1,5 +1,15 @@
 # Índice de evidencias del proyecto
 
+## Despliegue de sonda Azure GET/HEAD — 16/10/2026, 05:08–05:19 UTC
+
+La Function quedó `Running`/HTTPS-only; GET y HEAD `/api/health` respondieron
+200 con TLS verificado, HEAD sin cuerpo y siete Functions indexadas. Pasaron
+32 pruebas unitarias y el verificador del ZIP; Terraform aplicó solo el nuevo
+Blob de paquete y la actualización de Function, y el plan posterior quedó en
+`No changes`. El E2E AWS→Azure y la restauración son del corte anterior, no se
+repitieron tras este cambio. Detalle en la
+[evidencia de Azure](current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
+
 ## E2E AWS–Azure, recuperación y HTTPS — 16/10/2026, 04:42–05:09 UTC
 
 El E2E desplegado AWS→Azure completó venta/compra sintéticas con ledger demo

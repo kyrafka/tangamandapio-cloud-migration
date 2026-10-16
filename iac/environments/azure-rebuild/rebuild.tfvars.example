@@ -5,5 +5,5 @@ storage_account_name = "sttangama261008r"
 key_vault_name       = "kv-tangama-261008r"
 function_app_name    = "tangama-wms-261008"
 name_prefix          = "tangama"
-function_package_path = "../../../artifacts/azure_function_package-364cf88c934a236eb72ef929f96faabc4ea4cbd08844d7cae8ab286dbc379d1d.zip"
+function_package_path = "../../../artifacts/azure_function_package-97383da268c023b54c38c8bba28c31853abb10545b796b995b8b336511bbe30d.zip"
 alert_email_receivers = []

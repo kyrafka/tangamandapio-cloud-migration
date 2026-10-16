@@ -94,6 +94,36 @@ class FulfillmentQueueTestCase(unittest.TestCase):
         self.assertEqual(queue_config["maxDequeueCount"], 5)
         self.assertEqual(queue_config["visibilityTimeout"], "00:01:00")
 
+    def test_anonymous_health_supports_get_and_head_without_head_body(self):
+        trigger = next(
+            binding
+            for binding in function_app.health._function.get_bindings()
+            if binding.type == "httpTrigger"
+        )
+        self.assertEqual(
+            [method.value for method in trigger.methods],
+            ["GET", "HEAD"],
+        )
+        for method in ("GET", "HEAD"):
+            with self.subTest(method=method):
+                request = func.HttpRequest(
+                    method=method,
+                    url="https://example.test/api/health",
+                    headers={},
+                    params={},
+                    body=b"",
+                )
+                response = function_app.health._function(request)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.mimetype, "application/json")
+                if method == "HEAD":
+                    self.assertEqual(response.get_body(), b"")
+                else:
+                    self.assertEqual(
+                        json.loads(response.get_body()),
+                        {"status": "ok", "service": "tangamandapio-wms"},
+                    )
+
     def test_queue_message_validates_hash_and_writes_inventory_result(self):
         event = make_event()
         message = func.QueueMessage(

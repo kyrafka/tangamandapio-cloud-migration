@@ -1,4 +1,15 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 05:09 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 05:19 UTC
+
+## Suplemento de despliegue Azure — 16/10/2026, 05:08–05:19 UTC
+
+La Function Azure ahora acepta GET y HEAD en `/api/health`; ambos devolvieron
+200 por HTTPS con TLS verificado y HEAD sin cuerpo. Pasaron las 32 pruebas de
+Function, el ZIP coincidió con fuente/hash aprobado, los triggers se
+sincronizaron y las siete Functions aparecen indexadas. Terraform aplicó solo
+el paquete y la actualización de Function; el plan posterior terminó `No
+changes`. No se repitió el E2E AWS→Azure ni se pudo releer AWS tras el rechazo
+de STS. Véase la
+[evidencia de despliegue](../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
 
 ## Suplemento vivo — 16/10/2026, 04:42–05:09 UTC
 
