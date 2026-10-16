@@ -1,26 +1,47 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 00:45 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 01:05 UTC
 
-## Corte vigente — 16/10/2026, 00:45 UTC (release v18)
+## Corte vigente — 16/10/2026, 01:05 UTC (release v18)
 
 El cambio de paginación del historial WMS se empaquetó y desplegó como v18;
 CloudFormation terminó `UPDATE_COMPLETE` a las 00:42:53 UTC. El gate local
 aprobó 209 pruebas y los tests dirigidos cubren el total de 45 eventos en dos
 páginas, compatibilidad de la API anterior, valores inválidos y duplicados.
 
-La validación en nube quedó incompleta: inmediatamente después del despliegue
-la URL `/health` respondió 200, pero una comprobación posterior contra el
-origen ALB devolvió 503 (`awselb/2.0`). AWS Academy rechazó llamadas de lectura
-y `ssm:SendCommand` con la política explícita `voc-cancel-cred`; no fue posible
-confirmar targets, drift ni el smoke autenticado de v18. El intento de login
-desde EC2 al dominio HTTPS recibió 403 antes de crear datos de negocio. Azure
-Function `/api/health` respondió 200. No se debe describir v18 como operativo
-de extremo a extremo hasta restaurar el acceso al laboratorio y repetir las
-pruebas. Detalle en [la revalidación v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0045UTC.md).
+El dominio TLS funciona y HTTP redirige a HTTPS, pero al 16/10 01:02 UTC la
+portada, `/health`, `/ready` y `/platform` responden 503. AWS STS autentica; la
+política explícita `voc-cancel-cred` deniega `cloudformation:DescribeStacks`, por
+lo que el estado actual de targets/drift/RDS no está confirmado. No se afirma
+v18 operativo de extremo a extremo.
 
-El comportamiento del ledger sintético sí cuenta con evidencia previa en v17:
-venta y recepción finalizaron por Azure y el saldo demo volvió de 10 a 10. Es
-inventario ficticio funcional; no representa existencias físicas. La evidencia
-v17 no sustituye el smoke posterior al despliegue v18.
+Azure Function está `Running`, `httpsOnly=true` y health 200. El E2E sintético
+local→Azure pasó: guardas 401/400, venta y recepción compensatoria procesadas,
+saldo demo restaurado a su base y poison count 0 antes/después. La prueba no se
+originó desde AWS. La puerta local de 209 pruebas, build y validaciones IaC pasó.
+Detalle en [la revalidación 01:05 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md).
+
+### Estado cualitativo por criterio — 16/10/2026, 01:05 UTC
+
+| # | Criterio | Estado vigente y pendiente principal |
+|---:|---|---|
+| 1 | Análisis del problema y requerimientos · 1.0 | Documentado; falta cerrar la trazabilidad requisito→componente→prueba y defender supuestos en la exposición. |
+| 2 | Diseño de arquitectura cloud · 2.0 | Arquitectura AWS–Azure documentada; falta demostrar el dimensionamiento y explicar límites/costos. |
+| 3 | Redes VPC/VCN · 2.0 | VPC AWS existente; falta conectividad/ruta privada AWS–Azure. La VPN fue denegada por AWS Academy en preflight. |
+| 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El portal AWS devuelve 503 y el inventario cloud actual está bloqueado. RDS sigue documentado Single-AZ/backup 1 día. |
+| 5 | Seguridad cloud · 2.5 | TLS/redirect comprobados; roles en API pasaron en v17. Falta repetir seguridad/roles en v18 y revisar configuración actual. WAF está desactivado. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 y pruebas pequeñas constan históricamente; estado actual de targets no verificable. Falta carga y autoscaling representativos; 3,000 usuarios es objetivo, no capacidad probada. |
+| 7 | Monitoreo y observabilidad · 1.0 | El usuario confirmó haber recibido alerta y recuperación en prueba previa; Azure health y poison count se comprobaron. Falta evidencia visual/reciente de métricas e invocaciones y correlación con alarma. |
+| 8 | Infrastructure as Code · 1.5 | CloudFormation v18 aplicado y validaciones locales de Terraform pasan; drift actual de AWS no se pudo consultar. Falta reconciliar antes de aplicar más infraestructura. |
+| 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado previo dejó RTO/RPO observados; no prueba una garantía ni failover. RDS Single-AZ y retención de un día siguen siendo límites. |
+| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Se documentó el acuerdo oral para AWS–Azure. E2E Azure sintético pasó desde local y v17 tuvo E2E desde EC2; falta repetir desde AWS en v18 y no hay ruta privada. No presentar Azure como OCI. |
+| 11 | Costos y optimización · 0.5 | Hay estimación AWS; faltan costo observado/Cost Analysis de Azure y reconciliación de consumo del lab. |
+| 12 | Pruebas técnicas · 1.0 | Gate local 209 y E2E Azure sintético pasan; AWS v18 está en 503. Faltan regresión autenticada post-v18, carga, CSV visual, red privada y pruebas WebRTC de producto. |
+| 13 | Documentación técnica · 0.5 | Este corte y plan se actualizan con evidencia fechada; siguen pendientes capturas de consola/monitor y el estado final de Actions tras sincronizar. |
+| 14 | Sustentación y defensa técnica · 0.5 | Pendiente de demostración oral: arquitectura, decisiones, límites, costos y resultados. |
+
+La rúbrica local suma 18.5 en los pesos aunque declara 20 y no define conversión
+numérica de descriptores; no se promete una nota. Los cortes posteriores y
+antecedentes anteriores deben leerse con sus fechas. La tabla histórica de
+15/10 se conserva abajo, no sustituye este estado.
 
 ## Corte anterior — 15/10/2026, 23:45 UTC (v17)
 
@@ -92,15 +113,16 @@ conversión inventada; la segunda no tenía una suma criterio por criterio. El
 estado apagado del laboratorio no se descuenta en un supuesto de despliegue, pero
 desplegar los recursos tampoco cierra por sí solo los criterios que requieren
 funciones y pruebas demostrables. Hace falta que el docente aclare el total y la
-conversión antes de estimar una nota. La tabla siguiente es cualitativa y lista
-evidencia y trabajo pendiente, no puntos.
+conversión antes de estimar una nota. La tabla vigente por criterio está al
+inicio de este archivo; es cualitativa y lista brechas, no puntos.
 
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-La evidencia de módulos vigente es el corte del 15/10 a las 23:45 UTC:
-[revalidación](../evidence/current/CLOUD-REVALIDATION-2026-10-15-2345UTC.md). La
-última revalidación de infraestructura sigue siendo la de las 23:21–23:24 UTC.
+La evidencia vigente es la revalidación del 16/10 a las 01:05 UTC
+[post-v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md); el
+corte de infraestructura con inventario completo de AWS sigue siendo el de
+23:21–23:24 UTC del 15/10 porque la lectura actual está denegada.
 Los bloques fechados anteriores, incluidos los que reportan `ExpiredToken` o
 v12/v13, son antecedentes y no sustituyen esta revalidación.
 
@@ -187,7 +209,7 @@ Los bloques fechados anteriores conservan resultados históricos y no deben
 interpretarse como estado vigente. La revalidación 16:43 UTC precede a la tabla
 cualitativa siguiente.
 
-## Revalidación vigente — 15/10/2026, 19:21–19:23 UTC
+## Corte histórico por criterio — 15/10/2026, 19:21–19:23 UTC
 
 El portal HTTPS devolvió 200; HTTP redirigió a HTTPS con 301. `/health`,
 `/ready` y nueve recursos JavaScript/CSS devolvieron 200. Se observaron HSTS,

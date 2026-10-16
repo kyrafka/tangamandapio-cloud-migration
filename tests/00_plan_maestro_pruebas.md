@@ -1,41 +1,63 @@
-# Plan maestro de pruebas AWS Azure
+# Plan maestro de pruebas AWS–Azure
 
-**Actualizado:** 14/10/2026, corte de las 07:49 America/Chicago. Los estados
-distinguen pruebas locales de validaciones vivas; un E2E histórico conserva su
-alcance y fecha, no se presenta como ejecución actual.
+**Corte vigente:** 16/10/2026, 01:05 UTC. Los resultados históricos conservan
+su fecha y no reemplazan una comprobación fallida posterior.
 
-AWS STS sigue devolviendo `ExpiredToken`; el último inventario del plano de
-control confirmado es el corte de 06:46. Los GET de salud del ALB y pruebas de
-seguridad/rendimiento anteriores son evidencia fechada, no un chequeo actual;
-el POST/GET autenticado contra AWS no se repitió. En Azure, el grupo y el health
-se revalidaron a las 07:16–07:18 y el plan Terraform terminó `No changes`, sin
-`apply`. A las 07:43–07:44 el smoke E2E local/SQLite comprobó 401 sin key, 400
-para productor no autorizado y que el probe no se persistiera; después completó
-venta→Queue/Function→reconciliación→recepción compensatoria. El ledger demo
-volvió a la línea base, poison count fue cero antes/después y no se leyeron
-mensajes. Application Insights mostró seis respuestas 202, un rechazo 400 y
-seis ejecuciones del worker `resultCode=0` para tres corridas. La compuerta
-local terminó aprobada con 140 pruebas Python, 8 Node, rendimiento, build,
-auditorías e IaC. Los eventos válidos quedan en auditoría Azure; no cambió
-infraestructura ni se tocó AWS/RDS.
-El 503 de 02:45 se conserva como histórico, supersedido por health 200.
+## Estado actual
 
-| ID | Área | Caso | Criterio | Estado |
-|---|---|---|---|---|
-| PT-AWS-01 | Funcional/seguridad | GET `/health`; rutas de negocio sin sesión; POST/GET órdenes con sesión válida | Salud 200, rutas protegidas 401/403 y pedido persistido | Últimos smoke HTTP previos: `/health` 100/100 HTTP 200 y `/api/admin/users` anónimo 401. No son revalidación de este corte; el POST/GET autenticado cloud no se repitió porque AWS STS expiró. El 503 de 02:45 es histórico, supersedido. |
-| PT-AWS-02 | Disponibilidad | Revisar ALB y destinos | Dos destinos healthy | Parcial: 20/20 GET secuenciales devolvieron 200 desde dos marcadores de backend, pero el plano de control sigue sin acceso (`ExpiredToken`), así que no se confirmó configuración ASG ni estado formal `Healthy` del target group. |
-| PT-PERF-01 | Rendimiento | `/health` en Docker local y smoke de salud tras el ALB | p95 < 2000 ms, error ≤ 1 % | Local: 1000/1000, concurrencia 50, p95 68.34 ms, 0 errores. ALB 14/10: 100/100, concurrencia 10, p95 851.9 ms, 0 errores. Solo salud; no prueba transacciones ni autoscaling. |
-| PT-AWS-03 | Datos | RDS privada y S3 cifrado | Sin acceso público; cifrado en reposo | La última lectura disponible confirmó RDS `available`, privada/cifrada, Single-AZ/backup 1 día y buckets AES256. En la revalidación 02:20 no se pudo renovar el inventario por `AccessDenied`; la restauración separada sigue documentada en PT-DR-01. |
-| PT-IAC-01 | IaC | Formato/validación CloudFormation y Terraform; plan seguro | Sin errores, secretos ni reemplazos no revisados | Gate local 14/10 07:49: 140 pruebas Python + 8 Node, build, auditorías, CloudFormation y Terraform fmt/validate/mock. Azure `azure-rebuild`: plan normal `No changes` 07:18, sin `apply`. AWS sin plan vivo por `ExpiredToken`; drift no revalidado. |
-| PT-MC-01 | Integración | Evento ERP→Azure Function originado desde AWS | Evento correlacionado y respuesta autenticada | Parcial: hay un E2E histórico desde EC2 (02:32), pero el más reciente (07:43) corrió desde ERP local/SQLite hacia Azure. Telemetría muestra seis solicitudes 202, un rechazo 400 y seis worker `resultCode=0` para tres corridas locales. No acredita origen AWS ni ruta privada en este corte. |
-| PT-MC-02 | WMS | Function publica tarea en Queue y Blob | Evento idempotente, registro y estado | Aprobado para el ledger demo: venta y reposición compensatoria terminaron con stock restaurado. Smoke consultó poison metadata y encontró cero antes/después, sin leer mensajes. No es inventario de un WMS empresarial real. |
-| PT-MC-03 | Resiliencia | Azure no disponible; outbox AWS reintenta | Pedido durable y reintento automático observable | Parcial: la prueba unitaria simuló dos timeouts, comprobó que pedido y outbox persisten, que se respeta el backoff y que el tercer intento se marca entregado. Pendiente inyectar la falla en el portal desplegado y observar recuperación real; poison queue Azure tuvo una prueba sintética separada. |
-| PT-SEC-01 | Seguridad | Rutas protegidas y matriz autenticada de roles | 401/403 apropiado, privilegio mínimo, sin secretos expuestos | Matriz local de API cubre roles y rutas. En AWS la API admin anónima devuelve 401, pero `/metrics` sigue público y `/api` incluye `instance`; roles autenticados cloud siguen pendientes y v6 aún no se despliega. |
-| PT-DR-01 | Recuperación | Restore privado/cifrado, marcador SQL, conteos y limpieza | RTO/RPO observados y sin temporales | Aprobado en ejecución viva repetida: marcador y 14 tablas coinciden; RTO 289 s, RPO superior observado 14 s; copia y snapshot temporales eliminados, RDS principal y snapshot fuente preservados. |
-| PT-NET-01 | Red multinube privada | AWS–Azure IPsec/BGP o alternativa aprobada | Túneles/rutas privadas y tráfico entre subredes | Pendiente por permisos: el 14/10 `Describe*Vpn*` y `CreateCustomerGateway --dry-run` fueron denegados; el grupo Azure dedicado no existe. No se creó infraestructura. La integración HTTPS pública histórica no sustituye una VPN. Preflight y gates mock aprobados localmente. |
-| PT-COST-01 | Costos/limpieza | Ver inventario y costo; retirar solo temporales | Sin residuos temporales; consumo comprendido | Copias temporales PT-DR-01 y la prueba VPN fueron limpiadas. Se mantienen activos los recursos principales por solicitud del usuario; coste acumulado/forecast no verificado en este corte. SNS tiene dos suscripciones confirmadas y las cinco alarmas notifican cambios de estado; no se probó envío artificial. |
+- HTTPS del dominio completa TLS y HTTP redirige a HTTPS (`301`). A las 01:02
+  UTC portada, `/health`, `/ready` y `/platform` devolvieron `503`.
+- AWS STS autenticó en la cuenta Academy `841113066612`; CloudFormation
+  `DescribeStacks` fue rechazado por el `explicit deny` `voc-cancel-cred`. No se
+  confirmaron targets, drift, ASG ni RDS actuales; no se cambió infraestructura.
+- Azure Function `tangama-wms-261008`: `Running`, `httpsOnly=true`; `/api/health`
+  devolvió `200`.
+- El E2E sintético local→Azure pasó guardas (401 sin clave, 400 productor no
+  autorizado), venta `demo_fulfillment_completed`, recepción
+  `demo_restock_completed`, stock demo restaurado exactamente y poison count 0
+  antes/después. Los eventos válidos permanecen en auditoría Blob. Este flujo no
+  salió de EC2/RDS.
+- Gate local: 209 pruebas, frontend/build, CloudFormation, Terraform format y
+  validate, mocks de red y auditoría de dependencias aprobados. No ejecutó
+  `apply` ni verifica la salud del portal remoto.
+- El restore RDS, permisos API por rol y E2E AWS→Azure disponibles en evidencia
+  son cortes previos a v18. No asumir que validan esta revisión.
 
-Cada prueba final requiere evidencia real fechada, nube/región, configuración,
-resultado esperado y observado. Las capturas Chrome/consola de inventario y
-monitor Azure siguen pendientes; los registros CLI de esta revalidación no las
-sustituyen.
+## Matriz de pruebas
+
+| ID | Prueba | Criterio de aprobación | Último resultado y siguiente acción |
+|---|---|---|---|
+| PT-HTTPS-01 | Dominio, TLS y redirect | TLS válido, HTTP 301, HTTPS sirve páginas | TLS/301 sí; las cuatro rutas HTTPS dan 503. Recuperar el origen. |
+| PT-AWS-01 | Salud y disponibilidad | `/health` y `/ready` 200; dos destinos sanos | Falla 503; IAM impide leer salud formal del target group. Recuperar permiso legítimo y diagnosticar antes de editar. |
+| PT-AWS-02 | Login y operaciones v18 | Login, roles 200/403, venta/compra persistidas y reconciliadas | No repetido en v18. Hacer después de restaurar disponibilidad. |
+| PT-WMS-01 | ERP→Queue→Function→ledger | Evento correlacionado, estado y stock demo reconciliado | Aprobado local→Azure. Repetir como AWS/EC2→Azure y preservar saldo inicial. |
+| PT-OUTBOX-01 | Historial paginado | 45 eventos sin omisiones/duplicados: páginas 30+15 | Unitarias pasan; falta confirmar GET autenticado contra el despliegue v18. |
+| PT-RETRY-01 | Reintento y poison | Pedido/outbox durables, retry observable, poison inspeccionado sin destruir evidencia | Pruebas unitarias; poison metadata Azure 0 en la prueba reciente. Falta inyectar falla controlada y observar recuperación en el portal desplegado. |
+| PT-DR-01 | Backup y restauración | Restore aislado íntegro; medir RTO/RPO y limpiar solo temporales | Restore exitoso en evidencia previa; RDS Single-AZ/backup 1 día y sin failover probado. Revalidar cuando haya permisos si el corte actual lo requiere. |
+| PT-NET-01 | Conectividad privada AWS–Azure | Túnel/rutas privadas y tráfico verificado entre redes | Pendiente; preflight de VPN denegado por AWS Academy. HTTPS público no satisface este criterio. |
+| PT-PERF-01 | Carga y autoescalado | Perfil de carga aprobado, errores/p95 definidos, escalado observado | Gate histórico corto (24 lecturas, concurrencia 6); no acredita 3,000 usuarios ni autoescalado. |
+| PT-SEC-01 | Roles, admin y navegador | Roles aislados, CSRF/sesión, vistas autenticadas y CSV correctos | API pasó en v17; visual y regresión v18 pendientes. WAF desactivado. |
+| PT-AZ-MON-01 | Azure y alertas | Invocaciones correlacionadas, métricas, alarma/recuperación y evidencia | Function health 200 y E2E reciente; usuario confirmó alerta/recuperación previa. Guardar captura/telemetría actual. |
+| PT-IAC-01 | CloudFormation/Terraform | fmt/validate/plan; drift y cambios revisados, sin reemplazos sorpresa | Gate local aprobado; CloudFormation v18 `UPDATE_COMPLETE`; drift AWS no consultable por IAM. No aplicar a ciegas. |
+| PT-APP-01 | CSV, correo y finanzas | Importar catálogo, comprobar ledger, finanzas y entrega de correo conforme alcance | Finanzas/correo interno `portal_only` pasaron en v17; CSV visual y SMTP saliente no verificados/desplegados. |
+| PT-RTC-01 | Telefonía WebRTC | Audio/video bidireccional, mute/cámara y grabación con consentimiento | No probado recientemente entre dos navegadores. Pendiente de producto, separado del 503. |
+| PT-COST-01 | Costos y limpieza | Costo AWS/Azure observado; solo temporales retirados tras verificar | AWS tiene estimación; Azure y consumo real del lab sin conciliación actual. |
+| PT-DOC-01 | Evidencia/entrega | Capturas, logs sanitizados, matriz y documentación sincronizados | Corte actual documentado; faltan capturas de consola/monitor y comprobar Actions tras sincronizar. |
+
+## Secuencia de cierre
+
+1. Recuperar acceso de lectura autorizado al plano de control AWS. No usar
+   perfiles alternativos ni intentar sortear `voc-cancel-cred`.
+2. Consultar ALB/target health, ASG, eventos/logs de las instancias y RDS; aislar
+   causa del 503 antes de desplegar otra versión.
+3. Cuando `/health` y `/ready` estén sanos, ejecutar el smoke autenticado v18,
+   roles y paginación, seguido de venta/compra sintéticas AWS→Azure con
+   reconciliación del saldo.
+4. Revalidar drift IaC; probar restauración/failover según presupuesto y
+   restricciones de Academy; crear la red privada solo con permisos, costo y
+   plan revisados.
+5. Ejecutar los casos de carga, navegador, monitoreo, CSV, correo y WebRTC que
+   se mantengan dentro del alcance acordado; guardar evidencia fechada.
+
+El detalle del corte está en
+[`CLOUD-REVALIDATION-2026-10-16-0105UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md).
