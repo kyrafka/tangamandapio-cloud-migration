@@ -601,6 +601,7 @@ def main_admin_readonly_smoke(target: str) -> int:
             raise SmokeFailure("The authenticated account lacks the ERP admin role.")
         dashboard = inspect_admin_dashboard_consistency(client)
         alarms = verify_admin_alarm_subscriptions(client)
+        read_load = measure_read_only_database_load(client)
         print(
             json.dumps(
                 {
@@ -609,6 +610,7 @@ def main_admin_readonly_smoke(target: str) -> int:
                     "role_authorization": roles,
                     "dashboard": dashboard,
                     "alarm_subscriptions": alarms,
+                    "read_only_load": read_load,
                     "alarm_triggered": False,
                 },
                 sort_keys=True,

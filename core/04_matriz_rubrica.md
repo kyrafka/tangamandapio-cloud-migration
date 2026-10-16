@@ -1,4 +1,18 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 04:00 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 04:24 UTC
+
+## Suplemento vivo — 16/10/2026, 04:22–04:24 UTC
+
+Se revalidó AWS `default` (cuenta 841113066612), stack `UPDATE_COMPLETE` y
+detección fresca de drift `IN_SYNC`. El dominio HTTPS respondió 200, HTTP
+redirigió a HTTPS (301), Azure WMS health dio 200; ASG y ALB conservan 2/2
+instancias/destinos sanos. Las cinco alarmas consultadas aparecen `OK`, aunque
+la alarma 5xx no tenía datapoints y trata los faltantes como `NonBreaching`.
+
+El smoke autenticado de solo lectura pasó por origen ALB con TLS: 24/24 GET,
+concurrencia 6 y p95 191.51 ms; roles Comercial/Operaciones respetaron 200/403,
+el outbox se concilió 49/49 y SNS informó dos suscripciones confirmadas. No se
+escribieron datos de negocio. Esto no establece capacidad sostenida ni soporte
+para 3,000 usuarios. Detalle: [sonda AWS de 04:24 UTC](../evidence/current/aws/AWS-READONLY-LOAD-2026-10-16-0424UTC.md).
 
 ## Suplemento vivo — 16/10/2026, 03:53–03:58 UTC
 

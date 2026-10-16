@@ -229,13 +229,20 @@ class AdminReadonlySmokeTests(unittest.TestCase):
             patch.object(live_e2e, "verify_role_authorization", return_value=role_matrix) as roles,
             patch.object(live_e2e, "inspect_admin_dashboard_consistency", return_value={"order_count": 1}),
             patch.object(live_e2e, "verify_admin_alarm_subscriptions", return_value={"subscription_count": 2}),
+            patch.object(
+                live_e2e,
+                "measure_read_only_database_load",
+                return_value={"requests": 24, "concurrency": 6, "p95_ms": 123.45, "all_http_200": True},
+            ) as read_load,
             patch("builtins.print") as output,
         ):
             result = live_e2e.main_admin_readonly_smoke("alb-origin-https")
         self.assertEqual(result, 0)
         roles.assert_called_once_with("alb-origin-https")
+        read_load.assert_called_once_with(client)
         payload = live_e2e.json.loads(output.call_args.args[0])
         self.assertEqual(payload["role_authorization"], role_matrix)
+        self.assertEqual(payload["read_only_load"]["requests"], 24)
         client.logout.assert_called_once_with()
 
 

@@ -1,5 +1,16 @@
 # Índice de evidencias del proyecto
 
+## Revalidación puntual más reciente — 16/10/2026, 04:22–04:24 UTC
+
+El perfil AWS autenticó; el stack quedó `UPDATE_COMPLETE` y la detección fresca
+de drift terminó `IN_SYNC`. HTTPS `/health` devolvió 200, HTTP redirigió con
+301, Azure WMS health devolvió 200, ASG/ALB tienen 2/2 sanos y las alarmas
+consultadas están `OK` (la alarma 5xx no tuvo datos y considera los faltantes
+como no infractores). El smoke autenticado de solo lectura por origen ALB pasó:
+24 GET, concurrencia 6, 24/24 HTTP 200, p95 191.51 ms; outbox 49/49 y dos
+suscripciones SNS confirmadas. No prueba capacidad sostenida ni 3,000 usuarios.
+Véase [evidencia AWS de 04:24 UTC](current/aws/AWS-READONLY-LOAD-2026-10-16-0424UTC.md).
+
 ## Revalidación puntual más reciente — 16/10/2026, 04:00 UTC
 
 HTTPS/ACM, ALB, targets AWS y health Azure se confirmaron vivos a las 03:53–03:58
