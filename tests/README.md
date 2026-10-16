@@ -239,7 +239,7 @@ medición es loopback en una sola EC2 con base de datos, no incluye ALB/ASG ni
 demuestra capacidad para 3,000 usuarios.
 Revisa el resultado de SSM y el saldo antes de reintentar si una ejecución queda
 en estado desconocido. El último éxito está documentado en
-[`CLOUD-REVALIDATION-2026-10-16-0337UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0337UTC.md).
+[`CLOUD-REVALIDATION-2026-10-16-0341UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
 
 Para probar los módulos administrativos con datos QA:
 

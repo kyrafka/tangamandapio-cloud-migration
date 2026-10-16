@@ -3,6 +3,21 @@
 **Corte:** 08/10/2026. **Uso:** revisión interna; no sustituye la calificación
 del docente ni una prueba de sustentación.
 
+## Auditoría adicional de fuentes — 16/10/2026
+
+Se cotejaron directamente la hoja específica `rúbrica proyecto_qod3szrctm (3).xlsx`
+y el PDF general `rúbrica de evaluacion de proyecto de fin de ciclo_llss4pnf0z.pdf`
+que están en Descargas. Las cuatro copias XLSX tienen SHA-256 idéntico. Sus 14
+máximos suman 18.5, aunque la celda TOTAL imprime 20. El PDF general organiza
+otros bloques (diseño de red, virtualización, servicios TI, cloud,
+documentación y defensa); sus máximos visibles por bloque suman 90. No es la
+misma escala ni explica los 1.5 puntos que faltan en la rúbrica de nube.
+
+No se normalizan los pesos ni se combinan ambas escalas. Por ahora la evaluación
+es cualitativa y ligada a evidencia; el docente debe confirmar cuál instrumento
+aplica y cómo pondera el máximo anunciado. Los hashes y el cotejo están en la
+[evidencia de nube y fuentes de rúbrica](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
+
 ## Revalidación cloud — 13/10/2026, 23:50 America/Chicago
 
 AWS STS autenticó; CloudFormation seguía `UPDATE_COMPLETE`, el ALB tenía 2/2
@@ -37,9 +52,10 @@ y el [mapa histórico 08/10](../evidence/current/MAPA_ESTADO_ACTUAL_2026-10-08.m
 
 ## Alcance de la comparación
 
-Se contrastaron los tres archivos académicos compartidos: plantilla del
-proyecto, descripción del proyecto y rúbrica de 14 criterios (20 puntos). La
-descripción y plantilla escritas mencionan expresamente AWS + OCI, incluyendo
+El análisis inicial contrastó la plantilla del proyecto, la descripción del
+proyecto y la rúbrica específica de 14 criterios. La auditoría del 16/10 añadió
+el PDF general descrito arriba, que es un instrumento distinto. La descripción
+y plantilla escritas mencionan expresamente AWS + OCI, incluyendo
 VPC/VCN; el alumno reporta que el docente confirmó presencialmente AWS + Azure,
 sin OCI. La confirmación no está respaldada por escrito en el repositorio; debe
 explicarse en el informe y anexarse si está disponible. No se inventa una VCN:

@@ -1,28 +1,37 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 03:37 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 03:41 UTC
 
-## Revalidación vigente — 16/10/2026, 03:37 UTC
+## Revalidación vigente — 16/10/2026, 03:41 UTC
 
-Con el token del laboratorio, AWS STS autenticó en la cuenta Academy desde el
-perfil `default`. CloudFormation está `UPDATE_COMPLETE`; ALB activo, ACM
-`ISSUED`, HTTPS y redirección 80→443 operativos, ASG y targets 2/2 sanos. Las
-rutas HTTPS `/`, `/health`, `/ready` de AWS y `/api/health` de Azure dieron 200
-con TLS válido. El E2E AWS→Azure pasó: saldo sintético 10→10 y 24/24 lecturas
-HTTP 200 (p95 287.75 ms). También pasaron Finanzas, correo portal-only, poison
-queue, Admin y la matriz de permisos de Comercial/Operaciones por HTTPS directo
-al ALB. El tablero concilió 49 eventos entregados y 0 pendientes; SNS tiene dos
-suscripciones confirmadas.
+AWS STS autenticó con el perfil `default`; el stack sigue `UPDATE_COMPLETE`, el
+drift registrado es `IN_SYNC` y el dominio HTTPS conserva ACM `ISSUED` y
+redirección 80→443. El portal y Azure health dieron 200. ASG y target group
+están 2/2 sanos (deseado/mínimo 2, máximo 5); RDS está `available`, privada y
+cifrada, pero Single-AZ y con backup de un día. El smoke autenticado
+`LIVE_ADMIN_READONLY_SMOKE_PASSED` pasó por TLS directo al ALB: Admin concilió
+49/49 eventos, Comercial recibió 200 solo en ventas y Operaciones 200 en
+WMS/outbox. SNS tiene dos suscripciones confirmadas.
 
-La autenticación automatizada al FQDN público recibió 403 de Cloudflare antes
-de Flask; no se ha identificado una regla concreta del proxy. RDS sigue
-Single-AZ, con backup de un día. No hay ruta privada AWS–Azure (SCP bloquea el
-Customer Gateway y no existe VNet Azure), WAF AWS, carga representativa de
-3,000 usuarios, prueba WebRTC de dos navegadores ni alarma métrica disparada en
-esta pasada. El restore PT-DR-01 y alerta/recuperación previos siguen como
-evidencia histórica, no se repitieron. El gate local aprobó 213 pruebas Python,
-14 Node, build, auditorías, CloudFormation y Terraform sin aplicar recursos.
-Detalle: [revalidación completa 03:37 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0337UTC.md).
+CloudWatch mantiene la alarma de escala-baja en `ALARM` por CPU cercana a 1%,
+debajo del umbral 42%; la capacidad mínima 2 impide reducir el ASG. No se
+demostró escalado bajo carga. No hay ruta privada AWS–Azure (SCP bloquea
+Customer Gateway y no existe VNet Azure), WAF, failover RDS, carga
+representativa, prueba WebRTC entre navegadores, alarma sintética con entrega
+verificada, ni recorrido visual completo en esta pasada. El historial contiene
+lanzamientos cancelados por `Client.InternalError`, seguidos por dos
+lanzamientos exitosos y el estado actual sano; la causa inicial no está
+atribuida. Evidencia: [revalidación completa 03:41 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
 
-## Corte anterior — 16/10/2026, 02:20–03:04 UTC
+### Fuentes de evaluación
+
+La hoja XLSX específica del proyecto muestra 14 máximos que suman 18.5 aunque
+su celda TOTAL dice 20. El PDF general de Redes es otro instrumento: sus bloques
+impresos suman 90 y añaden virtualización/VLAN, sin una correspondencia
+publicada con los 20 puntos de la hoja específica. No se combinan ni normalizan;
+hace falta que el docente confirme cuál aplica y la ponderación oficial. El
+detalle y hashes de las fuentes locales están en la
+[revalidación 03:41 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
+
+## Corte anterior — 16/10/2026, 02:20–03:37 UTC
 
 Con el token nuevo se autenticó también desde el perfil local AWS CLI `default`.
 Se confirmó `UPDATE_COMPLETE`, HTTPS público 200 en portada, health y readiness,
@@ -39,21 +48,22 @@ confirma explicit deny de SCP en AWS y no hay VNet Azure. No existe Web ACL
 regional. La puerta local pasó 209 pruebas, build y validación IaC sin aplicar
 recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md) y [estado cloud 02:55 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
-### Estado por criterio — brechas vigentes tras 03:37 UTC
+### Estado por criterio — brechas vigentes tras 03:41 UTC
 
 | # | Criterio | Brecha que queda tras esta revalidación |
 |---:|---|---|
 | 3 | Redes VPC/VCN | Dry-run de Customer Gateway denegado por SCP `p-qa2qn8qf`; la suscripción Azure no tiene VNet. No hay ruta privada AWS–Azure. |
-| 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; RDS sigue Single-AZ y con backup de 1 día; causa del 503 previo no atribuida. |
-| 5 | Seguridad cloud | HTTPS/redirect y permisos API pasaron por TLS directo al ALB. El login automatizado al FQDN recibió 403 de Cloudflare antes de Flask; causa exacta pendiente de sus registros. Falta recorrido interactivo completo; WAF AWS no está desplegado. |
-| 6 | Alta disponibilidad y escalabilidad | ASG 2/2 y 2/2 targets sanos; falta carga representativa y medir escalado/RTO durante una falla. |
-| 7 | Monitoreo y observabilidad | SNS tiene dos suscripciones confirmadas; no se disparó alarma en este corte. Falta correlacionar una alerta métrica reciente con invocación/recuperación y evidencia visual. |
+| 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; historial de inicio incluye `Client.InternalError` transitorios, seguido por recuperación; causa inicial no atribuida. RDS sigue Single-AZ con backup de 1 día. |
+| 5 | Seguridad cloud | HTTPS/redirect y matriz API pasan por TLS directo al ALB. Cloudflare devolvió 403 en automatización antes de Flask; causa exacta pendiente. Falta recorrido visual; no hay WAF. |
+| 6 | Alta disponibilidad y escalabilidad | ASG 2/2 y máximo 5, con política target tracking CPU 60%; falta carga por ALB que demuestre escalado. Alarma de CPU baja activa bajo 42%, capacidad mínima 2 preservada. |
+| 7 | Monitoreo y observabilidad | SNS tiene dos suscripciones confirmadas y alarms con acciones; falta disparar una alarma sintética y verificar entrega/recuperación. La alarma actual de CPU baja es señal de escala-in, no prueba de notificación recibida. |
 | 8 | Infrastructure as Code | Detección fresca `IN_SYNC`, 0 recursos desviados; CloudFormation/Terraform local validados. La plantilla original del stack conserva defaults de artefacto v16 mientras los parámetros efectivos usan v18. AWS rechazó el change set vacío, así que este detalle de plantilla no se actualizó. |
 | 9 | Backup y recuperación | PT-DR-01 restauró con sonda SQL el 15/10 (RTO 260 s, RPO observado ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin prueba de failover. |
 | 10 | Multicloud AWS–Azure | E2E desde portal AWS a Azure pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
 | 11 | Costos | AWS CE: US$26.0033 uso y −US$26.0033 créditos en la cuenta Academy, no atribuible solo al proyecto; Azure entregó 255 filas pero `pretaxCost=None`. Falta el gasto Azure y atribución por proyecto. |
-| 12 | Pruebas técnicas | E2E AWS→Azure, Admin/Finanzas/correo portal-only/poison y permisos API de los tres roles pasaron; faltan recorrido interactivo completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
+| 12 | Pruebas técnicas | E2E AWS→Azure, Admin/Finanzas/correo portal-only/poison y permisos API de los tres roles pasaron; faltan recorrido visual completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
 | 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure; faltan capturas recientes de las consolas y del monitor/invocación. |
+| 14 | Sustentación | No evaluable desde el repositorio; requiere demostración y defensa oral. |
 
 El estado anterior de v18, incluidas las métricas y capturas autenticadas, se
 conserva como corte histórico inmediatamente debajo; este complemento no afirma

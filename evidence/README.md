@@ -1,6 +1,26 @@
 # Índice de evidencias del proyecto
 
-## Revalidación puntual más reciente — 15/10/2026, 19:21–19:23 UTC
+## Revalidación puntual más reciente — 16/10/2026, 03:41 UTC
+
+AWS Academy autenticó en `default`; CloudFormation sigue `UPDATE_COMPLETE`, la
+última detección reportó `IN_SYNC`, HTTPS/ACM funciona y el ASG/target group
+están 2/2 sanos. Azure health respondió 200. El smoke autenticado de solo
+lectura por TLS directo al ALB pasó para Admin, Comercial y Operaciones y
+reconcilió 49/49 eventos. El job de GitHub para el commit `84b97bf` completó
+los tres controles en verde. Consulta la [revalidación viva y las brechas
+vigentes](current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md) y la
+[matriz cualitativa](../core/04_matriz_rubrica.md).
+
+Siguen pendientes la ruta privada AWS–Azure (bloqueada por SCP y sin VNet),
+failover/RDS Multi-AZ, carga que demuestre escalado, WAF, alarma sintética con
+entrega comprobada, recorrido visual completo y capturas recientes. La base
+está Single-AZ con un día de retención. La alarma de CPU baja actualmente en
+`ALARM` porque el promedio quedó cerca de 1%, pero el ASG conserva su mínimo de
+dos instancias. Las fuentes de evaluación también discrepan: la hoja cloud suma
+18.5 aunque imprime 20; el PDF general es un instrumento diferente. No se
+infiere una nota.
+
+## Corte histórico supersedido — 15/10/2026, 19:21–19:23 UTC
 
 Portal HTTPS, `/health` y `/ready` devolvieron 200; la portada no registró
 errores JavaScript. Azure for Students está Enabled y la Function devolvió
