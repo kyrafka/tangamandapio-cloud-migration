@@ -1,5 +1,16 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Recuperación cloud revalidada — 16/10/2026, 09:05–09:17 UTC
+
+Drift CloudFormation fresco `IN_SYNC`/0; los dos targets del ALB están sanos,
+EBS cifrados, portal AWS HTTPS/TLS 200 (HTTP 301) y Azure HTTPS/TLS 200.
+PT-DR-01 volvió a pasar: restauración RDS desde snapshot, marcador sintético y
+conteos de tablas coincidentes, RTO 258 s, RPO superior observado 8 s. La copia
+y el snapshot temporales se eliminaron y se verificó su ausencia. RDS principal
+sigue privada/cifrada, Single-AZ y con retención de un día. WAF no está activo;
+la VPN sigue bloqueada por SCP. Véase
+[`CLOUD-REVALIDATION-2026-10-16-0917UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0917UTC.md).
+
 ## Revalidación desplegada AWS–Azure — 16/10/2026, 08:53–09:01 UTC
 
 Health HTTPS de AWS y Azure 200; CloudFormation `UPDATE_COMPLETE`, ASG 2/2

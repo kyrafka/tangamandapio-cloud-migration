@@ -1,4 +1,17 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 09:01 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 09:17 UTC
+
+## Suplemento vigente — revalidación 16/10/2026, 09:05–09:17 UTC
+
+CloudFormation terminó una detección fresca de drift `IN_SYNC` (0); ASG y
+targets ALB 2/2 sanos, EBS cifrados, portal AWS HTTPS/TLS 200 (HTTP 301) y Azure
+HTTPS/TLS 200. PT-DR-01 volvió a aprobar restauración: marcador y conteos
+coincidentes, RTO observado 258 s/RPO superior observado 8 s; copia y snapshot
+temporales se eliminaron y su ausencia quedó verificada. RDS sigue privada y
+cifrada, Single-AZ, con backups retenidos un día. La alarma `AlarmLow` es la
+señal de scale-in por CPU bajo el umbral; no indica indisponibilidad. WAF no
+está activo (`EnableWaf=false`) por su costo y la aprobación explícita que
+requiere el template. VPN sigue bloqueada por SCP. No hubo despliegue ni apply.
+Véase la [evidencia viva 09:17 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0917UTC.md).
 
 ## Suplemento vigente — revalidación 16/10/2026, 08:53–09:01 UTC
 
@@ -264,21 +277,21 @@ confirma explicit deny de SCP en AWS y no hay VNet Azure. No existe Web ACL
 regional. La puerta local pasó 209 pruebas, build y validación IaC sin aplicar
 recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md) y [estado cloud 02:55 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
-### Estado por criterio — brechas vigentes tras 03:41 UTC
+### Estado por criterio — brechas vigentes tras 09:17 UTC
 
 | # | Criterio | Brecha que queda tras esta revalidación |
 |---:|---|---|
 | 3 | Redes VPC/VCN | Dry-run de Customer Gateway denegado por SCP `p-qa2qn8qf`; la suscripción Azure no tiene VNet. No hay ruta privada AWS–Azure. |
-| 4 | Cómputo, almacenamiento y BD | Última lectura autenticada: 2/2 targets sanos; RDS privado/cifrado y restore aislado probado (RTO 289 s, RPO ≤10 s). RDS sigue Single-AZ con backup de 1 día; causa de `Client.InternalError` histórico no atribuida. |
-| 5 | Seguridad cloud | HTTPS/HSTS, redirect y matriz API pasan; Cloudflare devolvió 403 a una sonda Python, mientras curl/Invoke-WebRequest y origen ALB dieron 200. Falta recorrido visual; no hay WAF. |
-| 6 | Alta disponibilidad y escalabilidad | ASG 2/2, máximo 5 y target tracking CPU 60%. Pruebas históricas lograron scale-out 2→3 y scale-in 3→2; falta carga transaccional por ALB y capacidad para 3,000 usuarios. La alarma baja actual refleja CPU reducida con mínimo 2. |
+| 4 | Cómputo, almacenamiento y BD | A las 09:17: 2/2 targets sanos y EBS raíz cifrados; RDS privada/cifrada y restore probado (RTO 258 s, RPO ≤8 s). RDS sigue Single-AZ con backup de 1 día; failover pendiente. |
+| 5 | Seguridad cloud | HTTPS/TLS, redirect y matriz API de seis perfiles pasan; WAF no está desplegado y requiere autorizar costo. Falta recorrido visual; la sonda Python bloqueada por Cloudflare no se eludió. |
+| 6 | Alta disponibilidad y escalabilidad | ASG 2/2, máximo 5 y target tracking CPU 60%; scale-out/in 2↔3 en pruebas históricas. Falta carga transaccional sostenida por ALB y capacidad para 3,000 usuarios. Alarma baja actual es la señal normal de scale-in por CPU bajo. |
 | 7 | Monitoreo y observabilidad | Dos suscripciones SNS confirmadas; en la consulta 04:24 las cinco alarmas estaban `OK`, pero 5xx no tenía datapoints. El test sintético 14/10 hizo `OK→ALARM→OK` y el usuario confirmó recepción. Falta vincular una alerta a un umbral de métrica real y telemetría de entrega. |
-| 8 | Infrastructure as Code | Detección fresca `IN_SYNC` a las 05:00:46 UTC, 0 drift; CloudFormation/Terraform local validados. La plantilla guardada conserva defaults v16 mientras el release efectivo usa v18; el change set sin cambios se eliminó y no se forzó. |
-| 9 | Backup y recuperación | PT-DR-01 restauró el 16/10 con marcador y limpieza verificados (RTO 289 s, RPO ≤10 s); RDS sigue Single-AZ y retención de 1 día, sin failover. |
-| 10 | Multicloud AWS–Azure | E2E desplegado AWS→Azure Queue/Function y conciliación ERP pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
+| 8 | Infrastructure as Code | Detección fresca `IN_SYNC` a las 09:05 UTC, 0 drift; IaC local validado. Terraform Azure remoto no se revalidó en este corte; la plantilla no administra toda la huella. |
+| 9 | Backup y recuperación | PT-DR-01 restauró el 16/10 con marcador/conteos y limpieza verificados (RTO 258 s, RPO ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin failover. |
+| 10 | Multicloud AWS–Azure | E2E AWS→Azure Queue/Function y conciliación ERP pasan por HTTPS público; la ruta privada sigue bloqueada por SCP y no existe VNet del proyecto. Azure no se presenta como OCI. |
 | 11 | Costos | AWS CE: US$26.0033 uso y −US$26.0033 créditos en la cuenta Academy, no atribuible solo al proyecto; Azure entregó 255 filas pero `pretaxCost=None`. Falta el gasto Azure y atribución por proyecto. |
-| 12 | Pruebas técnicas | E2E AWS→Azure, roles, restore aislado, Admin/Finanzas/correo portal-only y consulta poison pasaron; faltan recorrido visual completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
-| 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure y restore; faltan capturas recientes de las consolas y del monitor/invocación. |
+| 12 | Pruebas técnicas | E2E AWS→Azure, matriz ERP de seis roles, restore aislado, Admin/Finanzas/correo portal-only y consulta poison pasaron; faltan recorrido visual, CSV, carga representativa, reintento inducido y WebRTC entre navegadores. |
+| 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure/restore; faltan capturas recientes de inventario de consola y monitor/invocación. |
 | 14 | Sustentación | No evaluable desde el repositorio; requiere demostración y defensa oral. |
 
 El estado anterior de v18, incluidas las métricas y capturas autenticadas, se
