@@ -1317,3 +1317,25 @@ El workflow de GitHub ejecuta navegación por rol (8 tests) e importación CSV
 (6 tests) antes del build. Los commits `6adb8d0` y `977f437` ya están publicados
 en `codex/aws-v11-deploy-sync`; Actions `38792459084` pasó para `977f437`. El
 workflow valida código e IaC y no despliega recursos cloud.
+
+## Estado vivo posterior — 16/10/2026, 10:39 UTC
+
+El corte anterior de 14/10 ya no representa el estado actual del portal:
+`https://tangamandapio.kendellnm.me/health` y el ALB de origen devuelven HTTP
+503 (`Server: awselb/2.0`, TLS válido). STS reconoce la sesión AWS, pero una
+denegación explícita `voc-cancel-cred` bloquea las lecturas de CloudFormation,
+SSM y ELB; no se puede afirmar el estado actual de EC2, targets o RDS. No se
+realizaron cambios AWS.
+
+Azure fue revalidado en vivo: Function `Running`/HTTPS-only y health 200; las
+dos alertas siguen habilitadas. El smoke compensado produjo una venta y una
+recepción sintéticas y restauró el saldo demo; App Insights mostró 7
+invocaciones del worker sin fallos en dos horas. El plan Terraform normal
+terminó `No changes`; `refresh-only` tuvo código 2 pese a emitir el mismo
+mensaje, sin aplicar ni guardar el plan. El E2E no utilizó EC2/RDS.
+
+La compuerta local pasó con 230 pruebas unitarias, 40 transacciones aisladas,
+build y auditorías; el adaptador ICE suma 5 pruebas aprobadas y está publicado
+en `codex/aws-v11-deploy-sync`, pero no en el portal cloud. El origen AWS debe
+recuperarse antes de probar roles, desplegar o afirmar funcionalidad total.
+Detalle: [estado vivo 16/10, 10:39 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1039UTC.md).
