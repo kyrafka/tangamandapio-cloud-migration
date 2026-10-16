@@ -63,6 +63,15 @@ la aplicación ni la restauración de RDS.
 
 ## Recuperación revalidada — 02:10 UTC
 
+En un smoke anterior, a las 01:47 UTC, el artefacto local del portal completó
+el recorrido local→Azure: sin clave respondió 401; un origen no autorizado
+respondió 400 sin persistir; la venta sintética
+`evt-a36d104709094d0381383afa158b134f` terminó `demo_fulfillment_completed` y
+la reposición compensatoria
+`evt-320487ed540246e98736c8ddc3be34aa` terminó `demo_restock_completed`, con el
+ledger demo restaurado. Esto no pasó por el ALB/EC2 y sus eventos quedaron en
+la auditoría de Azure.
+
 El token temporal compartido para esta sesión sí quedó activo en el perfil local
 `default`: STS autenticó la cuenta académica `841113066612`. Se repitieron las
 consultas después de la recuperación automática del grupo:

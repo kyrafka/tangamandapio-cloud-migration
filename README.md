@@ -36,8 +36,9 @@ eventos sintéticos permanecen en el almacenamiento de auditoría.
 La puerta local pasó 209 pruebas unitarias, build Vite, auditorías frontend y
 de dependencias, `cfn-lint`, validación AWS de CloudFormation y `fmt`/`init`/
 `validate` más cinco pruebas mock de Terraform; no aplicó infraestructura.
-Véanse la [evidencia AWS](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md),
-el [smoke Azure](evidence/current/azure/AZURE-ERP-SMOKE-LIVE-2026-10-16-0147UTC.md),
+GitHub Actions pasó el quality gate del commit `aab64cc` (run
+[38839629336](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38839629336)).
+Véanse la [evidencia AWS/Azure](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md),
 el [estado de IaC](iac/README.md) y la [matriz cualitativa](core/04_matriz_rubrica.md).
 
 ### Corte histórico (02:58 UTC)

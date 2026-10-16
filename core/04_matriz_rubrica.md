@@ -31,8 +31,8 @@ sintéticos permanecen en el almacenamiento de auditoría.
 
 La puerta local aprobó 209 pruebas unitarias, build Vite, auditorías,
 `cfn-lint`, `validate-template` de AWS y Terraform `fmt`/`init`/`validate` más
-cinco pruebas mock; no aplicó recursos. Detalle en la [evidencia AWS (incluye la recuperación 02:10 UTC)](../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md) y el
-[smoke Azure 01:47 UTC](../evidence/current/azure/AZURE-ERP-SMOKE-LIVE-2026-10-16-0147UTC.md).
+cinco pruebas mock; no aplicó recursos. El smoke local→Azure 01:47 está
+resumido en la [evidencia AWS/Azure de 16/10](../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
 
 ### Estado cualitativo por criterio — 16/10/2026, 01:25 UTC
 
@@ -50,7 +50,7 @@ cinco pruebas mock; no aplicó recursos. Detalle en la [evidencia AWS (incluye l
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para AWS–Azure documentado. La consola autenticada consultó un estado guardado en Azure a través del portal AWS; no hay ruta privada. No presentar Azure como OCI. |
 | 11 | Costos y optimización · 0.5 | Hay estimación AWS; faltan costo observado/Cost Analysis de Azure y reconciliación de consumo del lab. |
 | 12 | Pruebas técnicas · 1.0 | Portal v18 autenticado y consulta AWS→Azure verificados; gate local con Terraform en curso. Faltan regresión completa de roles, CSV visual, carga, red privada y WebRTC entre dos navegadores. |
-| 13 | Documentación técnica · 0.5 | Evidencias AWS/Azure, `README` e IaC actualizados con el corte 16/10. Falta captura visual de consola/monitor y conservar el resultado del workflow del commit de esta actualización. |
+| 13 | Documentación técnica · 0.5 | Evidencia AWS/Azure, `README` e IaC actualizados con el corte 16/10; GitHub Actions pasó para `aab64cc` (run [38839629336](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38839629336)). Falta captura visual de consola/monitor. |
 | 14 | Sustentación y defensa técnica · 0.5 | Pendiente de demostración oral: arquitectura, decisiones, límites, costos y resultados. |
 
 La rúbrica local suma 18.5 en los pesos aunque declara 20 y no define conversión
