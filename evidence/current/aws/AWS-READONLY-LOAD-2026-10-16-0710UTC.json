@@ -1,0 +1,26 @@
+{
+  "test_id": "PT-PERF-01",
+  "url": "https://tangamandapio.kendellnm.me/health",
+  "requests": 300,
+  "concurrency": 15,
+  "elapsed_seconds": 9.339,
+  "latency_ms": {
+    "min": 393.7,
+    "mean": 462.89,
+    "p95": 444.51,
+    "max": 1363.48
+  },
+  "errors": 300,
+  "error_rate": 1.0,
+  "thresholds": {
+    "max_p95_ms": 2000.0,
+    "max_error_rate": 0.01
+  },
+  "status_counts": {
+    "403": 300
+  },
+  "error_types": {
+    "HTTPError": 300
+  },
+  "passed": false
+}

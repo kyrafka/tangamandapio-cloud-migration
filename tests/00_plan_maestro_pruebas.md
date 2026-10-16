@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 07:03 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 07:22 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -31,6 +31,13 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   de nube. [Registro QA](../evidence/current/QA-LOCAL-2026-10-16-0702UTC.md).
 - Reconsulta a las 07:03: ASG estable con exactamente 2/2 instancias y targets
   sanos; los health endpoints públicos de AWS y Azure devolvieron 200.
+- Revalidación 07:10–07:22: AWS STS válido, CloudFormation `UPDATE_COMPLETE` y
+  detección de drift fresca `IN_SYNC` (cero recursos); ASG 2/2 y RDS disponible.
+  Azure `/api/health` respondió 200 y Terraform remoto `-refresh-only` indicó
+  `No changes`. En Chrome se recorrieron módulos del portal con sesión Admin.
+  La carga externa de 300 solicitudes fue bloqueada por Cloudflare 1010 y no
+  midió la aplicación. Detalle en el
+  [corte cloud 07:22 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0722UTC.md).
 
 - El token AWS más reciente quedó actualizado en `default` y STS lo aceptó a
   las 06:13 UTC para la cuenta académica `841113066612`. Esto reemplaza el
@@ -134,9 +141,9 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   poison queue quedó en cero por consulta de metadatos, sin leer ni eliminar
   mensajes. No se correlacionaron los conteos con IDs de evento ni se disparó
   una alarma por métrica real.
-- El control de Chrome se detuvo con Escape durante la recuperación de AWS
-  Academy; no hay recorrido visual nuevo de módulos/CSV en este corte. WebRTC
-  entre dos navegadores tampoco está probado recientemente.
+- El recorrido visual de Chrome 07:10–07:22 se hizo con sesión Admin; Comercial,
+  Operaciones y CSV aún no se probaron visualmente. WebRTC entre dos navegadores
+  tampoco está probado recientemente.
 - La revisión de rúbrica sigue ambigua: la hoja del proyecto suma 18.5 aunque
   declara 20; el PDF general es otro instrumento con máximos que suman 90. No
   se combinan las escalas ni se inventa una nota.
@@ -149,22 +156,25 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 | ID | Prueba | Estado verificado | Qué falta |
 |---|---|---|---|
-| PT-HTTPS-01 | Dominio, TLS y redirect | Health público HTTPS 200 a las 06:53; TLS/hostname activos | Recorrido visual autenticado en navegador; no revalidado en este corte. |
-| PT-AWS-01 | Salud y disponibilidad | STS acepta token; stack `UPDATE_COMPLETE`, drift fresco `IN_SYNC`, dos instancias y targets sanos, health 200 | Observar estabilidad tras el reemplazo automatizado de instancias. |
-| PT-AWS-02 | Login y roles | API Admin, Comercial y Operaciones pasó 200/403 por TLS | Recorrido visual autenticado completo. |
-| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E desplegado por SSM/ALB/Azure; venta/compra sintéticas, ledger 10→10 y dos eventos entregados | Repetición visual del flujo desde el portal. |
-| PT-OUTBOX-01 | Historial paginado | 51/51 eventos entregados leídos sin omisiones, cero pendientes | Comprobar tabla y paginación en recorrido visual. |
+| PT-HTTPS-01 | Dominio, TLS y redirect | Health público HTTPS 200 a las 07:11; recorrido Chrome autenticado cargó el portal y módulos | Mantener monitoreo TLS/DNS; carga automatizada bloqueada por Cloudflare 1010 antes de llegar a la app. |
+| PT-AWS-01 | Salud y disponibilidad | STS acepta token; stack `UPDATE_COMPLETE`, drift fresco `IN_SYNC` (0 recursos), dos instancias cifradas y targets sanos; dashboard muestra AWS disponible | Observar estabilidad tras dos reemplazos EC2 recientes; capacidad actual está en el mínimo 2. |
+| PT-AWS-02 | Login y roles | API Admin, Comercial y Operaciones pasó 200/403 por TLS; Chrome Admin recorrió módulos principales | Recorrido visual con Comercial y Operaciones. |
+| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E desplegado por SSM/ALB/Azure; venta/compra sintéticas, ledger compensado; Chrome consultó un evento y mostró `demo_restock_completed` en ledger ficticio | La consulta visual no sustituye otro E2E compensado; mantener rotulado demo. |
+| PT-OUTBOX-01 | Historial paginado | 53 eventos en Chrome; páginas verificadas 1–30 y 31–53; 0 pendientes en resumen | Ninguna para lectura/paginación; falla controlada y recuperación siguen en PT-RETRY-01. |
 | PT-RETRY-01 | Reintento y poison | Guards y metadata poison probados en Azure; outbox durable | Falla controlada y recuperación observada en el portal desplegado, sin borrar evidencia. |
 | PT-DR-01 | Backup/restore/failover | Restore aislado: RTO 289 s, RPO observado ≤10 s; marcador y limpieza verificados | Failover Multi-AZ no probado; origen Single-AZ y backup de un día. |
 | PT-NET-01 | Red privada AWS–Azure | E2E usa HTTPS público | VNet/ruta privada ausente; SCP bloquea Customer Gateway en AWS Academy. |
-| PT-PERF-01 | Carga y escalado | E2E actual: 24 GET al origen ALB, concurrencia 6, 24/24 HTTP 200, p95 346.89 ms; escalado 2↔3 solo histórico | Carga sostenida y representativa, medir escalado/capacidad; no se afirma soportar 3,000 usuarios. |
-| PT-SEC-01 | Seguridad y navegador | TLS, controles de rol por API; SNS y auditoría existentes | WAF ausente; validar vistas/CSV visualmente; no atribuir el 403 a la app sin origen confirmado. |
-| PT-AZ-MON-01 | Invocaciones y alertas | Health Azure 200; endpoint protegido de poison queue reportó count 0 y no expuso payloads; telemetría agregada anterior muestra workers exitosos | Captura actual del monitor, invocación correlacionada por ID y alarma de métrica real. |
-| PT-IAC-01 | CloudFormation/Terraform | Detección fresca de drift CloudFormation `IN_SYNC` a las 06:53:38; gate local por repetir | Verificar Terraform remoto Azure por separado; no desplegar cambios vacíos. |
-| PT-APP-01 | CSV, correo y finanzas | Finanzas sintéticas persistida/liquidada; correo interno portal-only enviado y recibido por Comercial; no hubo SMTP externo | CSV e interacción ERP en navegador; SMTP externo no forma parte del correo portal-only. |
-| PT-RTC-01 | WebRTC | Controles mute/cámara implementados | Prueba de audio/video bidireccional entre dos navegadores. |
+| PT-PERF-01 | Carga y escalado | E2E previo: 24 GET, concurrencia 6, 24/24 HTTP 200, p95 346.89 ms. Intento nuevo 300/15 al dominio recibió Cloudflare 403/1010 y no midió la app; ASG 2/2 | Carga sostenida autorizada por proxy y observar 2↔3; no se afirma soportar 3,000 usuarios. |
+| PT-SEC-01 | Seguridad y navegador | TLS, cookies `Secure`/`HttpOnly`, controles de rol por API, SNS y auditoría activos; centro de nube declara WAF no desplegado | WAF ausente; recorrido con roles no-admin/CSV pendiente. Cloudflare bloqueó User-Agent de prueba; no se desactivó ni eludió. |
+| PT-AZ-MON-01 | Invocaciones y alertas | Health 200; última hora: 2 recepciones 202, 2 `process_fulfillment_message` resultCode 0, poison status 200; alertas 5xx/latencia habilitadas | Probar invocación correlacionada por ID y entrega real de alarma Azure. |
+| PT-IAC-01 | CloudFormation/Terraform | Drift CloudFormation `IN_SYNC` (0) a las 07:15:52; plan Terraform remoto Azure `-refresh-only`: `No changes` | No hay cambios IaC pendientes en este corte; no desplegar planes vacíos. |
+| PT-APP-01 | CSV, correo y finanzas | Chrome verificó ERP: 6 socios, 13 SKU, 27 ventas, 25 compras, 56 documentos; buzón muestra correo sintético portal-only; 3 cuentas/roles y auditoría | CSV y recorrido con cada rol pendientes; SMTP externo no probado/no se afirma configurado. |
+| PT-RTC-01 | WebRTC | UI lista 2 extensiones, 3 llamadas históricas y 1 grabación de audio | Prueba de audio/video bidireccional entre dos navegadores. |
 | PT-COST-01 | Costos | AWS con créditos Academy que compensan el consumo medido | Importe Azure fiable y atribución por proyecto. |
 | PT-DOC-01 | Evidencia/entrega | 216 pruebas Python, 14 Node, CloudFormation/Terraform y E2E Azure documentados; CI `b1d36a9` es un corte anterior | Capturas recientes del inventario AWS y monitor Azure; estado CI del commit nuevo y defensa oral. |
+
+La revalidación cloud y el recorrido de Chrome de las 07:10–07:22 UTC están en
+[`CLOUD-REVALIDATION-2026-10-16-0722UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0722UTC.md).
 
 ## Secuencia de cierre
 
