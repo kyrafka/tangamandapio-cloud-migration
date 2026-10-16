@@ -55,6 +55,22 @@ if [[ -n "${APPLICATION_ARTIFACT_KEY:-}" || -n "${APPLICATION_ARTIFACT_REVISION:
   fi
 fi
 
+for override_name in DATABASE_MULTI_AZ ENABLE_WAF MANAGE_WAF_ASSOCIATION ENABLE_AWS_BACKUP; do
+  override_value="${!override_name:-}"
+  if [[ -n "$override_value" && "$override_value" != "true" && "$override_value" != "false" ]]; then
+    echo "$override_name solo acepta true o false." >&2
+    exit 2
+  fi
+done
+
+if [[ -n "${DATABASE_BACKUP_RETENTION_DAYS:-}" ]]; then
+  if [[ ! "$DATABASE_BACKUP_RETENTION_DAYS" =~ ^[0-9]+$ ]] ||
+     (( DATABASE_BACKUP_RETENTION_DAYS < 1 || DATABASE_BACKUP_RETENTION_DAYS > 35 )); then
+    echo "DATABASE_BACKUP_RETENTION_DAYS debe ser un entero entre 1 y 35." >&2
+    exit 2
+  fi
+fi
+
 STACK_STATUS="$(aws cloudformation describe-stacks \
   --region "$REGION" \
   --stack-name "$STACK_NAME" \
@@ -220,6 +236,41 @@ for key in $PARAMETER_KEYS; do
     AlarmNotificationEmailAlternate)
       if [[ -n "${ALARM_NOTIFICATION_EMAIL_ALTERNATE:-}" ]]; then
         PARAMETERS+=("ParameterKey=$key,ParameterValue=$ALARM_NOTIFICATION_EMAIL_ALTERNATE")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    DatabaseMultiAZ)
+      if [[ -n "${DATABASE_MULTI_AZ:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$DATABASE_MULTI_AZ")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    DatabaseBackupRetentionDays)
+      if [[ -n "${DATABASE_BACKUP_RETENTION_DAYS:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$DATABASE_BACKUP_RETENTION_DAYS")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    EnableWaf)
+      if [[ -n "${ENABLE_WAF:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$ENABLE_WAF")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    ManageWafAssociation)
+      if [[ -n "${MANAGE_WAF_ASSOCIATION:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$MANAGE_WAF_ASSOCIATION")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    EnableAwsBackup)
+      if [[ -n "${ENABLE_AWS_BACKUP:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$ENABLE_AWS_BACKUP")
       else
         PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
       fi

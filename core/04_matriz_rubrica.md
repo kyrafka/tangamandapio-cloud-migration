@@ -1,4 +1,37 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 10:15 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 16:04 UTC
+
+## Suplemento vigente — v19 desplegado; cierre de infraestructura confirmado
+
+AWS Academy autenticó en la cuenta correcta. El portal v19 está desplegado en
+`tangamandapio-live-20261013`; CloudFormation terminó `UPDATE_COMPLETE` y el
+drift final es `IN_SYNC`/0. ASG y target group están 2/2 sanos. Los parámetros
+son `EnableWaf=false`, `ManageWafAssociation=false` y `DatabaseMultiAZ=false`;
+el ACL WAF temporal ya no existe. RDS está `available`/Single-AZ, cifrada y
+privada, con un día de respaldo. HTTP redirige a HTTPS; HTTPS `/health` y
+`/ready` devuelven 200 con TLS válido. Terraform AWS no administra el portal:
+CloudFormation sigue siendo su IaC de reconstrucción.
+
+Las pruebas temporales autorizadas sí se ejecutaron: WAF bloqueó una solicitud
+XSS según el muestreo administrado; la conversión RDS Multi-AZ se completó y
+un failover solicitado quedó registrado como completado. Después del failover,
+RDS volvió a `available`, `/ready` fue 200 y el smoke autenticado de solo
+lectura volvió a pasar. La reversión está siendo gestionada por CloudFormation,
+no mediante cambios manuales fuera de IaC.
+
+El smoke Admin de solo lectura, antes y después del failover, dio
+`LIVE_ADMIN_READONLY_SMOKE_PASSED`: 24/24 solicitudes 200, p95 182.52/248.37
+ms antes/después del failover y 260.77 ms tras la reversión final; 65/65 eventos del outbox entregados, 0 pendientes, dos destinatarios de
+alertas confirmados y permisos correctos para Comercial y Operaciones. Azure
+Function `/api/health=200`; Terraform con `rebuild.tfvars.example` y
+`alert-recipients.local.tfvars` concluyó `No changes` (sin `apply`). El gate
+local integral aprobó 230 pruebas, build, auditorías, CloudFormation y
+Terraform. Evidencia: [revalidación cloud 16/10](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1545UTC.md).
+
+Serverless: Azure Functions es el servicio serverless del WMS. No hay AWS
+Lambda ni API Gateway del proyecto; el portal AWS usa ALB + EC2 Auto Scaling.
+No atribuir Lambdas administrativas de Academy al proyecto.
+
+## Registro histórico — AWS indisponible, Azure alineada, 16/10/2026 14:31 UTC
 
 ## Suplemento vigente — revalidación AWS–Azure, 16/10/2026, 10:06–10:15 UTC
 

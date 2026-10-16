@@ -1,8 +1,8 @@
 # AWS CloudFormation — portal y reconstrucción
 
-CloudFormation es la definición de reconstrucción del portal AWS. **Estado operativo: 16/10/2026 07:03 UTC.** El stack sigue `UPDATE_COMPLETE`; una detección fresca terminó `IN_SYNC` a las 06:53:38. El ALB está `active`, el FQDN HTTPS `/health` devolvió 200 y el ASG se estabilizó con exactamente dos instancias `InService`/`Healthy` y dos targets `healthy`. La recuperación ocurrió sin cambiar el stack ni el Launch Template v18; el volumen raíz EBS continúa cifrado. El E2E completo AWS→Azure y el smoke `admin-modules` pasaron. Azure Function quedó confirmada `Running`/HTTPS-only y health 200. El error de KMS de 06:07 permanece documentado como incidente histórico; no se creó un override sin cifrado. Véase la [revalidación cloud 06:54](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0654UTC.md) y el [diagnóstico KMS 06:28](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0628UTC.md).
+CloudFormation es la definición de reconstrucción del portal AWS. **Corte operativo: 16/10/2026, 16:04 UTC.** El stack `tangamandapio-live-20261013` está `UPDATE_COMPLETE`, en v19 (`20261016-webrtc-ice-config-v19-python312`), y el drift final es `IN_SYNC`/0. El ASG volvió a deseada/mínima 2 (máxima 5), con dos instancias y destinos ALB saludables. El WAF temporal está eliminado y `EnableWaf=false`; RDS está `available`, cifrada/privada, Single-AZ (`DatabaseMultiAZ=false`), con un día de retención. El dominio responde HTTPS válido y `/health`/`/ready=200`; HTTP redirige a HTTPS. La prueba temporal WAF bloqueó una carga XSS y la prueba Multi-AZ registró un failover completado; ambos extras ya fueron revertidos por CloudFormation. Azure Function `/api/health=200`; Terraform con los var-files locales requeridos concluyó `No changes`. Tangamandapio no despliega AWS Lambda ni API Gateway: Azure Functions es el servicio serverless del flujo WMS y el portal AWS usa ALB + EC2 Auto Scaling. Véase la [revalidación cloud 16/10](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-1545UTC.md).
 
-El E2E por HTTPS, login/roles y health 200 de las 03:04 UTC son evidencia histórica, superada por la indisponibilidad AWS actual. Véanse la [revalidación de login/permisos 03:04](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md), la [revalidación cloud 02:55](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md) y el [E2E AWS→Azure](../../evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md).
+La caída reportada a las 14:31 UTC fue transitoria: a las 15:02 el stack aplicó v19; desde entonces el portal volvió a estar sano y se revalidaron roles y datos. Las evidencias de las 03:04 UTC siguen siendo históricas. Véanse la [revalidación de login/permisos 03:04](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md), la [revalidación cloud 02:55](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md) y el [E2E AWS→Azure](../../evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md).
 
 Históricamente, el stack se eliminó el 08/10 y se reconstruyó el 09/10. Los snapshots y restauraciones anotados en los cortes anteriores no determinan el estado de hoy. `rebuild.sh` solo debe ejecutarse después de verificar el nombre exacto del stack, el snapshot y los secretos requeridos, reconciliar la plantilla con el inventario y aprobar el costo; ahora exige un `STACK_NAME` explícito.
 
@@ -14,22 +14,32 @@ El stack de grabaciones es independiente y su definición permanece en `voice-re
 
 La secuencia de `deploy.sh` exige un `STACK_NAME` explícito con el nombre exacto del inventario actual, valida que el stack esté estable y sin drift, y genera un change set `UPDATE`. Rechaza nombres ausentes, nombres genéricos y el default histórico para no modificar accidentalmente otro stack. Mantiene todos los parámetros actuales con `UsePreviousValue=true`, incluidos los secretos `NoEcho`; no restablece Multi-AZ, WAF, Backup ni certificados a los valores por defecto del template. No ejecuta el change set a menos que se solicite explícitamente.
 
+Para cambios operativos acotados se admiten overrides explícitos y validados:
+`DATABASE_MULTI_AZ=true|false`, `DATABASE_BACKUP_RETENTION_DAYS=1..35`,
+`ENABLE_WAF=true|false`, `MANAGE_WAF_ASSOCIATION=true|false` y
+`ENABLE_AWS_BACKUP=true|false`. Si no se definen, el script conserva los valores
+vivos. Estos controles solo preparan un change set; siempre hay que revisar cada
+recurso que cambiaría antes de ejecutarlo. WAF, Multi-AZ y AWS Backup pueden
+generar cargos adicionales. Las pruebas con mocks no activan servicios ni
+demuestran failover real.
+
 El preflight HTTPS se prueba localmente con respuestas ACM simuladas: exige ambos valores, nombre DNS válido, misma región que el ALB, certificado `ISSUED` y SAN exacto o wildcard de un único nivel. La propia plantilla de CloudFormation también rechaza labels DNS vacíos, con guiones en los extremos o de más de 63 caracteres, incluso si se inicia desde la consola. Entradas inválidas se detienen antes de validar el template o crear un change set. La prueba no contacta AWS ni crea recursos.
 
-El volumen raíz continúa cifrado obligatoriamente (`Encrypted: true`). Aunque
-CloudTrail registró denegaciones KMS durante dos lanzamientos a las 06:07 UTC,
-el mismo Launch Template v18 volvió a iniciar instancias cifradas a las 06:39
-sin modificar la plantilla ni desactivar cifrado. No desplegar una excepción
-sin cifrado por este incidente transitorio; revisar CloudTrail y el estado del
-ASG si vuelve a ocurrir. RDS y S3 también conservan su cifrado.
+El volumen raíz continúa cifrado obligatoriamente (`Encrypted: true`). En un
+corte histórico de las 14:31 UTC, CloudTrail mostró denegaciones `kms:Decrypt`
+para lanzamientos bloqueados por una SCP explícita de AWS Academy. Después el
+ASG pudo desplegar v19 y los volúmenes nuevos se verificaron cifrados; no se
+eludió la SCP ni se lanzaron discos sin cifrado. RDS y S3 también conservan su
+cifrado.
 
-### Dominio y HTTPS activos
+### Dominio y HTTPS configurados; salud vigente verificada
 
-El hostname `tangamandapio.kendellnm.me` ya usa el listener 443 con ACM
-`ISSUED`; el listener 80 redirige a HTTPS y la salida `ApplicationURL` es el
-FQDN público. Cloudflare mantiene proxied el registro de aplicación y DNS-only
-los CNAME de validación ACM. No es necesario volver a desplegar el certificado
-ni cambiar DNS para mantener el estado actual. Si se cambia el dominio, sigue
+El hostname `tangamandapio.kendellnm.me` está configurado en el listener HTTPS
+443; el listener 80 redirige a HTTPS y la salida `ApplicationURL` es el FQDN
+público. El dominio público y la conexión directa al ALB con el SNI del dominio
+responden TLS válido y `/health=200`; `/ready=200` también se comprobó después
+del failover y los rolling updates. Cloudflare mantiene proxied el registro de
+aplicación y DNS-only los CNAME de validación ACM. Si se cambia el dominio, sigue
 el procedimiento de cambio documentado en la sección “Dominio y HTTPS —
 activados el 15/10/2026”; revisar el change set y evitar reemplazar recursos con
 datos.

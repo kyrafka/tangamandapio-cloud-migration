@@ -176,11 +176,13 @@ if (Test-Path -LiteralPath $gitBashPath) {
   $portalArtifactTestPath = Join-Path $workspacePath 'tests\aws\package_portal_artifact_test.sh'
   $pythonRuntimeGuardPath = Join-Path $workspacePath 'tests\aws\python_runtime_guard_test.sh'
   $certificatePreflightTestPath = Join-Path $workspacePath 'tests\aws\certificate_preflight_test.sh'
+  $deployParameterTestPath = Join-Path $workspacePath 'tests\aws\deploy_parameter_overrides_test.sh'
   $monitorRestoreTestPath = Join-Path $workspacePath 'tests\aws\pt-mon-restore_mock_test.sh'
   $storageTestPath = Join-Path $workspacePath 'tests\aws\pt-sto-01-s3.sh'
   $monitorTestPath = Join-Path $workspacePath 'tests\aws\pt-mon-01-alarm.sh'
   $destroyMockPath = Join-Path $workspacePath 'tests\aws\fixtures\mock_aws_destroy_unsafe_template.sh'
   $certificateMockPath = Join-Path $workspacePath 'tests\aws\fixtures\mock_aws_certificate_preflight.sh'
+  $deployParameterMockPath = Join-Path $workspacePath 'tests\aws\fixtures\mock_aws_deploy_parameters.sh'
   $alarmMockPath = Join-Path $workspacePath 'tests\aws\fixtures\mock_aws_alarm_state.sh'
   & $gitBashPath -n $restoreTestPath
   if ($LASTEXITCODE -ne 0) { throw 'Falló la validación sintáctica Bash del test de restore RDS' }
@@ -275,6 +277,13 @@ if (Test-Path -LiteralPath $gitBashPath) {
   if ($LASTEXITCODE -ne 0) { throw 'Falló la validación sintáctica de la prueba de preflight ACM/HTTPS' }
   & $gitBashPath -n $certificateMockPath
   if ($LASTEXITCODE -ne 0) { throw 'Falló la validación sintáctica del mock ACM/CloudFormation' }
+  & $gitBashPath -n $deployParameterTestPath
+  if ($LASTEXITCODE -ne 0) { throw 'Falló la validación sintáctica de la prueba de parámetros CloudFormation' }
+  & $gitBashPath -n $deployParameterMockPath
+  if ($LASTEXITCODE -ne 0) { throw 'Falló la validación sintáctica del mock de parámetros CloudFormation' }
+  & $gitBashPath $deployParameterTestPath
+  if ($LASTEXITCODE -ne 0) { throw 'deploy.sh no preservó parámetros ni validó los overrides de despliegue' }
+  Write-Host 'CLOUDFORMATION_PARAMETER_OVERRIDES=VALIDATED (mock AWS; sin operaciones de nube)'
   & $gitBashPath $certificatePreflightTestPath
   if ($LASTEXITCODE -ne 0) { throw 'El preflight ACM/HTTPS no rechazó entradas inválidas o aceptó una cobertura DNS incorrecta' }
   Write-Host 'HTTPS_PREFLIGHT=ACM_REGION_STATUS_SAN_AND_WILDCARD_GUARDS_APPROVED (mock AWS; sin mutaciones)'
