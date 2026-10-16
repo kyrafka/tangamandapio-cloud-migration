@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:51 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 05:58 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -12,18 +12,18 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   CLI no puede hacer una relectura adicional en este corte. Una nueva llamada
   STS aislada con el último token también fue rechazada; no se guardó y no se
   modificaron recursos.
-- La verificación pública más reciente (05:44–05:51 UTC) cambia el estado
+- La verificación pública más reciente (05:44–05:58 UTC) cambia el estado
   operativo: dominio HTTPS con TLS válido, pero `/` y `/health` responden 503.
   El ALB directo confirma 503 en 443 y 301 en 80→443. Por eso el estado 2/2 de
   instancias y destinos sanos que sigue corresponde a la última lectura
   autenticada de 05:00, no a una condición vigente confirmada. El estado del
   ASG/target group y la causa del 503 quedan pendientes de lectura con credencial
   aceptada. Detalle:
-  [corte de disponibilidad 05:47](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
-- ACM figura `ISSUED` hasta 30/04/2027 y el listener HTTP redirige a HTTPS.
-  El ALB está activo; ASG
-  deseado/mínimo 2, máximo 5, con 2/2 instancias `InService/Healthy` y 2/2
-  targets `healthy`.
+  [corte de disponibilidad 05:58](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
+- La última lectura AWS autenticada (05:00 UTC) vio ACM `ISSUED` hasta
+  30/04/2027, ASG deseado/mínimo 2, máximo 5 y 2/2 instancias/destinos sanos.
+  Ese inventario es histórico frente al 503 observado después; no demuestra
+  salud actual del target group.
 - A las 05:02:29 UTC el dominio HTTPS `/health` devolvió `200`; la respuesta
   pública mostró HSTS. La última lectura AWS autenticada verificó HTTP→HTTPS
   (`301`). Azure CLI reporta el grupo `Succeeded` y la Function `Running` /
@@ -41,6 +41,9 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   salud 200, guardas 401/400, venta y reposición demo completadas, saldo
   restaurado y poison count cero antes/después. Los eventos quedan en auditoría
   Azure; la prueba no usó EC2 ni RDS.
+- A las 05:57 UTC, el plan Terraform de `azure-rebuild` consultó el backend
+  remoto y terminó `No changes`; no se ejecutó `apply`. AWS no se pudo planear
+  ni consultar por el rechazo de STS.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
   cloud.

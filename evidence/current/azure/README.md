@@ -1,11 +1,12 @@
 # Evidencias Azure
 
-**Revalidación viva — 16/10/2026, 05:44–05:47 UTC:** suscripción `Azure for
+**Revalidación viva — 16/10/2026, 05:44–05:58 UTC:** suscripción `Azure for
 Students` `Enabled`; grupo de reconstrucción `Succeeded`; Function
 `tangama-wms-261008` `Running`/HTTPS-only y siete funciones indexadas. Health
-200 con TLS válido. El E2E local→Azure volvió a procesar venta/reposición
-sintéticas, restauró el ledger ficticio y dejó poison count cero; no fue tráfico
-desde EC2/RDS. La evidencia conjunta incluye el incidente del portal AWS:
+200 con TLS válido. El plan Terraform con el backend remoto terminó `No
+changes` sin `apply`. El E2E local→Azure procesó venta/reposición sintéticas,
+restauró el ledger ficticio y dejó poison count cero; no fue tráfico desde
+EC2/RDS. La evidencia conjunta incluye el incidente del portal AWS:
 [`CLOUD-REVALIDATION-2026-10-16-0547UTC.md`](../CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
 
 **E2E compensado ERP local→Azure — 16/10/2026, 05:37 UTC:** tras desplegar la

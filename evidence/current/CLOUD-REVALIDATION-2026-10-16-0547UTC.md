@@ -1,4 +1,4 @@
-# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–05:51 UTC
+# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–05:58 UTC
 
 ## Resultado actual
 
@@ -10,9 +10,9 @@
   HTTPS; una solicitud HTTPS al ALB con el `Host` del dominio devolvió HTTP 503
   desde `awselb/2.0`. Esto ubica el fallo después del listener HTTPS, en el
   servicio/origen detrás del balanceador. No confirma por sí solo el estado de
-  cada destino ni la causa exacta. Una segunda consulta cerca de las 05:51 UTC
-  volvió a recibir 503 del health público y del origen directo; TLS del dominio
-  siguió válido.
+  cada destino ni la causa exacta. Consultas repetidas a las 05:51 y 05:58 UTC
+  volvieron a recibir 503 del health público y del origen directo; TLS del
+  dominio siguió válido.
 - STS rechazó el token AWS recién compartido con `InvalidClientTokenId`. El
   token se usó solo en variables del proceso de prueba; no se guardó ni se
   reemplazó el perfil local `default`. No se hicieron cambios en AWS.
@@ -21,6 +21,9 @@
   `tangama-wms-261008` figura `Running`/HTTPS-only y sus siete funciones están
   indexadas. `https://tangama-wms-261008.azurewebsites.net/api/health` respondió
   HTTP 200 con TLS válido y `{"status":"ok","service":"tangamandapio-wms"}`.
+- Terraform consultó el backend remoto Azure con las variables de reconstrucción
+  y alertas locales; el plan terminó `No changes` a las 05:57 UTC. No se guardó
+  un plan aplicable ni se ejecutó `apply`.
 
 ## Flujo Azure sintético
 

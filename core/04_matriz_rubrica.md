@@ -1,16 +1,17 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 05:51 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 05:58 UTC
 
-## Incidente operativo vigente — 16/10/2026, 05:44–05:51 UTC
+## Incidente operativo vigente — 16/10/2026, 05:44–05:58 UTC
 
 El FQDN HTTPS conserva TLS válido, pero `/` y `/health` responden 503; la
 consulta directa al ALB confirma 503 desde `awselb/2.0` después de la
 redirección 80→443. No se pudo leer el estado de destinos/ASG porque STS
 rechazó el token nuevo (`InvalidClientTokenId`); no se modificó AWS. Azure
 continúa con la suscripción `Enabled`, Function `Running`/HTTPS-only, health
-200 y un E2E local→Azure aprobado que restauró el ledger ficticio. Hasta
+200, plan Terraform remoto `No changes` sin `apply` y E2E local→Azure aprobado
+que restauró el ledger ficticio. Hasta
 recuperar el origen AWS y volver a probar aplicación, login y roles, el portal
-no puede marcarse disponible. El 503 se repitió cerca de las 05:51 UTC. Detalle:
-[revalidación 05:51 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
+no puede marcarse disponible. El 503 se repitió a las 05:51 y 05:58 UTC. Detalle:
+[revalidación 05:58 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
 
 ## Suplemento de pruebas integrales — 16/10/2026, 05:19–05:37 UTC
 
