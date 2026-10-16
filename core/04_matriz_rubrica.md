@@ -1,18 +1,19 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 02:28 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 02:31 UTC
 
-## Revalidación vigente — 16/10/2026, 02:20–02:28 UTC
+## Revalidación vigente — 16/10/2026, 02:20–02:31 UTC
 
 Con una sesión AWS Academy renovada se confirmó otra vez `UPDATE_COMPLETE`,
 HTTPS público 200 en portada, health y readiness, ACM `ISSUED`, redirección
-80→443 y 2/2 destinos sanos. El smoke Admin de solo lectura pasó por HTTPS
-directo al ALB con validación normal del certificado: 1 pedido, 45 eventos
-entregados, 0 pendientes y dos suscripciones SNS confirmadas. No escribió datos.
-El acceso por el dominio proxied había recibido 403 de Cloudflare en el login;
-por eso falta el recorrido de navegador a través del dominio, aunque el origen
-de la aplicación sí acepta el login. RDS sigue Single-AZ, con un día de backup;
-hay snapshots automáticos cifrados disponibles, pero en esta pasada no se hizo
-una restauración. No hay Web ACL regional ni VPN Site-to-Site en AWS.
-Detalle: [revalidación HTTPS y acceso Admin](../evidence/current/aws/AWS-REVALIDACION-HTTPS-2026-10-16-0228UTC.md).
+80→443 y 2/2 destinos sanos. El smoke Admin de solo lectura y el E2E completo
+pasaron por HTTPS directo al ALB con validación normal del certificado. El E2E
+AWS→Azure comprobó permisos API, importación de catálogo, venta y recepción
+compensadas en el ledger sintético, 2 eventos entregados y 24/24 lecturas
+autenticadas 200 (p95 399.77 ms). El acceso por el dominio proxied había recibido
+403 de Cloudflare en el login; por eso falta el recorrido visual a través del
+dominio, aunque el origen acepta el login. RDS sigue Single-AZ, con un día de
+backup; hay snapshots automáticos cifrados disponibles, pero no se hizo una
+restauración en esta pasada. No hay Web ACL regional ni VPN Site-to-Site.
+Detalles: [revalidación HTTPS y acceso Admin](../evidence/current/aws/AWS-REVALIDACION-HTTPS-2026-10-16-0228UTC.md) y [E2E vivo AWS→Azure](../evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md).
 
 ### Estado actualizado por criterio
 
@@ -20,14 +21,14 @@ Detalle: [revalidación HTTPS y acceso Admin](../evidence/current/aws/AWS-REVALI
 |---:|---|---|
 | 3 | Redes VPC/VCN | No existe ruta privada AWS–Azure; no hay VPN Site-to-Site activa. |
 | 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; RDS permanece Single-AZ y con backup de 1 día; causa del 503 previo no atribuida. |
-| 5 | Seguridad cloud | TLS y redirect activos; Admin pasó solo por el origen directo. Cloudflare devuelve 403 al login proxied; falta corregir la regla y revalidar navegador/roles. WAF AWS no está desplegado. |
+| 5 | Seguridad cloud | TLS y redirect activos; permisos API de Comercial/Operaciones y Admin pasaron por el origen directo. Cloudflare devuelve 403 al login proxied; falta corregir la regla y revalidar navegador. WAF AWS no está desplegado. |
 | 6 | Alta disponibilidad y escalabilidad | ASG 2/2 y 2/2 targets sanos; falta carga representativa y medir escalado/RTO durante una falla. |
 | 7 | Monitoreo y observabilidad | Dos suscripciones SNS confirmadas; falta correlacionar una alerta y recuperación recientes con la telemetría, más evidencia visual. |
 | 8 | Infrastructure as Code | La pila está desplegada; usar el corte de drift fechado de 02:10 y validar IaC de nuevo antes de otro cambio. |
 | 9 | Backup y recuperación | Hay snapshots cifrados; falta una restauración aislada reciente y métricas RTO/RPO de esa restauración. |
-| 10 | Multicloud AWS–Azure | Flujo de aplicación público funciona según los E2E previos; ruta privada aún ausente. Azure no se presenta como OCI. |
+| 10 | Multicloud AWS–Azure | E2E desde el portal AWS a Azure pasó por HTTPS público; no hay ruta privada. Azure no se presenta como OCI. |
 | 11 | Costos | Falta reconciliar consumo real de ambas nubes con el presupuesto/créditos del laboratorio. |
-| 12 | Pruebas técnicas | Smoke Admin read-only directo al ALB pasó; faltan login público proxied, roles en navegador, CSV visual, carga y WebRTC de dos navegadores. |
+| 12 | Pruebas técnicas | E2E AWS→Azure, permisos API, importación y 24 lecturas concurrentes pasaron; faltan login público proxied, roles/CSV visuales, carga representativa y WebRTC de dos navegadores. |
 | 13 | Documentación/evidencia | Se añadió este corte verificable; faltan capturas recientes del portal de AWS y de Azure Monitor/invocación. |
 
 El estado anterior de v18, incluidas las métricas y capturas autenticadas, se
