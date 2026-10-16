@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 15/10/2026, 00:34 UTC — v11 desplegado, red verificada y E2E aprobado
+**Corte:** 16/10/2026, 05:47 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
 
 ## 1. Caso y objetivo
 
@@ -46,7 +46,7 @@ Azure es el segundo dominio del alcance operativo AWS–Azure para este proyecto
 4. Cada ventana de nube tiene: inventario previo -> validación IaC -> despliegue -> pruebas -> evidencia -> eliminación/apagado -> inventario final.
 5. Los antecedentes de `evidence/legacy/` sirven para rescatar procedimientos, no para demostrar este núcleo.
 
-## 4.1 Estado cloud vigente — 15/10/2026, 00:18–00:30 UTC
+## 4.1 Corte cloud histórico — 15/10/2026, 00:18–00:30 UTC (superado; véase 4.3)
 
 El perfil AWS `default` autentica por STS en la cuenta académica `841113066612`.
 CloudFormation `tangamandapio-live-20261013` está en `UPDATE_COMPLETE` y la
@@ -99,7 +99,23 @@ La puerta local terminó aprobada: 163 pruebas Python más 14 Node, PT-PERF-02 4
 
 La arquitectura empresarial, que separa portal B2B, ERP, WMS, correo e identidad y distingue objetivos de lo implementado, está organizada en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
-## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.1)
+## 4.3 Estado vigente — 16/10/2026, 05:44–05:47 UTC
+
+El estado descrito en la sección 4.1 ya no representa disponibilidad actual.
+El dominio HTTPS conserva TLS válido, pero `/` y `/health` responden HTTP 503;
+una consulta directa confirmó que el ALB devuelve 503 en su listener 443. El
+listener HTTP redirige a HTTPS. STS rechazó el token AWS nuevo con
+`InvalidClientTokenId`, así que ASG, destinos, instancias y logs no se pudieron
+consultar ni modificar. No se declara el portal operativo hasta recuperar 200
+y repetir pruebas funcionales.
+
+Azure for Students está `Enabled`; `rg-tangamandapio-rebuild-wus` está
+`Succeeded` y `tangama-wms-261008` está `Running`/HTTPS-only. El health
+desplegado respondió 200 y el E2E sintético local→Azure volvió a pasar, dejando
+el saldo ficticio en su línea base y poison count cero. Esto no ejercitó EC2 ni
+RDS. Evidencia: [corte cloud 05:47 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
+
+## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.3)
 
 | Área | Estado | Límite de la afirmación |
 |---|---|---|

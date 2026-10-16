@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:37 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 05:47 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -9,7 +9,17 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   (cuenta `841113066612`); CloudFormation seguía `UPDATE_COMPLETE` y una
   detección fresca terminó `IN_SYNC` a las 05:00:46 UTC. El token nuevo
   compartido después fue rechazado por STS (`InvalidClientTokenId`), así que la
-  CLI no puede hacer una relectura adicional en este corte.
+  CLI no puede hacer una relectura adicional en este corte. Una nueva llamada
+  STS aislada con el último token también fue rechazada; no se guardó y no se
+  modificaron recursos.
+- La verificación pública más reciente (05:44–05:45 UTC) cambia el estado
+  operativo: dominio HTTPS con TLS válido, pero `/` y `/health` responden 503.
+  El ALB directo confirma 503 en 443 y 301 en 80→443. Por eso el estado 2/2 de
+  instancias y destinos sanos que sigue corresponde a la última lectura
+  autenticada de 05:00, no a una condición vigente confirmada. El estado del
+  ASG/target group y la causa del 503 quedan pendientes de lectura con credencial
+  aceptada. Detalle:
+  [corte de disponibilidad 05:47](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
 - ACM figura `ISSUED` hasta 30/04/2027 y el listener HTTP redirige a HTTPS.
   El ALB está activo; ASG
   deseado/mínimo 2, máximo 5, con 2/2 instancias `InService/Healthy` y 2/2
@@ -27,6 +37,10 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   cero antes/después. Application Insights reportó dos ejecuciones correctas
   del worker y cero fallidas en la ventana de 20 minutos (conteo agregado).
   No fue tráfico originado desde EC2/RDS.
+- Entre 05:45 y 05:47 UTC se repitió el E2E local→Azure: Function `Running`,
+  salud 200, guardas 401/400, venta y reposición demo completadas, saldo
+  restaurado y poison count cero antes/después. Los eventos quedan en auditoría
+  Azure; la prueba no usó EC2 ni RDS.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
   cloud.
