@@ -1,4 +1,23 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 08:30 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 08:46 UTC
+
+## Suplemento vigente — revalidación 16/10/2026, 08:43–08:46 UTC
+
+Se volvió a probar AWS en vivo: STS válido, CloudFormation `UPDATE_COMPLETE`/
+`IN_SYNC`, dos instancias sanas y ambas raíces EBS cifradas. El health HTTPS
+respondió 200 y HTTP redirigió 301. El E2E sintético AWS→Azure pasó: venta y
+recepción completadas, dos eventos entregados y ledger 10→10. `admin-readonly`
+reconcilió 59/59 eventos, cero pendientes, 24/24 lecturas HTTP 200 y la matriz
+esperada de 200/403 para Comercial/Operaciones. Los smokes de concurrencia 6
+midieron p95 225.67–585.97 ms; no son una prueba de carga sostenida.
+
+Se verificó el permiso de red sin crear recursos: AWS permite `CreateVpnGateway`
+(dry-run) pero una SCP deniega explícitamente `ec2:CreateCustomerGateway`;
+Azure sigue sin VNet del proyecto. No hay VPN desplegada ni costo iniciado. Esto
+confirma un bloqueo de política del laboratorio, no un token vencido. La
+[evidencia viva 08:46 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0846UTC.md)
+registra los detalles. Persisten WebRTC de dos navegadores, UI/CSV visual,
+reintento live inducido, WAF, carga sostenida, failover Multi-AZ y costo Azure
+atribuible.
 
 ## Suplemento vigente — revalidación 16/10/2026, 08:18–08:30 UTC
 

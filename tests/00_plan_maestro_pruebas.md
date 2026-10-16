@@ -1,9 +1,26 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 08:08 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 08:43–08:46 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
+
+- Revalidación viva 08:43–08:46 UTC: STS aceptado; CloudFormation
+  `UPDATE_COMPLETE`/`IN_SYNC`; ASG 2/2 sano y discos raíz cifrados; HTTPS 200,
+  HTTP→HTTPS 301. E2E AWS→Azure pasó (venta/recepción, 2 eventos, ledger
+  sintético 10→10); `admin-readonly` pasó con outbox 59/59, 0 pendientes,
+  matriz Comercial/Operaciones 200/403 y 24/24 lecturas 200. El p95 fue
+  585.97 ms en la prueba solo lectura y 225.67 ms en el E2E; son smokes cortos,
+  no capacidad sostenida. No hubo cambios IaC.
+- Preflight de interconexión: el `--dry-run` de `CreateVpnGateway` fue permitido,
+  pero `CreateCustomerGateway` fue denegado explícitamente por una SCP de AWS
+  Organizations; Azure tiene suscripción activa y `Microsoft.Network`
+  registrado, pero no tiene VNets del proyecto. No se creó infraestructura ni
+  se inició costo VPN. Véase el
+  [corte 08:46 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0846UTC.md).
+- El despliegue conserva cifrado: ambos volúmenes raíz EBS activos reportan
+  `Encrypted=true`. No se necesita excepción sin cifrado ni autorización para
+  retirarlo.
 
 - Revalidación viva 07:59–08:08 UTC: AWS STS aceptado; CloudFormation
   `UPDATE_COMPLETE`, detección fresca `IN_SYNC` (0 drift), ASG y destinos ALB
