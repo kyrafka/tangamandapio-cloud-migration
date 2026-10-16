@@ -1345,3 +1345,9 @@ sin overrides de entorno, aunque `elbv2:DescribeLoadBalancers` sigue denegado y
 el portal HTTPS continúa en 503. Application Insights correlacionó los dos
 eventos sintéticos de la última corrida con sus resultados de fulfill y
 reposición; no se repitió la mutación. Véase [seguimiento 10:41](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1041UTC.md).
+
+La v19 para llamadas quedó preparada y la plantilla CloudFormation declara su
+misma revisión y SHA; la compuerta integral local pasó. `s3api head-bucket`
+devolvió 403, así que el artefacto no se subió ni desplegó. HTTPS permanece en
+503; TURN y prueba A/V entre dos navegadores siguen pendientes. Detalle:
+[release preparado 10:48 UTC](../evidence/current/RELEASE-PREPARED-2026-10-16-1048UTC.md).

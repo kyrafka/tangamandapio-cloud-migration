@@ -1,18 +1,33 @@
 # Paquete de release AWS
 
-> Último release preparado: v18, `20261015-outbox-pagination-v18-python312`,
-> SHA-256 `c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f`.
-> El objeto v18 existe en el bucket privado y el stack actual informa
-> `UPDATE_COMPLETE`. A las 02:10 UTC del 16/10 el dominio HTTPS y las rutas
-> `/health` y `/ready` respondieron 200; ASG y target group tenían 2/2 destinos
-> saludables. Se completó una consulta autenticada desde la consola AWS al
-> resultado de un evento Azure (`demo_restock_completed`). Hubo una ventana 503
-> entre 01:37 y 01:49 UTC y no quedó determinada la causa de la recuperación
-> automática. Evidencia: [revalidación AWS 01:37–02:10 UTC](../../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
+> Último release preparado localmente: v19,
+> `20261016-webrtc-ice-config-v19-python312`, SHA-256
+> `e5ab7874feafd8f22ad2c0d631acbd3448188479616d42fbc1f7bb649c1e12d8`.
+> El paquete está creado, pero no subido a S3 ni desplegado. AWS reconoce STS,
+> pero bloquea lecturas de recursos con `voc-cancel-cred`; el portal HTTPS
+> responde 503. El v18 fue la última versión confirmada antes de esta caída,
+> no una confirmación del estado actual. Véase
+> [el corte vivo 10:41 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-1041UTC.md).
+
+## Release v19 preparado — adaptador de configuración ICE (no desplegado)
+
+`current/BUILD_REVISION` identifica `20261016-webrtc-ice-config-v19-python312`.
+El paquete reproducible local tiene SHA-256
+`e5ab7874feafd8f22ad2c0d631acbd3448188479616d42fbc1f7bb649c1e12d8`; la clave
+inmutable está preparada como default en CloudFormation. El artefacto **no se
+ha subido a AWS** porque el laboratorio deniega operaciones y el ALB responde
+503.
+
+El frontend consulta `/api/voice/ice-config` antes de iniciar SDP y conserva
+STUN como fallback; cinco pruebas Node verifican orden, fallback y filtrado de
+esquemas. La integración permite usar credenciales TURN de vida corta cuando
+se configure un relay; esta release no crea TURN ni confirma llamadas reales
+entre dos navegadores.
 
 ## Release v18 desplegado — paginación íntegra del outbox
 
-`current/BUILD_REVISION` identifica `20261015-outbox-pagination-v18-python312`.
+Cuando se publicó v18, `current/BUILD_REVISION` identificaba
+`20261015-outbox-pagination-v18-python312`.
 La API conserva el arreglo JSON histórico de `GET /api/outbox` y agrega
 `limit`/`offset` y metadatos de página; el panel de plataforma recorre el
 historial y muestra el total completo. La consulta usa orden estable y se añadió
