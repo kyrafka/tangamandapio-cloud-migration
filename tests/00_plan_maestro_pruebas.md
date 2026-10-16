@@ -1,17 +1,23 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 01:10 UTC. Los resultados históricos conservan
+**Corte vigente:** 16/10/2026, 01:17 UTC. Los resultados históricos conservan
 su fecha y no reemplazan una comprobación fallida posterior.
 
 ## Estado actual
 
-- HTTPS del dominio completa TLS y HTTP redirige a HTTPS (`301`). A las 01:02
-  UTC portada, `/health`, `/ready` y `/platform` devolvieron `503`.
+- HTTPS del dominio completa TLS y HTTP redirige a HTTPS (`301`). A las 01:17
+  UTC la app seguía en `503`; a las 01:11 las cuatro rutas dieron `503` conectando directamente a ambas IP del
+  ALB; `Server: awselb/2.0` confirma que el error viene del origen, no solo del
+  proxy DNS.
 - AWS STS autenticó en la cuenta Academy `841113066612`; CloudFormation
-  `DescribeStacks` fue rechazado por el `explicit deny` `voc-cancel-cred`. No se
-  confirmaron targets, drift, ASG ni RDS actuales; no se cambió infraestructura.
+  `DescribeStacks`, ELB `DescribeTargetGroups`, ASG `DescribeAutoScalingGroups`
+  y RDS `DescribeDBInstances` fueron rechazados por `voc-cancel-cred`. STS está
+  válido; no se confirmaron targets, drift, ASG ni RDS y no se cambió infraestructura.
+- La plantilla local comprueba `/health` y espera 200; la ruta también hace
+  `SELECT 1` contra RDS. Es una pista para diagnóstico, no evidencia de causa:
+  hay que confirmar estado de target y logs de arranque cuando AWS lo permita.
 - Azure Function `tangama-wms-261008`: `Running`, `httpsOnly=true`; `/api/health`
-  devolvió `200`. Application Insights: 22 solicitudes/24 h, dos recepciones
+  devolvió `200` en consulta directa a las 01:17 UTC. Application Insights: 22 solicitudes/24 h, dos recepciones
   `202`, dos workers `resultCode=0`, un `400` guard esperado y cero `5xx`. Las
   alertas métricas `Http5xx > 0` y latencia media `> 5s` están habilitadas y
   enlazadas al Action Group; no se disparó una nueva alerta sintética.
@@ -30,8 +36,8 @@ su fecha y no reemplazan una comprobación fallida posterior.
 
 | ID | Prueba | Criterio de aprobación | Último resultado y siguiente acción |
 |---|---|---|---|
-| PT-HTTPS-01 | Dominio, TLS y redirect | TLS válido, HTTP 301, HTTPS sirve páginas | TLS/301 sí; las cuatro rutas HTTPS dan 503. Recuperar el origen. |
-| PT-AWS-01 | Salud y disponibilidad | `/health` y `/ready` 200; dos destinos sanos | Falla 503; IAM impide leer salud formal del target group. Recuperar permiso legítimo y diagnosticar antes de editar. |
+| PT-HTTPS-01 | Dominio, TLS y redirect | TLS válido, HTTP 301, HTTPS sirve páginas | TLS/301 sí; TLS directo a ambas IP de ALB confirma 503 en las cuatro rutas. Recuperar el origen. |
+| PT-AWS-01 | Salud y disponibilidad | `/health` y `/ready` 200; dos destinos sanos | ALB devuelve `awselb/2.0` 503; ELB/ASG/RDS de lectura reciben explicit deny. Recuperar autorización legítima y diagnosticar antes de editar. |
 | PT-AWS-02 | Login y operaciones v18 | Login, roles 200/403, venta/compra persistidas y reconciliadas | No repetido en v18. Hacer después de restaurar disponibilidad. |
 | PT-WMS-01 | ERP→Queue→Function→ledger | Evento correlacionado, estado y stock demo reconciliado | Aprobado local→Azure. Repetir como AWS/EC2→Azure y preservar saldo inicial. |
 | PT-OUTBOX-01 | Historial paginado | 45 eventos sin omisiones/duplicados: páginas 30+15 | Unitarias pasan; falta confirmar GET autenticado contra el despliegue v18. |
@@ -45,7 +51,7 @@ su fecha y no reemplazan una comprobación fallida posterior.
 | PT-APP-01 | CSV, correo y finanzas | Importar catálogo, comprobar ledger, finanzas y entrega de correo conforme alcance | Finanzas/correo interno `portal_only` pasaron en v17; CSV visual y SMTP saliente no verificados/desplegados. |
 | PT-RTC-01 | Telefonía WebRTC | Audio/video bidireccional, mute/cámara y grabación con consentimiento | No probado recientemente entre dos navegadores. Pendiente de producto, separado del 503. |
 | PT-COST-01 | Costos y limpieza | Costo AWS/Azure observado; solo temporales retirados tras verificar | AWS tiene estimación; Azure y consumo real del lab sin conciliación actual. |
-| PT-DOC-01 | Evidencia/entrega | Capturas, logs sanitizados, matriz y documentación sincronizados | Corte actual documentado; faltan capturas de consola/monitor y comprobar Actions tras sincronizar. |
+| PT-DOC-01 | Evidencia/entrega | Capturas, logs sanitizados, matriz y documentación sincronizados | Actions de e936c33 y e2aa8de pasaron; falta publicar este addendum IAM/origen, verificar su workflow y guardar capturas de consola/monitor. |
 
 ## Secuencia de cierre
 

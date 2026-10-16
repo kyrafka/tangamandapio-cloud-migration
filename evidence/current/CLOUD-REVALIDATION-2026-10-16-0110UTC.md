@@ -1,4 +1,4 @@
-# Revalidación post-v18 — 16/10/2026, 01:10 UTC
+# Revalidación post-v18 — 16/10/2026, 01:10 UTC (addenda 01:11, 01:15 y 01:17 UTC)
 
 Este corte supersede el estado de salud del informe 01:05 UTC; la causa del
 503 de AWS continúa sin diagnóstico por falta de permiso de lectura.
@@ -6,9 +6,20 @@ Este corte supersede el estado de salud del informe 01:05 UTC; la causa del
 ## Dominio y AWS
 
 El dominio negocia TLS correctamente y HTTP redirige a HTTPS con `301`. A las
-01:02 UTC la portada, `/health`, `/ready` y `/platform` respondieron `503` por
-HTTPS. El portal no está operativo aunque el certificado y el redirect sí lo
-están.
+01:02 UTC portada, `/health`, `/ready` y `/platform` respondieron `503` por
+HTTPS; health/readiness/plataforma seguían en 503 a las 01:14 UTC, y las cuatro
+rutas —incluida la portada— seguían en 503 al probar el dominio a las 01:17 UTC.
+A las 01:11
+se repitieron esas cuatro rutas contra las dos direcciones
+IPv4 que resuelve el ALB, forzando conexión directa pero conservando dominio y
+SNI para validar TLS; las ocho respuestas fueron `503` y llevaron el header
+`Server: awselb/2.0`. El origen ALB, no solo Cloudflare, está devolviendo el error.
+
+La plantilla confirma que el target group comprueba `/health` y solo acepta
+HTTP 200; la aplicación valida `SELECT 1` en la BD antes de devolver 200. La
+conectividad de RDS es por ello una posible causa de targets no sanos, pero no
+está demostrada. También hay que descartar instancias ausentes/no registradas o
+un fallo de arranque con target health y logs reales.
 
 AWS STS autenticó en la cuenta Academy `841113066612`, pero
 `cloudformation:DescribeStacks` devolvió `AccessDenied` por el explicit deny
@@ -17,10 +28,18 @@ intentó sortear la política. CloudFormation había completado la actualizació
 v18 a las 00:42:53 UTC; una comprobación posterior del origen ALB mostró 503. No
 se modificó infraestructura durante esta revalidación.
 
+A las 01:14 UTC también fueron denegados explícitamente
+`elasticloadbalancing:DescribeTargetGroups`,
+`autoscaling:DescribeAutoScalingGroups` y `rds:DescribeDBInstances` por la misma
+política. STS autentica; el bloqueo es de autorización del plano de control, no
+un token inválido. A las 01:17 se repitió la lectura y las cuatro acciones
+continuaron denegadas; tampoco se hicieron cambios.
+
 ## Azure: Function, procesamiento y alertas
 
 La Function `tangama-wms-261008` figura `Running`, `httpsOnly=true`, en West US;
-`/api/health` devolvió `200`. El E2E sintético local→Azure comprobó las guardas
+`/api/health` devolvió `200` tanto en el corte de métricas como en una consulta
+directa a las 01:17 UTC. El E2E sintético local→Azure comprobó las guardas
 `401` sin clave y `400` para productor no autorizado (sin persistir esos probes),
 una venta `demo_fulfillment_completed` y una recepción compensatoria
 `demo_restock_completed`. El ledger ficticio regresó exactamente a su saldo
@@ -47,17 +66,20 @@ eventos válidos de prueba quedan en el log de auditoría Azure.
 
 La puerta local aprobó 209 pruebas, frontend/build, CloudFormation, validación
 Terraform, mocks de red y auditoría de dependencias. El commit
-`e936c332073b31c709f5c1067a06b582812842f9` sincronizó la matriz, plan maestro y
-el corte previo con GitHub; la ejecución de Actions terminó `success` a las
-01:08:59 UTC.
-El presente corte agrega telemetría Azure y está pendiente de su propia corrida
-de Actions después de publicarse. Estas verificaciones no sustituyen
+`e936c332073b31c709f5c1067a06b582812842f9` sincronizó matriz y plan; su workflow
+de Actions terminó `success` a las 01:08:59 UTC. El corte de telemetría Azure
+`e2aa8de097d5d8b1ff5967ebb7e9aea685a6e57e` también terminó `success` a las
+01:12:13 UTC. Este addendum incluye las pruebas directas al ALB y las lecturas
+de salud de 01:17 UTC; su workflow de Actions queda pendiente de esta publicación.
+Estas verificaciones no sustituyen
 el smoke AWS autenticado de v18.
 
 ## Pendientes
 
 1. Restaurar permiso legítimo de lectura AWS y diagnosticar el 503 consultando
-   target group, ASG y registros; no desplegar a ciegas.
+   target group, ASG y registros; no desplegar a ciegas. El probe directo prueba
+   que el 503 se origina en el ALB, pero no revela si está apagado el lab, si no
+   hay targets sanos u otra condición del listener.
 2. Con el portal sano, repetir login, Admin/Comercial/Operaciones, transacciones
    sintéticas, reconciliación AWS→Azure y las dos páginas del outbox v18 (30+15).
 3. Revisar drift AWS/Terraform; RDS sigue documentado Single-AZ con backup de un
