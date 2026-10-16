@@ -1,14 +1,15 @@
 # Reconstrucción del WMS de demostración en Azure
 
-La comprobación más reciente, 16/10/2026 07:16 UTC, confirma la Function
+La comprobación más reciente, 16/10/2026 07:40 UTC, confirma la Function
 `Running`/HTTPS-only y siete Functions indexadas; el health respondió HTTP 200
-con TLS válido a las 07:10. ARM enumera diez recursos. El plan Terraform
+con TLS válido a las 07:23. ARM enumera diez recursos. El plan Terraform
 `-refresh-only` consultó el backend remoto y terminó `No changes` a las 07:14;
-no se ejecutó
-`apply`. El flujo E2E compensado local→Azure pasó entre 05:45–05:47 y volvió a
-pasar a las 06:09 UTC con venta/reposición sintética y saldo restaurado. Véase
-el [corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md)
-y la [evidencia de despliegue y sondas](../../../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
+no se ejecutó `apply`. El E2E compensado contra el portal desplegado AWS→Azure
+pasó a las 07:28: venta `completed_demo`, compra `received_demo`, dos eventos
+entregados y ledger sintético restaurado 10→10. El smoke posterior confirmó
+55/55 eventos entregados y cero pendientes. Véase el
+[corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0730UTC.md)
+y la evidencia de despliegue y sondas.
 
 ## Revalidación viva — 16/10/2026, 02:40 UTC
 
