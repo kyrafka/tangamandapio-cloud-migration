@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:19 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 05:37 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -21,6 +21,15 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   en el corte 05:09; se corrigió y publicó a las 05:15. A las 05:18 GET y HEAD
   devolvieron 200 con TLS verificado y HEAD sin cuerpo. Terraform posterior:
   `No changes`.
+- A las 05:37 UTC pasó de nuevo el E2E compensado ERP local→Azure después del
+  despliegue de health: guardas 401/400, venta/reposición sintéticas,
+  reconciliación ERP y saldo ficticio de vuelta a la línea base; poison count
+  cero antes/después. Application Insights reportó dos ejecuciones correctas
+  del worker y cero fallidas en la ventana de 20 minutos (conteo agregado).
+  No fue tráfico originado desde EC2/RDS.
+- La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
+  build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
+  cloud.
 - El E2E desplegado AWS→Azure completó venta/compra sintéticas y dejó el saldo
   demo 10→10; el outbox quedó 51/51 entregado, cero pendiente. La prueba Admin
   de solo lectura ejecutó 24 GET autenticados, concurrencia 6, p95 217.69 ms;
@@ -81,12 +90,12 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 | PT-NET-01 | Red privada AWS–Azure | E2E usa HTTPS público | VNet/ruta privada ausente; SCP bloquea Customer Gateway en AWS Academy. |
 | PT-PERF-01 | Carga y escalado | Escalado sintético 2↔3 histórico; 24 GET al origen ALB, concurrencia 6, 24/24 HTTP 200, p95 217.69 ms | Carga sostenida y representativa, medir escalado/capacidad; no se afirma soportar 3,000 usuarios. |
 | PT-SEC-01 | Seguridad y navegador | TLS, controles de rol por API; SNS y auditoría existentes | WAF ausente; validar vistas/CSV visualmente; no atribuir el 403 a la app sin origen confirmado. |
-| PT-AZ-MON-01 | Invocaciones y alertas | Health 200; 4 recepciones 202 y 4 ejecuciones correctas agregadas; poison metadata=0 | Captura actual de monitor e invocación, correlación por ID y alarma de métrica real. |
+| PT-AZ-MON-01 | Invocaciones y alertas | E2E 05:37 y App Insights: 2 workers `resultCode=0`, 0 fallidos agregado; poison metadata=0 | Captura actual de monitor e invocación, correlación directa por ID y alarma de métrica real. |
 | PT-IAC-01 | CloudFormation/Terraform | Validación local; detección fresca de drift `IN_SYNC` a las 05:00:46 UTC | Reconciliar defaults de artefacto v16/v18 en el siguiente cambio efectivo; no desplegar un cambio vacío. |
 | PT-APP-01 | CSV, correo y finanzas | Módulos con datos sintéticos y mensajería interna portal-only | CSV e interacción ERP en navegador; SMTP externo no forma parte del correo portal-only. |
 | PT-RTC-01 | WebRTC | Controles mute/cámara implementados | Prueba de audio/video bidireccional entre dos navegadores. |
 | PT-COST-01 | Costos | AWS con créditos Academy que compensan el consumo medido | Importe Azure fiable y atribución por proyecto. |
-| PT-DOC-01 | Evidencia/entrega | 215 pruebas unitarias, 14 Node y CI `b1d36a9` aprobado en tres trabajos | Capturas recientes del inventario AWS y monitor Azure; defensa oral. |
+| PT-DOC-01 | Evidencia/entrega | 216 pruebas Python, 14 Node, CloudFormation/Terraform y E2E Azure documentados; CI `b1d36a9` es un corte anterior | Capturas recientes del inventario AWS y monitor Azure; estado CI del commit nuevo y defensa oral. |
 
 ## Secuencia de cierre
 
@@ -109,6 +118,9 @@ La validación E2E, recuperación, HTTPS y estado de Function de este corte se r
 [`CLOUD-E2E-DR-2026-10-16-0500UTC.md`](../evidence/current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
 La corrección de la sonda y su validación viva se registra en
 [`AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md`](../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
+La puerta local y el E2E compensado posteriores están en
+[`QA-LOCAL-2026-10-16-0537UTC.md`](../evidence/current/QA-LOCAL-2026-10-16-0537UTC.md) y
+[`AZURE-ERP-E2E-2026-10-16-0537UTC.md`](../evidence/current/azure/AZURE-ERP-E2E-2026-10-16-0537UTC.md).
 La revalidación previa y el smoke de lectura siguen en
 [`CLOUD-REVALIDATION-2026-10-16-0400UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md).
 El smoke autenticado y la sonda de lectura del 16/10 se registran en

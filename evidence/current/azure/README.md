@@ -1,5 +1,12 @@
 # Evidencias Azure
 
+**E2E compensado ERP local→Azure — 16/10/2026, 05:37 UTC:** tras desplegar la
+sonda GET/HEAD, el release local procesó una venta y una recepción; el saldo
+ficticio regresó a su línea base. Guards 401/400 y poison count cero antes y
+después. Application Insights reportó dos ejecuciones correctas del worker,
+cero fallidas en la ventana agregada de 20 minutos. No fue tráfico de EC2/RDS. Véase
+[`AZURE-ERP-E2E-2026-10-16-0537UTC.md`](AZURE-ERP-E2E-2026-10-16-0537UTC.md).
+
 **Revalidación Function + Application Insights — 16/10/2026, 01:24 UTC:** el
 smoke ERP local→Azure pasó a las 01:20 con compensación del saldo demo. La
 consulta de 10 minutos mostró dos `202`, dos workers exitosos, el `400` de

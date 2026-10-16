@@ -1,16 +1,24 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
-## Puerta local completa — 16/10/2026, 02:55 UTC
+## Puerta local completa — 16/10/2026, 05:37 UTC
 
 `run_local_quality.ps1 -ValidateTerraform` terminó `QUALITY_GATE=APROBADA`
-sin llamadas de escritura a la nube: 209 pruebas unitarias, build Vite,
-auditoría de dependencias sin vulnerabilidades conocidas, validación
-CloudFormation y Terraform `fmt`/`init`/`validate` más cinco tests mock. Las
-pruebas de navegación por rol (8) y CSV de catálogo (6) también pasaron. La
-evidencia conjunta de cloud y esta puerta está en
-[`CLOUD-REVALIDATION-2026-10-16-0255UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
+sin operaciones de nube: 216 pruebas Python, 14 Node, 40 transacciones
+aisladas, build Vite, auditorías, CloudFormation `cfn-lint`, Terraform
+`fmt`/`validate` y cinco tests mock de VPN/red privada. Detalle reproducible en
+[`QA-LOCAL-2026-10-16-0537UTC.md`](../evidence/current/QA-LOCAL-2026-10-16-0537UTC.md).
 
-## Evidencia viva más reciente — 16/10/2026, 02:31–03:04 UTC
+## E2E Azure más reciente — 16/10/2026, 05:37 UTC
+
+Después de publicar GET/HEAD de health, el release local recorrió ERP→outbox→
+Azure Queue/Function→reconciliación. Guards 401/400, venta y recepción
+compensatoria completadas, saldo demo de vuelta a la línea base y poison count
+cero antes/después. Application Insights mostró dos workers exitosos y cero
+fallidos en una ventana agregada de 20 minutos. No fue tráfico originado en
+EC2/RDS. Véase
+[`AZURE-ERP-E2E-2026-10-16-0537UTC.md`](../evidence/current/azure/AZURE-ERP-E2E-2026-10-16-0537UTC.md).
+
+## E2E AWS→Azure previo — 16/10/2026, 02:31–03:04 UTC
 
 Con opt-in explícito, `run_live_aws_portal_azure_e2e.ps1` pasó en modo `full`
 contra `alb-origin-https`: RDS `ok`, venta/recepción demo compensadas y stock

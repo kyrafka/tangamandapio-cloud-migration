@@ -1,5 +1,17 @@
 # Índice de evidencias del proyecto
 
+## Puerta local y E2E Azure — 16/10/2026, 05:37 UTC
+
+La puerta integral aprobó 216 pruebas Python, 14 pruebas frontend, build y
+auditorías, `cfn-lint`, Terraform `fmt`/`validate` y cinco pruebas mock de
+red/costo; no ejecutó cambios de nube. Luego el arnés compensado
+ERP-local→Azure pasó guards 401/400, venta y reposición sintéticas, saldo
+ficticio restaurado y poison count cero. No se originó desde EC2/RDS. Véanse
+la [puerta local](current/QA-LOCAL-2026-10-16-0537UTC.md) y el
+[E2E Azure](current/azure/AZURE-ERP-E2E-2026-10-16-0537UTC.md). Application
+Insights reportó en la ventana de 20 minutos dos ejecuciones correctas del
+worker, cero fallidas.
+
 ## Despliegue de sonda Azure GET/HEAD — 16/10/2026, 05:08–05:19 UTC
 
 La Function quedó `Running`/HTTPS-only; GET y HEAD `/api/health` respondieron

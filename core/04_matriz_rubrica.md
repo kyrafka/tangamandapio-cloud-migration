@@ -1,4 +1,18 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 05:19 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 05:37 UTC
+
+## Suplemento de pruebas integrales — 16/10/2026, 05:19–05:37 UTC
+
+La puerta local completa aprobó 216 pruebas Python, 14 Node, build/auditorías,
+CloudFormation y Terraform `fmt`/`validate`; no aplicó recursos. Después, el
+E2E compensado ERP local→Azure pasó los guards 401/400, procesó una venta y su
+reposición, restauró el saldo demo y dejó poison count cero. Application
+Insights mostró dos ejecuciones correctas del worker y cero fallidas en la
+ventana de 20 minutos; el conteo es agregado. Los eventos
+`evt-54408c9020114efbab4d6678d1cb2a31` y
+`evt-0acfa708141e476b8eaa100a14f872ab` quedan en la auditoría. El origen fue el
+artefacto local, no EC2/RDS; AWS sigue sin revalidarse por `InvalidClientTokenId`.
+Véanse la [puerta local](../evidence/current/QA-LOCAL-2026-10-16-0537UTC.md) y
+el [E2E Azure](../evidence/current/azure/AZURE-ERP-E2E-2026-10-16-0537UTC.md).
 
 ## Suplemento de despliegue Azure — 16/10/2026, 05:08–05:19 UTC
 
