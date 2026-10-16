@@ -2,7 +2,7 @@ param(
     [string]$InstanceId,
     [ValidateSet('loopback', 'alb', 'https', 'alb-origin-https')]
     [string]$PortalTarget = 'loopback',
-    [ValidateSet('full', 'admin-modules', 'admin-readonly', 'admin-role-matrix')]
+    [ValidateSet('full', 'admin-modules', 'admin-readonly', 'admin-role-matrix', 'admin-idempotency')]
     [string]$Mode = 'full'
 )
 
@@ -91,6 +91,8 @@ if ($Mode -eq 'admin-modules') {
     $expectedResult = 'LIVE_ADMIN_READONLY_SMOKE_PASSED'
 } elseif ($Mode -eq 'admin-role-matrix') {
     $expectedResult = 'LIVE_ADMIN_ERP_ROLE_MATRIX_PASSED'
+} elseif ($Mode -eq 'admin-idempotency') {
+    $expectedResult = 'LIVE_ADMIN_IDEMPOTENCY_SMOKE_PASSED'
 } else {
     $expectedResult = 'LIVE_E2E_PASSED'
 }

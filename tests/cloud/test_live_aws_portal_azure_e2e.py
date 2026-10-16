@@ -641,5 +641,53 @@ class AdminModuleSmokeTests(unittest.TestCase):
             live_e2e.inspect_admin_dashboard_consistency(client)
 
 
+class DuplicateOutboxDeliveryTests(unittest.TestCase):
+    class FakeClient:
+        def __init__(self, after_stock: int = 10) -> None:
+            self.inventory_reads = 0
+            self.after_stock = after_stock
+            self.attempts = 4
+
+        def json(self, method: str, path: str) -> dict:
+            if method == "GET" and path == "/api/wms/inventory":
+                self.inventory_reads += 1
+                stock = 10 if self.inventory_reads == 1 else self.after_stock
+                return {
+                    "mode": "demo-inventory-ledger",
+                    "items": [{"sku": "SKU-SYNTHETIC", "on_hand": stock}],
+                }
+            raise AssertionError(f"Unexpected JSON request: {method} {path}")
+
+        def request(self, method: str, path: str, payload: dict | None = None):
+            if method == "GET" and path == "/api/outbox?limit=100&offset=0":
+                return 200, [{"event_id": "evt-synthetic", "status": "delivered", "attempts": self.attempts}]
+            if method == "GET" and path == "/api/outbox/evt-synthetic/fulfillment-status":
+                return 200, {"fulfillment_status": "demo_restock_completed"}
+            if method == "POST" and path == "/api/outbox/evt-synthetic/retry":
+                self.attempts += 1
+                return 200, {"status": "delivered", "upstream": "queued_duplicate"}
+            raise AssertionError(f"Unexpected request: {method} {path}")
+
+    def test_duplicate_delivery_is_acknowledged_and_leaves_demo_stock_unchanged(self) -> None:
+        client = self.FakeClient()
+        with patch.object(live_e2e.time, "sleep") as sleep:
+            result = live_e2e.exercise_duplicate_outbox_delivery(client)  # type: ignore[arg-type]
+
+        sleep.assert_called_once_with(3)
+        self.assertEqual(result["retry_upstream"], "queued_duplicate")
+        self.assertEqual(result["attempts_before"], 4)
+        self.assertEqual(result["attempts_after"], 5)
+        self.assertTrue(result["inventory_unchanged"])
+        self.assertEqual(result["inventory_mode"], "demo-inventory-ledger")
+
+    def test_duplicate_delivery_fails_if_demo_stock_changes(self) -> None:
+        client = self.FakeClient(after_stock=9)
+        with (
+            patch.object(live_e2e.time, "sleep"),
+            self.assertRaisesRegex(live_e2e.SmokeFailure, "changed the synthetic ledger stock"),
+        ):
+            live_e2e.exercise_duplicate_outbox_delivery(client)  # type: ignore[arg-type]
+
+
 if __name__ == "__main__":
     unittest.main()

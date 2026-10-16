@@ -1048,11 +1048,138 @@ def main_admin_module_smoke(target: str) -> int:
         client.logout()
 
 
+def exercise_duplicate_outbox_delivery(client: PortalClient) -> dict:
+    """Replay one completed synthetic event and verify the demo ledger is unchanged."""
+    before_inventory = client.json("GET", "/api/wms/inventory")
+    if before_inventory.get("mode") != "demo-inventory-ledger":
+        raise SmokeFailure("Refusing duplicate delivery against a non-demo inventory.")
+    before_stock = {
+        item.get("sku"): item.get("on_hand")
+        for item in before_inventory.get("items", [])
+        if isinstance(item, dict) and isinstance(item.get("sku"), str)
+    }
+
+    list_status, events = client.request("GET", "/api/outbox?limit=100&offset=0")
+    if list_status != 200 or not isinstance(events, list):
+        raise SmokeFailure("The outbox could not be read for duplicate-delivery testing.")
+
+    selected: dict[str, Any] | None = None
+    initial_fulfillment: str | None = None
+    for event in events:
+        if not isinstance(event, dict) or event.get("status") != "delivered":
+            continue
+        event_id = event.get("event_id")
+        attempts = event.get("attempts")
+        if not isinstance(event_id, str) or type(attempts) is not int:
+            continue
+        status, fulfillment = client.request(
+            "GET", f"/api/outbox/{event_id}/fulfillment-status"
+        )
+        if (
+            status == 200
+            and isinstance(fulfillment, dict)
+            and fulfillment.get("fulfillment_status")
+            in {"demo_fulfillment_completed", "demo_restock_completed"}
+        ):
+            selected = event
+            initial_fulfillment = fulfillment["fulfillment_status"]
+            break
+    if selected is None or initial_fulfillment is None:
+        raise SmokeFailure("No completed synthetic Azure event is available to replay.")
+
+    event_id = selected["event_id"]
+    previous_attempts = selected["attempts"]
+    retry_status, retry = client.request("POST", f"/api/outbox/{event_id}/retry", {})
+    if (
+        retry_status != 200
+        or not isinstance(retry, dict)
+        or retry.get("status") != "delivered"
+        or retry.get("upstream") != "queued_duplicate"
+    ):
+        raise SmokeFailure("Azure did not acknowledge the replay as a duplicate event.")
+
+    final_status, final_events = client.request("GET", "/api/outbox?limit=100&offset=0")
+    final_event = next(
+        (
+            row for row in final_events
+            if isinstance(row, dict) and row.get("event_id") == event_id
+        ),
+        None,
+    ) if isinstance(final_events, list) else None
+    if (
+        final_status != 200
+        or not isinstance(final_event, dict)
+        or final_event.get("status") != "delivered"
+        or final_event.get("attempts") != previous_attempts + 1
+    ):
+        raise SmokeFailure("The duplicate outbox attempt was not durably reconciled.")
+
+    time.sleep(3)
+    after_inventory = client.json("GET", "/api/wms/inventory")
+    after_stock = {
+        item.get("sku"): item.get("on_hand")
+        for item in after_inventory.get("items", [])
+        if isinstance(item, dict) and isinstance(item.get("sku"), str)
+    }
+    if after_inventory.get("mode") != "demo-inventory-ledger" or after_stock != before_stock:
+        raise SmokeFailure("Replaying a completed event changed the synthetic ledger stock.")
+
+    status, fulfillment = client.request(
+        "GET", f"/api/outbox/{event_id}/fulfillment-status"
+    )
+    if (
+        status != 200
+        or not isinstance(fulfillment, dict)
+        or fulfillment.get("fulfillment_status") != initial_fulfillment
+    ):
+        raise SmokeFailure("The completed Azure event status changed after duplicate delivery.")
+
+    return {
+        "event_id": event_id,
+        "initial_status": initial_fulfillment,
+        "retry_upstream": retry["upstream"],
+        "attempts_before": previous_attempts,
+        "attempts_after": final_event["attempts"],
+        "inventory_unchanged": True,
+        "inventory_mode": "demo-inventory-ledger",
+    }
+
+
+def main_admin_idempotency_smoke(target: str) -> int:
+    try:
+        client = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
+    try:
+        client.login()
+        access = client.json("GET", "/api/erp/access")
+        if "erp_admin" not in access.get("roles", []):
+            raise SmokeFailure("The authenticated account lacks the ERP admin role.")
+        result = exercise_duplicate_outbox_delivery(client)
+        print(
+            json.dumps(
+                {
+                    "result": "LIVE_ADMIN_IDEMPOTENCY_SMOKE_PASSED",
+                    "target": client.target,
+                    **result,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except SmokeFailure as error:
+        print(f"LIVE_ADMIN_IDEMPOTENCY_SMOKE_FAILED: {error}")
+        return 1
+    finally:
+        client.logout()
+
+
 def main() -> int:
     target = os.environ.get("LIVE_E2E_TARGET", "loopback")
     mode = os.environ.get("LIVE_E2E_MODE", "full")
-    if mode not in {"full", "admin-readonly", "admin-modules", "admin-role-matrix"}:
-        print("Refused: use the approved full, admin-readonly, admin-modules, or admin-role-matrix test mode.")
+    if mode not in {"full", "admin-readonly", "admin-modules", "admin-role-matrix", "admin-idempotency"}:
+        print("Refused: use the approved full, admin-readonly, admin-modules, admin-role-matrix, or admin-idempotency test mode.")
         return 2
     expected_opt_in = (
         READ_ONLY_OPT_IN if mode == "admin-readonly"
@@ -1068,6 +1195,8 @@ def main() -> int:
         return main_admin_role_matrix(target)
     if mode == "admin-modules":
         return main_admin_module_smoke(target)
+    if mode == "admin-idempotency":
+        return main_admin_idempotency_smoke(target)
     try:
         client = PortalClient(target)
     except SmokeFailure as error:

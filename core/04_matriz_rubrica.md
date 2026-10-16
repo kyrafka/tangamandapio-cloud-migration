@@ -1,4 +1,22 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 09:56 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 10:07 UTC
+
+## Suplemento vigente — replay idempotente y gate integral, 16/10/2026
+
+Se reenvió desde EC2 a Azure un evento de reposición sintético ya completado.
+La API respondió `queued_duplicate`; el intento del outbox avanzó de 1 a 2,
+pero su estado siguió `delivered` y Application Insights registró
+`duplicate=True` / `wms_demo_already_processed` con estado
+`demo_restock_completed`. La consulta de inventario confirmó el mismo saldo
+antes y después. Dos pruebas unitarias cubren idempotencia y fallo ante una
+mutación inesperada.
+
+Portal HTTPS/TLS 200 (HTTP 301), Function Azure `Running`/health 200, dos
+instancias SSM online y destinos ALB 2/2 saludables. Gate local integral:
+230 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías y
+validaciones IaC aprobadas, sin `apply`. Esto cierra la prueba de duplicado,
+no una caída transitoria ni el retry/backoff tras indisponibilidad. Siguen
+pendientes WebRTC de dos navegadores, CSV/recorrido visual, 3,000 usuarios,
+WAF, failover Multi-AZ y VPN bloqueada por SCP. [Evidencia 10:07 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1007UTC.md).
 
 ## Suplemento vigente — revalidación funcional y de carga 16/10/2026, 09:34–09:56 UTC
 
