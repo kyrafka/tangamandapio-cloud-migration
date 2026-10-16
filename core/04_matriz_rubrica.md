@@ -1,4 +1,20 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 10:07 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 10:15 UTC
+
+## Suplemento vigente — revalidación AWS–Azure, 16/10/2026, 10:06–10:15 UTC
+
+Una detección nueva de CloudFormation terminó `IN_SYNC`/0; EC2 y destinos ALB
+están 2/2 sanos, RDS disponible/cifrada/privada (Single-AZ, backup 1 día) y
+ambos discos raíz EBS cifrados. Portal HTTPS 200/HTTP 301; Function Azure
+`Running`/health 200. Se completó un smoke Azure separado que probó guardas
+401/400 sin persistencia y venta/recepción sintéticas con compensación al saldo
+inicial, confirmadas en Application Insights. Este smoke usó el artefacto local
+y SQLite temporal, no la instancia EC2. Terraform normal y `refresh-only`
+indicaron `No changes` (salida 0). El replay de duplicado iniciado desde EC2
+pasó y Azure confirmó `wms_demo_already_processed`; ver
+[evidencia 10:15 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1015UTC.md).
+Gate integral aprobada con 230 Python, 14 Node y 40 transacciones aisladas. No
+cierra prueba de fallo transitorio, CSV visual, WebRTC, 3,000 usuarios,
+failover Multi-AZ, WAF ni VPN (SCP bloquea Customer Gateway).
 
 ## Suplemento vigente — replay idempotente y gate integral, 16/10/2026
 

@@ -1,17 +1,21 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 09:59–10:07 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 10:06–10:15 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 - Replay duplicado en nube pasó: el outbox AWS reintentó un evento de reposición
   ya completado; Azure registró `duplicate=True` y `wms_demo_already_processed`,
   el estado siguió `demo_restock_completed` y el ledger sintético no cambió.
   Hay prueba unitaria para el camino correcto y para detectar mutación inesperada.
+- Smoke Azure separado pasó desde el artefacto local/SQLite temporal: ingreso
+  401/400 sin persistencia; venta/reposición sintéticas; Application Insights
+  registra ambos resultados y el stock vuelve a su saldo inicial; poison queue
+  queda vacía. No se cuenta como ejecución desde la EC2.
 - Portal HTTPS/TLS 200, HTTP 301; Azure Function `Running` y health HTTPS/TLS
   200; AWS SSM 2 instancias `Online`, targets ALB 2/2 saludables.
 - Puerta integral local posterior: 230 Python, 14 Node, 40 transacciones
   aisladas, build, auditorías, CloudFormation y Terraform aprobados; sin `apply`.
-  [Evidencia 10:07](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1007UTC.md).
+  [Evidencia 10:15](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1015UTC.md).
 - Pendientes: fallo transitorio real/backoff y recuperación, inspección visual
   CSV por rol, WebRTC bidireccional, carga transaccional 3,000 usuarios, WAF,
   failover Multi-AZ y VPN (SCP bloquea Customer Gateway).
