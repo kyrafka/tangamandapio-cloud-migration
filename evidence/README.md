@@ -18,8 +18,8 @@ UTC; RDS sigue Single-AZ y con retención de un día. Una sonda Python al domini
 recibió 403 de Cloudflare mientras `curl` e `Invoke-WebRequest` al health
 recibieron 200. El runner ahora distingue códigos HTTP de errores de transporte.
 Véase el [corte vivo de 04:00](current/CLOUD-REVALIDATION-2026-10-16-0400UTC.md).
-El commit `d060a2c` que incorpora la mejora del diagnóstico pasó los tres
-trabajos de GitHub Actions.
+El commit `b1d36a9` que incorpora la sonda autenticada también pasó los tres
+trabajos de GitHub Actions ([run 38851449937](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38851449937)).
 
 La última revalidación autenticada completa de roles y outbox es la de 03:41
 UTC: Admin/Comercial/Operaciones pasaron el smoke de solo lectura y se

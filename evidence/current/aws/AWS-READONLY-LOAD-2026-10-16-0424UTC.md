@@ -64,4 +64,5 @@ La adición del smoke fue cubierta por 32 pruebas unitarias de su módulo y por
 la compuerta local completa: 215 pruebas Python, 14 pruebas Node, build del
 frontend, auditorías, validación CloudFormation, validación Terraform y cinco
 pruebas mock. Estas validaciones no aplican cambios en la nube. GitHub Actions
-se comprobará para el commit que incorpora esta evidencia.
+para el commit de pruebas `b1d36a9` pasó sus tres trabajos (run
+[38851449937](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38851449937)).

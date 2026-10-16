@@ -47,8 +47,8 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   se combinan las escalas ni se inventa una nota.
 - La compuerta local recién repetida pasó 215 pruebas unitarias, 14 Node,
   frontend/build, auditorías, CloudFormation, Terraform y cinco pruebas mock;
-  no aplicó cambios cloud. GitHub Actions para `d060a2c` también pasó sus tres
-  trabajos.
+  no aplicó cambios cloud. GitHub Actions para `b1d36a9` también pasó sus tres
+  trabajos (run `38851449937`).
 
 ## Matriz de pruebas
 
@@ -69,7 +69,7 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 | PT-APP-01 | CSV, correo y finanzas | Módulos con datos sintéticos y mensajería interna portal-only | CSV e interacción ERP en navegador; SMTP externo no forma parte del correo portal-only. |
 | PT-RTC-01 | WebRTC | Controles mute/cámara implementados | Prueba de audio/video bidireccional entre dos navegadores. |
 | PT-COST-01 | Costos | AWS con créditos Academy que compensan el consumo medido | Importe Azure fiable y atribución por proyecto. |
-| PT-DOC-01 | Evidencia/entrega | 215 pruebas unitarias, 14 Node y CI `d060a2c` aprobado en tres trabajos | Capturas recientes del inventario AWS y monitor Azure; defensa oral. |
+| PT-DOC-01 | Evidencia/entrega | 215 pruebas unitarias, 14 Node y CI `b1d36a9` aprobado en tres trabajos | Capturas recientes del inventario AWS y monitor Azure; defensa oral. |
 
 ## Secuencia de cierre
 
