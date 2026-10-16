@@ -41,6 +41,8 @@
 
 - Los parámetros efectivos del stack son el artefacto v18, y el template local
   `iac/cloudformation/aws-lab.yaml` tiene defaults v18.
+- S3 confirmó que el objeto v18 existe (301,698 bytes) y su metadata `sha256`
+  coincide con el hash fijado por el stack y por el paquete local.
 - El template guardado en AWS conserva defaults de artefacto v16 para key,
   revision y SHA-256. La comparación de 1,251 líneas encontró solo esos tres
   valores y diferencias de codificación en texto descriptivo; no encontró
@@ -49,8 +51,10 @@
 
 ## Publicación
 
-- El commit anterior `da00449d0af0bca79463e17a03a03a3eb56c5487` está publicado y
-  su workflow terminó `success`. Este corte y la mejora de diagnóstico local
-  quedan listos para publicar y confirmar en GitHub Actions.
+- El commit `d060a2c82992ca1518f24e6bce34ea3378735d06` está publicado en
+  `codex/aws-v11-deploy-sync`. GitHub Actions run
+  [38848992018](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38848992018)
+  terminó `success` en sus tres trabajos: infraestructura AWS/Azure, frontend y
+  backend/flujo.
 - No se escribieron pedidos, compras, eventos, inventario ni recursos cloud en
   esta pasada.
