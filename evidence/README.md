@@ -1,12 +1,13 @@
 # Índice de evidencias del proyecto
 
-## Incidente de disponibilidad y Azure vivo — 16/10/2026, 05:44–05:47 UTC
+## Incidente de disponibilidad y Azure vivo — 16/10/2026, 05:44–05:51 UTC
 
 El dominio HTTPS sigue con TLS válido, pero tanto Cloudflare como el ALB
 respondieron 503. El listener HTTP del ALB redirige a HTTPS; la consulta directa
 HTTPS confirmó que la respuesta 503 proviene de `awselb/2.0`. AWS STS rechazó el
 token nuevo y no se hizo ninguna mutación; por ello aún no se sabe qué destino
-falla ni por qué. Azure sigue `Enabled`, Function `Running`/HTTPS-only y health
+falla ni por qué. El 503 del health público y del origen se repitió cerca de las
+05:51 UTC. Azure sigue `Enabled`, Function `Running`/HTTPS-only y health
 200. El E2E local→Azure volvió a pasar con venta y reposición sintéticas, stock
 demo restaurado y poison count cero. No prueba el portal AWS ni el flujo desde
 EC2. Véase la [revalidación vigente](current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).

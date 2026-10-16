@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:47 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 05:51 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -12,7 +12,7 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   CLI no puede hacer una relectura adicional en este corte. Una nueva llamada
   STS aislada con el último token también fue rechazada; no se guardó y no se
   modificaron recursos.
-- La verificación pública más reciente (05:44–05:45 UTC) cambia el estado
+- La verificación pública más reciente (05:44–05:51 UTC) cambia el estado
   operativo: dominio HTTPS con TLS válido, pero `/` y `/health` responden 503.
   El ALB directo confirma 503 en 443 y 301 en 80→443. Por eso el estado 2/2 de
   instancias y destinos sanos que sigue corresponde a la última lectura

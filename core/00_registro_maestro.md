@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 16/10/2026, 05:47 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
+**Corte:** 16/10/2026, 05:51 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
 
 ## 1. Caso y objetivo
 
@@ -99,7 +99,7 @@ La puerta local terminó aprobada: 163 pruebas Python más 14 Node, PT-PERF-02 4
 
 La arquitectura empresarial, que separa portal B2B, ERP, WMS, correo e identidad y distingue objetivos de lo implementado, está organizada en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
-## 4.3 Estado vigente — 16/10/2026, 05:44–05:47 UTC
+## 4.3 Estado vigente — 16/10/2026, 05:44–05:51 UTC
 
 El estado descrito en la sección 4.1 ya no representa disponibilidad actual.
 El dominio HTTPS conserva TLS válido, pero `/` y `/health` responden HTTP 503;
@@ -107,7 +107,8 @@ una consulta directa confirmó que el ALB devuelve 503 en su listener 443. El
 listener HTTP redirige a HTTPS. STS rechazó el token AWS nuevo con
 `InvalidClientTokenId`, así que ASG, destinos, instancias y logs no se pudieron
 consultar ni modificar. No se declara el portal operativo hasta recuperar 200
-y repetir pruebas funcionales.
+y repetir pruebas funcionales. El 503 del health público y del origen ALB se
+repitió cerca de las 05:51 UTC.
 
 Azure for Students está `Enabled`; `rg-tangamandapio-rebuild-wus` está
 `Succeeded` y `tangama-wms-261008` está `Running`/HTTPS-only. El health

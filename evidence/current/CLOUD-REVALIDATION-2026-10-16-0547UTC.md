@@ -1,4 +1,4 @@
-# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–05:47 UTC
+# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–05:51 UTC
 
 ## Resultado actual
 
@@ -10,7 +10,9 @@
   HTTPS; una solicitud HTTPS al ALB con el `Host` del dominio devolvió HTTP 503
   desde `awselb/2.0`. Esto ubica el fallo después del listener HTTPS, en el
   servicio/origen detrás del balanceador. No confirma por sí solo el estado de
-  cada destino ni la causa exacta.
+  cada destino ni la causa exacta. Una segunda consulta cerca de las 05:51 UTC
+  volvió a recibir 503 del health público y del origen directo; TLS del dominio
+  siguió válido.
 - STS rechazó el token AWS recién compartido con `InvalidClientTokenId`. El
   token se usó solo en variables del proceso de prueba; no se guardó ni se
   reemplazó el perfil local `default`. No se hicieron cambios en AWS.
