@@ -77,6 +77,7 @@ ROLE_ACCOUNTS = (
 REGION = "us-east-1"
 OPT_IN = "I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES"
 READ_ONLY_OPT_IN = "I_ACKNOWLEDGE_LIVE_ADMIN_READONLY_CHECK"
+ROLE_MATRIX_OPT_IN = "I_ACKNOWLEDGE_TEMPORARY_ROLE_ACCOUNT_WRITES"
 FIXED_SKU = "SKU-QA-V10-20261014"
 PARTNER_NAME = "QA LIVE AWS Azure v10"
 REQUEST_TIMEOUT = 20
@@ -86,6 +87,24 @@ READ_ONLY_LOAD_REQUESTS = 24
 READ_ONLY_LOAD_CONCURRENCY = 6
 AZURE_POISON_QUEUE_URL = "https://tangama-wms-261008.azurewebsites.net/api/wms/poison-queue"
 CFN_STACK_NAME = "tangamandapio-live-20261013"
+ERP_PERMISSION_SETS = {
+    "erp_admin": {"master:read", "master:write", "sales:read", "sales:write", "purchase:read", "purchase:write", "finance:read", "finance:write", "reports:read"},
+    "erp_sales": {"master:read", "sales:read", "sales:write", "reports:read"},
+    "erp_finance": {"master:read", "sales:read", "purchase:read", "finance:read", "finance:write", "reports:read"},
+    "erp_purchasing": {"master:read", "master:write", "purchase:read", "purchase:write", "reports:read"},
+    "erp_master_data": {"master:read", "master:write", "reports:read"},
+    "erp_auditor": {"master:read", "sales:read", "purchase:read", "finance:read", "reports:read"},
+}
+ERP_PERMISSION_PROBES = (
+    ("master:read", "GET", "/api/erp/partners", None),
+    ("master:write", "POST", "/api/erp/partners", {}),
+    ("sales:read", "GET", "/api/erp/sales/orders", None),
+    ("sales:write", "POST", "/api/erp/sales/orders", {}),
+    ("purchase:read", "GET", "/api/erp/purchases/orders", None),
+    ("purchase:write", "POST", "/api/erp/purchases/orders", {}),
+    ("finance:read", "GET", "/api/erp/finance/documents", None),
+    ("finance:write", "POST", "/api/erp/finance/expenses", {}),
+)
 
 
 class SmokeFailure(RuntimeError):
@@ -283,6 +302,7 @@ class PortalClient:
         username: str = ADMIN_USERNAME,
         parameter: str = ADMIN_PARAMETER,
         expected_role: str = "admin",
+        password: str | None = None,
     ) -> None:
         # Login starts without a CSRF-bound session; a fresh token is issued
         # after authentication and attached to all subsequent writes.
@@ -290,7 +310,10 @@ class PortalClient:
         status, body = self.request(
             "POST",
             "/api/auth/login",
-            {"username": username, "password": get_secure_parameter(parameter)},
+            {
+                "username": username,
+                "password": password if password is not None else get_secure_parameter(parameter),
+            },
         )
         if status != 200 or not isinstance(body, dict):
             raise SmokeFailure(f"The QA {expected_role} login was not accepted.")
@@ -624,6 +647,178 @@ def main_admin_readonly_smoke(target: str) -> int:
         client.logout()
 
 
+def exercise_erp_role_matrix(admin: PortalClient) -> dict:
+    """Probe live ERP permissions; deactivate temporary accounts in all cases."""
+    users_status, users = admin.request("GET", "/api/admin/users")
+    if users_status != 200 or not isinstance(users, list):
+        raise SmokeFailure("The admin user directory returned an unexpected response.")
+    admin_record = next(
+        (
+            user for user in users
+            if user.get("username") == ADMIN_USERNAME and user.get("role") == "admin"
+        ),
+        None,
+    )
+    if not isinstance(admin_record, dict) or type(admin_record.get("company_id")) is not int:
+        raise SmokeFailure("Could not resolve the admin tenant for temporary role checks.")
+
+    temporary_users: list[dict[str, Any]] = []
+    role_clients: dict[str, PortalClient] = {"erp_admin": admin}
+    run_id = f"{datetime.now(timezone.utc):%Y%m%d%H%M%S}-{secrets.token_hex(3)}"
+    cleanup_failed = False
+    try:
+        commercial = PortalClient(admin.target)
+        commercial.login(
+            username=ROLE_ACCOUNTS[0][1],
+            parameter=ROLE_ACCOUNTS[0][2],
+            expected_role=ROLE_ACCOUNTS[0][3],
+        )
+        role_clients["erp_sales"] = commercial
+
+        for role_code in ("erp_finance", "erp_purchasing", "erp_master_data", "erp_auditor"):
+            username = f"qa-{role_code}-{run_id}@tangamandapio.local"
+            password = secrets.token_urlsafe(32)
+            portal_role = "auditor" if role_code == "erp_auditor" else "sales"
+            temporary_users.append({"id": None, "username": username})
+            create_status, created = admin.request(
+                "POST",
+                "/api/admin/users",
+                {
+                    "username": username,
+                    "password": password,
+                    "role": portal_role,
+                    "company_id": admin_record["company_id"],
+                },
+                accepted_statuses=(400, 403, 409),
+            )
+            created_user = created.get("user") if isinstance(created, dict) else None
+            user_id = created_user.get("id") if isinstance(created_user, dict) else None
+            if create_status != 201 or type(user_id) is not int:
+                raise SmokeFailure("Could not create a temporary ERP role-check account.")
+            temporary_users[-1]["id"] = user_id
+
+            assigned_status, _ = admin.request(
+                "PUT",
+                f"/api/erp/users/{user_id}/roles",
+                {"roles": [role_code]},
+                accepted_statuses=(400, 403, 404),
+            )
+            if assigned_status != 200:
+                raise SmokeFailure("Could not assign the temporary ERP role.")
+
+            role_client = PortalClient(admin.target)
+            role_client.login(
+                username=username,
+                expected_role=portal_role,
+                password=password,
+            )
+            role_clients[role_code] = role_client
+
+        results: dict[str, dict[str, int]] = {}
+        for role_code, role_client in role_clients.items():
+            access = role_client.json("GET", "/api/erp/access")
+            if role_code not in access.get("roles", []):
+                raise SmokeFailure(f"The live {role_code} account has an unexpected ERP role.")
+            statuses: dict[str, int] = {}
+            for permission, method, path, payload in ERP_PERMISSION_PROBES:
+                allowed = permission in ERP_PERMISSION_SETS[role_code]
+                expected = (200 if method == "GET" else 400) if allowed else 403
+                status, _ = role_client.request(
+                    method,
+                    path,
+                    payload,
+                    accepted_statuses=(400, 403),
+                )
+                statuses[f"{method} {path}"] = status
+                if status != expected:
+                    raise SmokeFailure(
+                        f"The live {role_code} account received HTTP {status} on {path}; expected {expected}."
+                    )
+            results[role_code] = statuses
+        return {
+            "roles": results,
+            "probe_count": sum(len(statuses) for statuses in results.values()),
+            "temporary_account_count": len(temporary_users),
+        }
+    finally:
+        for role_code, role_client in role_clients.items():
+            if role_code != "erp_admin":
+                try:
+                    role_client.logout()
+                except Exception:
+                    pass
+        for user in temporary_users:
+            try:
+                user_id = user.get("id")
+                if type(user_id) is not int:
+                    candidates_status, candidates = admin.request("GET", "/api/admin/users")
+                    if candidates_status != 200 or not isinstance(candidates, list):
+                        raise SmokeFailure("Could not inspect the admin user directory for cleanup.")
+                    matching = next(
+                        (candidate for candidate in candidates if candidate.get("username") == user["username"]),
+                        None,
+                    )
+                    user_id = matching.get("id") if isinstance(matching, dict) else None
+                    if type(user_id) is int:
+                        user["id"] = user_id
+                if type(user_id) is not int:
+                    continue
+                status, _ = admin.request(
+                    "PATCH",
+                    f"/api/admin/users/{user_id}",
+                    {"active": False},
+                    accepted_statuses=(400, 403, 404),
+                )
+                if status != 200:
+                    cleanup_failed = True
+            except SmokeFailure:
+                cleanup_failed = True
+        if temporary_users:
+            try:
+                final_status, final_users = admin.request("GET", "/api/admin/users")
+                if final_status != 200 or not isinstance(final_users, list):
+                    raise SmokeFailure("Could not verify temporary ERP account cleanup.")
+                by_id = {user.get("id"): user for user in final_users if isinstance(user, dict)}
+                if any(
+                    type(user.get("id")) is int
+                    and by_id.get(user["id"], {}).get("active") is not False
+                    for user in temporary_users
+                ):
+                    cleanup_failed = True
+            except SmokeFailure:
+                cleanup_failed = True
+        if cleanup_failed:
+            raise SmokeFailure("Temporary ERP role-check accounts could not all be confirmed inactive.")
+
+
+def main_admin_role_matrix(target: str) -> int:
+    try:
+        admin = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
+    try:
+        admin.login()
+        result = exercise_erp_role_matrix(admin)
+        print(
+            json.dumps(
+                {
+                    "result": "LIVE_ADMIN_ERP_ROLE_MATRIX_PASSED",
+                    "target": admin.target,
+                    **result,
+                    "temporary_accounts_deactivated": result["temporary_account_count"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except SmokeFailure as error:
+        print(f"LIVE_ADMIN_ERP_ROLE_MATRIX_FAILED: {error}")
+        return 1
+    finally:
+        admin.logout()
+
+
 def exercise_finance_workflow(client: PortalClient) -> dict:
     """Create and settle a tiny synthetic payable; this is not a real payment."""
     reference = (
@@ -856,15 +1051,21 @@ def main_admin_module_smoke(target: str) -> int:
 def main() -> int:
     target = os.environ.get("LIVE_E2E_TARGET", "loopback")
     mode = os.environ.get("LIVE_E2E_MODE", "full")
-    if mode not in {"full", "admin-readonly", "admin-modules"}:
-        print("Refused: use the approved full, admin-readonly, or admin-modules test mode.")
+    if mode not in {"full", "admin-readonly", "admin-modules", "admin-role-matrix"}:
+        print("Refused: use the approved full, admin-readonly, admin-modules, or admin-role-matrix test mode.")
         return 2
-    expected_opt_in = READ_ONLY_OPT_IN if mode == "admin-readonly" else OPT_IN
+    expected_opt_in = (
+        READ_ONLY_OPT_IN if mode == "admin-readonly"
+        else ROLE_MATRIX_OPT_IN if mode == "admin-role-matrix"
+        else OPT_IN
+    )
     if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != expected_opt_in:
         print("Refused: set the exact opt-in appropriate to this live test mode.")
         return 2
     if mode == "admin-readonly":
         return main_admin_readonly_smoke(target)
+    if mode == "admin-role-matrix":
+        return main_admin_role_matrix(target)
     if mode == "admin-modules":
         return main_admin_module_smoke(target)
     try:

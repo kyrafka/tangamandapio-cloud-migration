@@ -1,5 +1,22 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Revalidación desplegada AWS–Azure — 16/10/2026, 08:53–09:01 UTC
+
+Health HTTPS de AWS y Azure 200; CloudFormation `UPDATE_COMPLETE`, ASG 2/2
+sano. El E2E AWS→Azure dejó el ledger sintético 10→10; Admin read-only
+reconcilió 61/61 eventos y 0 pendientes. Un nuevo smoke comprobó 48 permisos
+ERP en Admin, Ventas, Finanzas, Compras, Datos Maestros y Auditoría; cuatro
+usuarios QA temporales quedaron desactivados y verificados. Los POST de prueba
+no crearon documentos de negocio.
+
+La puerta local completa aprobó 225 pruebas Python, 14 Node, 40 transacciones
+aisladas, build, auditorías, CloudFormation y Terraform sin `apply`. No se
+desplegó código de aplicación en esta pasada. Siguen pendientes UI/CSV visual,
+reintento transitorio live, WebRTC entre dos navegadores, carga sostenida, WAF,
+failover Multi-AZ y VPN privada (bloqueada por una SCP de AWS Academy). El
+detalle está en
+[`CLOUD-REVALIDATION-2026-10-16-0901UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0901UTC.md).
+
 ## Revalidación desplegada AWS–Azure — 16/10/2026, 07:59–08:08 UTC
 
 CloudFormation terminó `UPDATE_COMPLETE`, el drift fresco fue `IN_SYNC` (0),

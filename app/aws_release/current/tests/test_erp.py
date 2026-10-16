@@ -186,6 +186,75 @@ class ErpReleaseTests(unittest.TestCase):
             outbox_count = connection.execute("SELECT COUNT(*) AS n FROM outbox_events").fetchone()["n"]
         self.assertGreaterEqual(outbox_count, 2)
 
+    def test_erp_role_matrix_enforces_least_privilege_without_business_writes(self):
+        password = "Release-Test-Role-Matrix-Password-2026!"
+        clients = {"erp_admin": self.client}
+        role_codes = (
+            "erp_sales",
+            "erp_finance",
+            "erp_purchasing",
+            "erp_master_data",
+            "erp_auditor",
+        )
+        for role_code in role_codes:
+            portal_role = "auditor" if role_code == "erp_auditor" else "sales"
+            username = f"{role_code}@release.test"
+            created = self.post(self.client, "/api/admin/users", {
+                "username": username,
+                "password": password,
+                "role": portal_role,
+            })
+            self.assertEqual(created.status_code, 201, created.get_json())
+            user_id = created.get_json()["user"]["id"]
+            assigned = self.client.put(
+                f"/api/erp/users/{user_id}/roles",
+                json={"roles": [role_code]},
+                headers={"X-CSRF-Token": self.client.csrf},
+            )
+            self.assertEqual(assigned.status_code, 200, assigned.get_json())
+            client = self.application.test_client()
+            self.login(client, username, password)
+            clients[role_code] = client
+
+        probes = (
+            ("master:read", "GET", "/api/erp/partners", None),
+            ("master:write", "POST", "/api/erp/partners", {}),
+            ("sales:read", "GET", "/api/erp/sales/orders", None),
+            ("sales:write", "POST", "/api/erp/sales/orders", {}),
+            ("purchase:read", "GET", "/api/erp/purchases/orders", None),
+            ("purchase:write", "POST", "/api/erp/purchases/orders", {}),
+            ("finance:read", "GET", "/api/erp/finance/documents", None),
+            ("finance:write", "POST", "/api/erp/finance/expenses", {}),
+        )
+        permissions = {
+            "erp_admin": {permission for permission, *_ in probes},
+            "erp_sales": {"master:read", "sales:read", "sales:write"},
+            "erp_finance": {"master:read", "sales:read", "purchase:read", "finance:read", "finance:write"},
+            "erp_purchasing": {"master:read", "master:write", "purchase:read", "purchase:write"},
+            "erp_master_data": {"master:read", "master:write"},
+            "erp_auditor": {"master:read", "sales:read", "purchase:read", "finance:read"},
+        }
+
+        for role_code, client in clients.items():
+            access = client.get("/api/erp/access")
+            self.assertEqual(access.status_code, 200)
+            self.assertIn(role_code, access.get_json()["roles"])
+            for permission, method, path, payload in probes:
+                allowed = permission in permissions[role_code]
+                if method == "GET":
+                    response = client.get(path)
+                    expected = 200 if allowed else 403
+                else:
+                    response = self.post(client, path, payload)
+                    # Empty payloads stop at validation for authorized roles;
+                    # forbidden roles must fail the permission guard first.
+                    expected = 400 if allowed else 403
+                self.assertEqual(
+                    response.status_code,
+                    expected,
+                    f"{role_code} {method} {path} should return HTTP {expected}",
+                )
+
     def test_internal_mail_is_private_csrf_protected_and_role_aware(self):
         no_csrf = self.client.post("/api/erp/mail", json={"recipient_id": 1, "subject": "x", "body": "y"})
         self.assertEqual(no_csrf.status_code, 403)

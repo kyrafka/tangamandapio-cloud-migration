@@ -214,6 +214,38 @@ class LiveModeOptInTests(unittest.TestCase):
             self.assertEqual(live_e2e.main(), 0)
         smoke.assert_called_once_with("https")
 
+    def test_role_matrix_mode_rejects_generic_e2e_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "alb-origin-https",
+                    "LIVE_E2E_MODE": "admin-role-matrix",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(live_e2e, "main_admin_role_matrix") as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 2)
+        smoke.assert_not_called()
+
+    def test_role_matrix_mode_runs_only_with_temporary_account_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "alb-origin-https",
+                    "LIVE_E2E_MODE": "admin-role-matrix",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.ROLE_MATRIX_OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(live_e2e, "main_admin_role_matrix", return_value=0) as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 0)
+        smoke.assert_called_once_with("alb-origin-https")
+
 
 class AdminReadonlySmokeTests(unittest.TestCase):
     def test_admin_readonly_smoke_includes_role_matrix(self) -> None:

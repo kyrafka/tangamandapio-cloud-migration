@@ -1,4 +1,26 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 08:46 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 09:01 UTC
+
+## Suplemento vigente — revalidación 16/10/2026, 08:53–09:01 UTC
+
+AWS y Azure respondieron health 200 por HTTPS; el ASG está 2/2 saludable y
+CloudFormation sigue `UPDATE_COMPLETE` con último drift reportado `IN_SYNC`.
+Pasaron el E2E de venta/compra sintéticas (ledger 10→10) y Admin read-only
+(61/61 outbox, cero pendientes, 24/24 HTTP 200).
+
+Se cerró una brecha de autorización ERP en vivo: 48 sondas sobre los seis roles
+ERP confirmaron que las lecturas permitidas devuelven 200, las prohibidas 403,
+y los POST permitidos con payload inválido paran en 400 sin crear negocio.
+Cuatro cuentas QA se desactivaron y verificaron; su registro/auditoría queda
+retenido como inactivo. El gate local completo aprobó 225 pruebas Python,
+14 Node, 40 transacciones aisladas, build, auditorías, CloudFormation y
+Terraform. No se desplegó código ni se aplicó IaC.
+
+La matriz ERP es API, no inspección visual de todas las pantallas/roles.
+Persisten WebRTC de dos navegadores, reintento vivo inducido, UI/CSV, carga
+sostenida/3,000 usuarios, WAF, failover Multi-AZ, red privada AWS–Azure
+(bloqueada por la SCP que niega `CreateCustomerGateway`) y costos Azure
+atribuibles. Véase la
+[evidencia viva 09:01 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0901UTC.md).
 
 ## Suplemento vigente — revalidación 16/10/2026, 08:43–08:46 UTC
 

@@ -2,7 +2,7 @@ param(
     [string]$InstanceId,
     [ValidateSet('loopback', 'alb', 'https', 'alb-origin-https')]
     [string]$PortalTarget = 'loopback',
-    [ValidateSet('full', 'admin-modules', 'admin-readonly')]
+    [ValidateSet('full', 'admin-modules', 'admin-readonly', 'admin-role-matrix')]
     [string]$Mode = 'full'
 )
 
@@ -10,8 +10,8 @@ $ErrorActionPreference = 'Stop'
 $region = 'us-east-1'
 $writeOptIn = 'I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES'
 $readOnlyOptIn = 'I_ACKNOWLEDGE_LIVE_ADMIN_READONLY_CHECK'
-$optInVariable = if ($Mode -eq 'admin-readonly') { 'RUN_LIVE_AWS_ERP_READONLY' } else { 'RUN_LIVE_AWS_ERP_E2E' }
-$expectedOptIn = if ($Mode -eq 'admin-readonly') { $readOnlyOptIn } else { $writeOptIn }
+$optInVariable = if ($Mode -eq 'admin-readonly') { 'RUN_LIVE_AWS_ERP_READONLY' } elseif ($Mode -eq 'admin-role-matrix') { 'RUN_LIVE_AWS_ERP_ROLE_MATRIX' } else { 'RUN_LIVE_AWS_ERP_E2E' }
+$expectedOptIn = if ($Mode -eq 'admin-readonly') { $readOnlyOptIn } elseif ($Mode -eq 'admin-role-matrix') { 'I_ACKNOWLEDGE_TEMPORARY_ROLE_ACCOUNT_WRITES' } else { $writeOptIn }
 
 if ([Environment]::GetEnvironmentVariable($optInVariable, 'Process') -cne $expectedOptIn) {
     throw "Refused: set $optInVariable to the documented opt-in value before running this live test."
@@ -89,6 +89,8 @@ if ($Mode -eq 'admin-modules') {
     $expectedResult = 'LIVE_ADMIN_MODULE_SMOKE_PASSED'
 } elseif ($Mode -eq 'admin-readonly') {
     $expectedResult = 'LIVE_ADMIN_READONLY_SMOKE_PASSED'
+} elseif ($Mode -eq 'admin-role-matrix') {
+    $expectedResult = 'LIVE_ADMIN_ERP_ROLE_MATRIX_PASSED'
 } else {
     $expectedResult = 'LIVE_E2E_PASSED'
 }

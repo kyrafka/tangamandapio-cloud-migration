@@ -1,9 +1,25 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 08:43–08:46 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 08:53–09:01 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
+
+- Revalidación 08:53–09:01 UTC: E2E AWS→Azure pasó con ledger demo 10→10;
+  Admin read-only reconcilió 61/61 eventos, cero pendientes y 24/24 lecturas
+  HTTP 200. Health público HTTPS de AWS y Azure respondió 200; ASG quedó 2/2
+  `InService`/`Healthy`, stack `UPDATE_COMPLETE`, drift reportado `IN_SYNC`.
+- Smoke ERP en vivo: 48/48 pruebas de autorización para Admin, Ventas,
+  Finanzas, Compras, Datos Maestros y Auditoría. Cuatro cuentas QA quedaron
+  desactivadas y verificadas; las solicitudes de escritura se detuvieron en
+  validación 400 y no crearon documentos de negocio.
+- Gate local completo: `QUALITY_GATE=APROBADA`, 225 pruebas Python, 14 Node,
+  40 transacciones aisladas, build, auditorías, CloudFormation y Terraform
+  formato/init/validate/tests. Sin `apply`. Detalle en
+  [revalidación 09:01](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0901UTC.md).
+- Siguen abiertos recorrido visual por rol/CSV, reintento live inducido,
+  WebRTC entre dos navegadores, carga sostenida, WAF, failover Multi-AZ,
+  conectividad privada (SCP deniega `CreateCustomerGateway`) y atribución Azure.
 
 - Revalidación viva 08:43–08:46 UTC: STS aceptado; CloudFormation
   `UPDATE_COMPLETE`/`IN_SYNC`; ASG 2/2 sano y discos raíz cifrados; HTTPS 200,
