@@ -355,6 +355,23 @@ Revisa el resultado de SSM y el saldo antes de reintentar si una ejecución qued
 en estado desconocido. El último éxito está documentado en
 [`CLOUD-REVALIDATION-2026-10-16-0341UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
 
+## ICE/TURN de WebRTC
+
+El frontend de la release carga `static/assets/voice-ice-config-20261016.js`
+antes del módulo de llamadas. El adaptador consulta `/api/voice/ice-config`
+con la sesión del portal, no almacena la respuesta y aplica la configuración
+antes de iniciar oferta/respuesta o aceptar una oferta. Si el endpoint falla o
+no entrega ICE válido, conserva el servidor STUN de respaldo. Nunca registra
+usuario o credencial TURN en consola. Las pruebas Node están en
+`app/aws_release/current/tests/test_voice_ice_config.js` y se incluyen en
+`tests/run_local_quality.ps1`.
+
+La ruta backend puede emitir credenciales TURN HMAC de vida corta si se
+configuran `WEBRTC_TURN_URLS` y `WEBRTC_TURN_SHARED_SECRET`. Esto no provisiona
+ni paga un relay: la release/IaC todavía no configura un servicio TURN. Por
+tanto, la integración del frontend se valida localmente, pero no prueba una
+llamada entre navegadores ni resuelve redes NAT que requieran relay.
+
 Para probar los módulos administrativos con datos QA:
 
 ```powershell

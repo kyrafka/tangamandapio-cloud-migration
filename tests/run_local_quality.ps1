@@ -327,6 +327,18 @@ Invoke-UnitSuite -Name 'API base' -WorkingDirectory $appPath -TestDirectory 'tes
 Invoke-UnitSuite -Name 'Azure Functions' -WorkingDirectory $workspacePath -TestDirectory 'app\azure_function_tests'
 Invoke-UnitSuite -Name 'Release AWS' -WorkingDirectory (Join-Path $appPath 'aws_release') -TestDirectory 'tests'
 Invoke-UnitSuite -Name 'AWS current package' -WorkingDirectory (Join-Path $appPath 'aws_release\current') -TestDirectory 'tests'
+$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+if (-not $nodeCommand) { throw 'Node.js es necesario para probar el adaptador ICE de WebRTC.' }
+$voiceIceTestPath = Join-Path $appPath 'aws_release\current\tests\test_voice_ice_config.js'
+$voiceIceTestOutput = & $nodeCommand.Source --test $voiceIceTestPath 2>&1
+if ($LASTEXITCODE -ne 0) {
+  $voiceIceTestOutput | ForEach-Object { Write-Host $_ }
+  throw 'Fallaron las pruebas del adaptador de configuración ICE para WebRTC.'
+}
+$voiceIceTestOutput |
+  Select-String -Pattern '^✔ |^ℹ tests |^ℹ pass |^ℹ fail ' |
+  ForEach-Object { Write-Host $_.Line }
+Write-Host 'WEBRTC_ICE_CONFIG=APROBADO (5 pruebas Node; fallback STUN preservado)'
 
 $transactionLoadPath = Join-Path $workspacePath 'tests\performance\transactional_load_test.py'
 $previousErrorActionPreference = $ErrorActionPreference
