@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 05:58 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 06:05 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -44,6 +44,11 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 - A las 05:57 UTC, el plan Terraform de `azure-rebuild` consultó el backend
   remoto y terminó `No changes`; no se ejecutó `apply`. AWS no se pudo planear
   ni consultar por el rechazo de STS.
+- A las 06:00 UTC, ARM enumeró diez recursos en el grupo de reconstrucción
+  Azure: Function, plan, Storage, Key Vault, Log Analytics, Application
+  Insights, dos alertas métricas y dos Action Groups.
+- A las 06:04 UTC, AWS STS rechazó el token recién proporcionado
+  (`InvalidClientTokenId`); no se actualizó el perfil local ni se mutó AWS.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
   cloud.

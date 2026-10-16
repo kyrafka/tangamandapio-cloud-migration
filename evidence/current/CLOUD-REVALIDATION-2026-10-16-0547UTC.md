@@ -1,4 +1,4 @@
-# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–05:58 UTC
+# Revalidación de disponibilidad AWS–Azure — 16/10/2026, 05:44–06:05 UTC
 
 ## Resultado actual
 
@@ -21,6 +21,13 @@
   `tangama-wms-261008` figura `Running`/HTTPS-only y sus siete funciones están
   indexadas. `https://tangama-wms-261008.azurewebsites.net/api/health` respondió
   HTTP 200 con TLS válido y `{"status":"ok","service":"tangamandapio-wms"}`.
+- El inventario ARM de solo lectura contó 10 recursos en el grupo: una Function
+  y un plan, una Storage Account, un Key Vault, un workspace Log Analytics, un
+  componente Application Insights, dos alertas métricas y dos Action Groups.
+  No se imprimieron direcciones de receptores ni secretos.
+- A las 06:04 UTC, STS rechazó el token AWS recién recibido con
+  `InvalidClientTokenId`. No se sobrescribió el perfil local y no se hicieron
+  cambios en AWS.
 - Terraform consultó el backend remoto Azure con las variables de reconstrucción
   y alertas locales; el plan terminó `No changes` a las 05:57 UTC. No se guardó
   un plan aplicable ni se ejecutó `apply`.

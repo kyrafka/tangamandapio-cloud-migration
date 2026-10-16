@@ -1,10 +1,11 @@
 # Reconstrucción del WMS de demostración en Azure
 
-La comprobación más reciente, 16/10/2026 05:58 UTC, confirma la Function
-`Running`/HTTPS-only, siete Functions indexadas y health HTTP 200/TLS válido.
-El plan Terraform consultó el backend remoto y terminó `No changes`; no se
-ejecutó `apply`. El flujo E2E compensado local→Azure volvió a pasar entre
-05:45–05:47 UTC. Health volvió a responder HTTP 200 a las 05:58 UTC. Véase el [corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md)
+La comprobación más reciente, 16/10/2026 06:05 UTC, confirma la Function
+`Running`/HTTPS-only y siete Functions indexadas; el health respondió HTTP 200
+con TLS válido a las 05:58. ARM enumera diez recursos. El plan Terraform
+consultó el backend remoto y terminó `No changes` a las 05:57; no se ejecutó
+`apply`. El flujo E2E compensado local→Azure pasó entre 05:45–05:47 UTC. Véase
+el [corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md)
 y la [evidencia de despliegue y sondas](../../../evidence/current/azure/AZURE-HEALTH-HEAD-DEPLOY-2026-10-16-0519UTC.md).
 
 ## Revalidación viva — 16/10/2026, 02:40 UTC
