@@ -1,6 +1,28 @@
-# Matriz de evidencia por criterio — actualización 15/10/2026, 23:45 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 00:45 UTC
 
-## Corte vigente — 15/10/2026, 23:45 UTC
+## Corte vigente — 16/10/2026, 00:45 UTC (release v18)
+
+El cambio de paginación del historial WMS se empaquetó y desplegó como v18;
+CloudFormation terminó `UPDATE_COMPLETE` a las 00:42:53 UTC. El gate local
+aprobó 209 pruebas y los tests dirigidos cubren el total de 45 eventos en dos
+páginas, compatibilidad de la API anterior, valores inválidos y duplicados.
+
+La validación en nube quedó incompleta: inmediatamente después del despliegue
+la URL `/health` respondió 200, pero una comprobación posterior contra el
+origen ALB devolvió 503 (`awselb/2.0`). AWS Academy rechazó llamadas de lectura
+y `ssm:SendCommand` con la política explícita `voc-cancel-cred`; no fue posible
+confirmar targets, drift ni el smoke autenticado de v18. El intento de login
+desde EC2 al dominio HTTPS recibió 403 antes de crear datos de negocio. Azure
+Function `/api/health` respondió 200. No se debe describir v18 como operativo
+de extremo a extremo hasta restaurar el acceso al laboratorio y repetir las
+pruebas. Detalle en [la revalidación v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0045UTC.md).
+
+El comportamiento del ledger sintético sí cuenta con evidencia previa en v17:
+venta y recepción finalizaron por Azure y el saldo demo volvió de 10 a 10. Es
+inventario ficticio funcional; no representa existencias físicas. La evidencia
+v17 no sustituye el smoke posterior al despliegue v18.
+
+## Corte anterior — 15/10/2026, 23:45 UTC (v17)
 
 El smoke remoto autenticado `admin-modules` pasó desde EC2 hacia el portal por
 ALB HTTPS. Finanzas creó una cuenta por pagar sintética de S/ 0.05, la liquidó

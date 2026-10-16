@@ -277,6 +277,14 @@ class PlatformConsoleTestCase(unittest.TestCase):
             self.assertEqual(response.status_code, 200, path)
             self.assertGreater(len(response.get_data()), 100, path)
             response.close()
+        page = self.admin.get("/platform").get_data(as_text=True)
+        script = self.admin.get("/assets/platform-console.js").get_data(as_text=True)
+        stylesheet = self.admin.get("/assets/platform-console.css").get_data(as_text=True)
+        self.assertIn('id="outbox-pagination"', page)
+        self.assertIn('id="outbox-page-summary"', page)
+        self.assertIn('headers.get("X-Total-Count")', script)
+        self.assertIn("Mostrando", script)
+        self.assertIn(".outbox-pagination", stylesheet)
 
     def test_release_homepage_references_assets_served_by_flask(self):
         page = self.admin.get("/")
@@ -340,9 +348,57 @@ class PlatformConsoleTestCase(unittest.TestCase):
         response = operations.get("/api/outbox")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), [])
+        self.assertEqual(response.headers["X-Total-Count"], "0")
         sales, _ = self.login("sales@example.test", "Temporary-Password-2026")
         self.assertEqual(sales.get("/api/outbox").status_code, 403)
         self.assertIn(b"fulfillment-status", self.admin.get("/assets/platform-console.js").get_data())
+
+    def test_outbox_api_paginates_without_changing_legacy_array_response(self):
+        for number in range(35):
+            response = self.admin.post(
+                "/api/orders",
+                json={"customer": f"QA page {number}", "total": number + 1},
+                headers={"X-CSRF-Token": self.admin_csrf},
+            )
+            self.assertEqual(response.status_code, 201, response.get_json())
+
+        first_page = self.admin.get("/api/outbox?limit=30&offset=0")
+        self.assertEqual(first_page.status_code, 200)
+        self.assertIsInstance(first_page.get_json(), list)
+        self.assertEqual(len(first_page.get_json()), 30)
+        self.assertEqual(first_page.headers["X-Total-Count"], "35")
+        self.assertEqual(first_page.headers["X-Page-Limit"], "30")
+        self.assertEqual(first_page.headers["X-Page-Offset"], "0")
+
+        second_page = self.admin.get("/api/outbox?limit=30&offset=30")
+        self.assertEqual(second_page.status_code, 200)
+        self.assertEqual(len(second_page.get_json()), 5)
+        self.assertEqual(second_page.headers["X-Total-Count"], "35")
+        event_ids = {
+            event["event_id"]
+            for event in first_page.get_json() + second_page.get_json()
+        }
+        self.assertEqual(len(event_ids), 35)
+
+        with portal.connect(portal.configured_database_target(self.app.config)) as connection:
+            index_names = {
+                row["name"]
+                for row in connection.execute("PRAGMA index_list('outbox_events')").fetchall()
+            }
+        self.assertIn("idx_outbox_created_event_id", index_names)
+
+        legacy = self.admin.get("/api/outbox")
+        self.assertEqual(legacy.status_code, 200)
+        self.assertIsInstance(legacy.get_json(), list)
+        self.assertEqual(len(legacy.get_json()), 30)
+        self.assertEqual(legacy.headers["X-Total-Count"], "35")
+
+    def test_outbox_api_rejects_invalid_pagination_parameters(self):
+        for query in ("limit=0", "limit=101", "limit=invalid", "offset=-1", "offset=1000001"):
+            with self.subTest(query=query):
+                response = self.admin.get(f"/api/outbox?{query}")
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.get_json()["error"], "invalid_pagination")
 
     def test_auto_dispatch_runs_after_the_order_and_outbox_are_committed(self):
         self.app.config["AUTO_DISPATCH_EVENTS"] = True

@@ -1,19 +1,44 @@
 # Paquete de release AWS
 
-> Corte de infraestructura: 15/10/2026, 23:24 UTC. CloudFormation
-> `tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`
-> (0 recursos desviados). El ASG volvió a 2/2 deseadas/sanas (máximo 5); un
-> destino anterior seguía drenando durante la limpieza. El portal HTTPS, salud,
-> readiness y el bundle v17 respondieron 200; HTTP redirige con 301.
-> El E2E sintético desde EC2 por ALB-HTTPS completó venta y recepción hacia
-> Azure, con dos eventos entregados y el ledger demo restaurado 10→10.
-> Corte de módulos: 15/10/2026, 23:45 UTC. Smoke remoto de Finanzas creó,
-> liquidó y releyó una cuenta sintética de S/ 0.05; el correo `portal_only`
-> llegó al buzón Comercial y se marcó leído; la Azure poison queue informó 0
-> mensajes, consultada sin mutar ni exponer payloads. Resumen admin: 1 pedido,
-> 0 pendientes, 45 entregados; la lista muestra solo los 30 más recientes.
-> SNS: 2 confirmadas/0 pendientes; no se disparó alarma ni se envió SMTP.
-> No se registra material de credenciales en este archivo.
+> Último release preparado: v18, `20261015-outbox-pagination-v18-python312`,
+> SHA-256 `c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f`.
+> CloudFormation terminó `UPDATE_COMPLETE` el 16/10 a las 00:42:53 UTC. La
+> última comprobación del origen ALB devolvió 503 y AWS Academy denegó consultas
+> por `voc-cancel-cred`; por eso la disponibilidad y el smoke autenticado de
+> v18 no quedaron confirmados. Azure `/api/health` respondió 200. Véase
+> [la revalidación 00:45 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0045UTC.md).
+
+## Release v18 desplegado — paginación íntegra del outbox
+
+`current/BUILD_REVISION` identifica `20261015-outbox-pagination-v18-python312`.
+La API conserva el arreglo JSON histórico de `GET /api/outbox` y agrega
+`limit`/`offset` y metadatos de página; el panel de plataforma recorre el
+historial y muestra el total completo. La consulta usa orden estable y se añadió
+el índice correspondiente a las migraciones SQLite y PostgreSQL.
+
+El artefacto inmutable se subió al bucket privado con SSE-S3 y metadato SHA-256
+verificado. La puerta local aprobó 209 pruebas. Las pruebas específicas
+verificaron 45 eventos en dos páginas de 30 + 15, compatibilidad del arreglo
+anterior y rechazo de parámetros fuera de rango. El código v18 está desplegado,
+pero su disponibilidad final no quedó confirmada por la denegación del
+laboratorio.
+
+## Corte anterior — 15/10/2026, 23:24 UTC (v17)
+
+CloudFormation
+`tangamandapio-live-20261013` terminó `UPDATE_COMPLETE`; drift `IN_SYNC`
+(0 recursos desviados). El ASG volvió a 2/2 deseadas/sanas (máximo 5); un
+destino anterior seguía drenando durante la limpieza. El portal HTTPS, salud,
+readiness y el bundle v17 respondieron 200; HTTP redirige con 301.
+El E2E sintético desde EC2 por ALB-HTTPS completó venta y recepción hacia
+Azure, con dos eventos entregados y el ledger demo restaurado 10→10.
+Corte de módulos: 15/10/2026, 23:45 UTC. Smoke remoto de Finanzas creó,
+liquidó y releyó una cuenta sintética de S/ 0.05; el correo `portal_only`
+llegó al buzón Comercial y se marcó leído; la Azure poison queue informó 0
+mensajes, consultada sin mutar ni exponer payloads. Resumen admin: 1 pedido,
+0 pendientes, 45 entregados; la lista de esa versión mostraba solo los 30 más
+recientes. SNS: 2 confirmadas/0 pendientes; no se disparó alarma ni se envió
+SMTP. No se registra material de credenciales en este archivo.
 
 ## Release v17 desplegado — indicador de salud coherente con API pública
 

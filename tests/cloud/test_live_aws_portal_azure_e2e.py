@@ -145,6 +145,19 @@ class PortalRequestHeaderTests(unittest.TestCase):
         self.assertIsNone(request.get_header("Referer"))
         self.assertIsNone(request.get_header("X-csrf-token"))
 
+    def test_request_with_headers_exposes_pagination_metadata(self) -> None:
+        client = live_e2e.PortalClient("https")
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b"[]"
+        response.headers.items.return_value = [("X-Total-Count", "45")]
+        with patch.object(client.opener, "open", return_value=response):
+            status, body, headers = client.request_with_headers("GET", "/api/outbox")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, [])
+        self.assertEqual(headers["x-total-count"], "45")
+
 
 class ReadOnlyLoadTransportTests(unittest.TestCase):
     def test_load_probe_reuses_the_target_specific_opener(self) -> None:
@@ -413,15 +426,18 @@ class AdminModuleSmokeTests(unittest.TestCase):
         def request(method: str, path: str):
             if path == "/api/orders":
                 return 200, [{"id": 1}, {"id": 2}]
-            if path == "/api/outbox":
-                return 200, [
-                    {"status": "delivered"},
-                    {"status": "delivered"},
-                    {"status": "pending"},
-                ]
             raise AssertionError(f"Unexpected reconciliation request: {method} {path}")
 
         client.request.side_effect = request
+        client.request_with_headers.return_value = (
+            200,
+            [
+                {"event_id": "evt-1", "status": "delivered"},
+                {"event_id": "evt-2", "status": "delivered"},
+                {"event_id": "evt-3", "status": "pending"},
+            ],
+            {"x-total-count": "3", "x-page-limit": "30", "x-page-offset": "0"},
+        )
         self.assertEqual(
             live_e2e.inspect_admin_dashboard_consistency(client),
             {
@@ -431,28 +447,37 @@ class AdminModuleSmokeTests(unittest.TestCase):
                 "outbox_pending": 1,
                 "outbox_delivered": 2,
                 "visible_outbox_rows": 3,
-                "outbox_reconciliation": "complete",
+                "outbox_total": 3,
+                "outbox_reconciliation": "complete_paginated",
             },
         )
 
-    def test_dashboard_reconciliation_marks_outbox_limit_without_overclaiming(self) -> None:
+    def test_dashboard_reconciliation_reads_multiple_outbox_pages_and_matches_totals(self) -> None:
         client = MagicMock()
         client.json.return_value = {
             "role": "admin",
             "orders": 1,
             "outbox": {"pending": 0, "delivered": 45},
         }
-        client.request.side_effect = [
-            (200, [{"id": 1}]),
-            (200, [{"status": "delivered"} for _ in range(30)]),
+        client.request.side_effect = [(200, [{"id": 1}])]
+        first_page = [
+            {"event_id": f"evt-{number}", "status": "delivered"}
+            for number in range(30)
+        ]
+        second_page = [
+            {"event_id": f"evt-{number}", "status": "delivered"}
+            for number in range(30, 45)
+        ]
+        page_headers = {"x-total-count": "45", "x-page-limit": "30"}
+        client.request_with_headers.side_effect = [
+            (200, first_page, {**page_headers, "x-page-offset": "0"}),
+            (200, second_page, {**page_headers, "x-page-offset": "30"}),
         ]
         result = live_e2e.inspect_admin_dashboard_consistency(client)
-        self.assertEqual(
-            result["outbox_reconciliation"],
-            "visible_rows_consistent_total_capped",
-        )
+        self.assertEqual(result["outbox_reconciliation"], "complete_paginated")
         self.assertEqual(result["outbox_delivered"], 45)
-        self.assertEqual(result["visible_outbox_rows"], 30)
+        self.assertEqual(result["visible_outbox_rows"], 45)
+        self.assertEqual(result["outbox_total"], 45)
 
     def test_dashboard_reconciliation_rejects_inconsistent_outbox_totals(self) -> None:
         client = MagicMock()
@@ -461,12 +486,38 @@ class AdminModuleSmokeTests(unittest.TestCase):
             "orders": 0,
             "outbox": {"pending": 0, "delivered": 8},
         }
-        client.request.side_effect = [
-            (200, []),
-            (200, [{"status": "delivered"}, {"status": "pending"}]),
-        ]
+        client.request.side_effect = [(200, [])]
+        client.request_with_headers.return_value = (
+            200,
+            [
+                {"event_id": "evt-1", "status": "delivered"},
+                {"event_id": "evt-2", "status": "pending"},
+            ],
+            {"x-total-count": "2", "x-page-limit": "30", "x-page-offset": "0"},
+        )
         with self.assertRaisesRegex(
             live_e2e.SmokeFailure, "lower than the visible event rows"
+        ):
+            live_e2e.inspect_admin_dashboard_consistency(client)
+
+    def test_dashboard_reconciliation_rejects_duplicate_or_missing_events(self) -> None:
+        client = MagicMock()
+        client.json.return_value = {
+            "role": "admin",
+            "orders": 0,
+            "outbox": {"pending": 0, "delivered": 2},
+        }
+        client.request.return_value = (200, [])
+        client.request_with_headers.return_value = (
+            200,
+            [
+                {"event_id": "evt-1", "status": "delivered"},
+                {"event_id": "evt-1", "status": "delivered"},
+            ],
+            {"x-total-count": "2", "x-page-limit": "30", "x-page-offset": "0"},
+        )
+        with self.assertRaisesRegex(
+            live_e2e.SmokeFailure, "duplicates or omitted events"
         ):
             live_e2e.inspect_admin_dashboard_consistency(client)
 

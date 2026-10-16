@@ -9,7 +9,7 @@
   };
   const allowedRoles = ["customer", "sales", "warehouse", "operations", "admin", "auditor"];
   const $ = (selector) => document.querySelector(selector);
-  const state = { csrf: "", role: "", window: 60, loading: false, inventory: [] };
+  const state = { csrf: "", role: "", window: 60, loading: false, inventory: [], outboxLimit: 30, outboxOffset: 0, outboxTotal: 0 };
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -19,13 +19,14 @@
   }
 
   async function request(path, options = {}) {
-    const headers = new Headers(options.headers || {});
-    if (options.body) headers.set("Content-Type", "application/json");
-    if (state.csrf && options.method && options.method !== "GET") {
+    const { includeMeta = false, ...fetchOptions } = options;
+    const headers = new Headers(fetchOptions.headers || {});
+    if (fetchOptions.body) headers.set("Content-Type", "application/json");
+    if (state.csrf && fetchOptions.method && fetchOptions.method !== "GET") {
       headers.set("X-CSRF-Token", state.csrf);
     }
     const response = await fetch(path, {
-      ...options,
+      ...fetchOptions,
       headers,
       credentials: "same-origin",
       cache: "no-store",
@@ -50,7 +51,7 @@
       }[errorCode] || errorCode || `Error ${response.status}`;
       throw new Error(message);
     }
-    return payload;
+    return includeMeta ? { payload, headers: response.headers } : payload;
   }
 
   function announce(message, tone = "error") {
@@ -301,10 +302,16 @@
     renderUsers(users, companies);
   }
 
-  function renderOutbox(events) {
+  function renderOutbox(events, total, limit, offset) {
     const body = $("#outbox-table-body");
     body.replaceChildren();
     $("#outbox-empty").hidden = events.length > 0;
+    const end = Math.min(offset + events.length, total);
+    $("#outbox-page-summary").textContent = total
+      ? `Mostrando ${offset + 1}–${end} de ${total} eventos · más recientes primero`
+      : "No hay eventos en el historial.";
+    $("#outbox-prev").disabled = offset === 0;
+    $("#outbox-next").disabled = offset + limit >= total;
     for (const event of events) {
       const row = document.createElement("tr");
       const identity = document.createElement("td");
@@ -351,7 +358,20 @@
   }
 
   async function refreshOutbox() {
-    renderOutbox(await request("/api/outbox"));
+    const query = new URLSearchParams({ limit: String(state.outboxLimit), offset: String(state.outboxOffset) });
+    const result = await request(`/api/outbox?${query}`, { includeMeta: true });
+    const total = Number(result.headers.get("X-Total-Count"));
+    const limit = Number(result.headers.get("X-Page-Limit"));
+    const offset = Number(result.headers.get("X-Page-Offset"));
+    if (!Array.isArray(result.payload) || ![total, limit, offset].every(Number.isSafeInteger) || limit < 1 || offset < 0) {
+      throw new Error("La respuesta del historial no contiene una página válida.");
+    }
+    state.outboxTotal = total;
+    if (offset > 0 && offset >= total) {
+      state.outboxOffset = Math.max(0, Math.floor((total - 1) / state.outboxLimit) * state.outboxLimit);
+      return refreshOutbox();
+    }
+    renderOutbox(result.payload, total, limit, offset);
   }
 
   function renderInventory(inventory) {
@@ -455,6 +475,7 @@
         body: JSON.stringify({ sku, quantity }),
       });
       showWmsResult(`Pedido ${order.reference} guardado en AWS (S/ ${Number(order.total).toFixed(2)}). Evento ${order.event_id}: ${order.fulfillment?.status || "pendiente"}. Consultando Azure…`);
+      state.outboxOffset = 0;
       await refreshOutbox();
       const outcome = await waitForWmsResult(order.event_id);
       if (!outcome) {
@@ -517,6 +538,16 @@
       }
       $("#platform-refresh").addEventListener("click", refresh);
       $("#outbox-refresh").addEventListener("click", () => refreshOutbox().catch((error) => announce(error.message)));
+      $("#outbox-prev").addEventListener("click", () => {
+        if (state.outboxOffset === 0) return;
+        state.outboxOffset = Math.max(0, state.outboxOffset - state.outboxLimit);
+        refreshOutbox().catch((error) => announce(error.message));
+      });
+      $("#outbox-next").addEventListener("click", () => {
+        if (state.outboxOffset + state.outboxLimit >= state.outboxTotal) return;
+        state.outboxOffset += state.outboxLimit;
+        refreshOutbox().catch((error) => announce(error.message));
+      });
       $("#wms-inventory-refresh").addEventListener("click", () => refreshInventory().catch(() => null));
       $("#wms-demo-sku").addEventListener("change", updateDemoProductNote);
       $("#wms-demo-quantity").addEventListener("input", updateDemoProductNote);

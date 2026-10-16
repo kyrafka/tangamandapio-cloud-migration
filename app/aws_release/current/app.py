@@ -1010,14 +1010,29 @@ def create_app(test_config=None):
     @app.get("/api/outbox")
     @require_roles("operations", "admin", "auditor", "warehouse")
     def list_outbox():
+        try:
+            limit = int(request.args.get("limit", "30"))
+            offset = int(request.args.get("offset", "0"))
+        except (TypeError, ValueError):
+            return jsonify(error="invalid_pagination"), 400
+        if not 1 <= limit <= 100 or not 0 <= offset <= 1_000_000:
+            return jsonify(error="invalid_pagination"), 400
         with connect(database_path) as connection:
+            total = connection.execute(
+                "SELECT COUNT(*) AS count FROM outbox_events"
+            ).fetchone()["count"]
             rows = connection.execute(
                 """
                 SELECT event_id, order_id, status, attempts, last_error, created_at, delivered_at
-                FROM outbox_events ORDER BY created_at DESC LIMIT 30
-                """
+                FROM outbox_events ORDER BY created_at DESC, event_id DESC LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
             ).fetchall()
-        return jsonify([dict(row) for row in rows])
+        response = jsonify([dict(row) for row in rows])
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["X-Page-Limit"] = str(limit)
+        response.headers["X-Page-Offset"] = str(offset)
+        return response
 
     @app.get("/api/wms/inventory")
     @require_roles("operations", "admin")

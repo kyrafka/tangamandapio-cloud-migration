@@ -124,7 +124,6 @@ class _ALBOriginHTTPSHandler(HTTPSHandler):
             request,
             origin_host=ALB_ORIGIN_DNS,
             context=self._context,
-            check_hostname=True,
         )
 
 
@@ -199,6 +198,18 @@ class PortalClient:
         payload: dict | None = None,
         accepted_statuses: tuple[int, ...] = (),
     ) -> tuple[int, dict | None]:
+        status, body, _ = self.request_with_headers(
+            method, path, payload, accepted_statuses
+        )
+        return status, body
+
+    def request_with_headers(
+        self,
+        method: str,
+        path: str,
+        payload: dict | None = None,
+        accepted_statuses: tuple[int, ...] = (),
+    ) -> tuple[int, dict | None, dict[str, str]]:
         headers = {"Accept": "application/json"}
         data = None
         if payload is not None:
@@ -221,10 +232,20 @@ class PortalClient:
         try:
             with self.opener.open(req, timeout=REQUEST_TIMEOUT) as response:
                 body = response.read()
-                return response.status, json.loads(body) if body else None
+                response_headers = {
+                    key.lower(): value for key, value in response.headers.items()
+                }
+                return (
+                    response.status,
+                    json.loads(body) if body else None,
+                    response_headers,
+                )
         except HTTPError as error:
             if error.code in accepted_statuses:
-                return error.code, None
+                response_headers = {
+                    key.lower(): value for key, value in error.headers.items()
+                }
+                return error.code, None, response_headers
             # Do not echo the response body; it may contain account data.
             raise SmokeFailure(f"{method} {path} returned HTTP {error.code}.") from None
         except (URLError, TimeoutError, json.JSONDecodeError) as error:
@@ -483,24 +504,57 @@ def inspect_admin_dashboard_consistency(client: PortalClient) -> dict:
         raise SmokeFailure("The dashboard returned invalid outbox counters.")
 
     orders_status, orders = client.request("GET", "/api/orders")
-    outbox_status, outbox = client.request("GET", "/api/outbox")
     if (
         orders_status != 200
         or not isinstance(orders, list)
-        or outbox_status != 200
-        or not isinstance(outbox, list)
     ):
-        raise SmokeFailure("Admin order or outbox rows were unavailable for reconciliation.")
+        raise SmokeFailure("Admin order rows were unavailable for reconciliation.")
     if order_count < len(orders):
         raise SmokeFailure("The dashboard order counter is lower than its visible order rows.")
     if len(orders) < 50 and order_count != len(orders):
         raise SmokeFailure("The dashboard order total differs from the complete visible order list.")
 
+    page_size = 30
+    outbox: list[dict] = []
+    total: int | None = None
+    offset = 0
+    while total is None or offset < total:
+        outbox_status, page, page_headers = client.request_with_headers(
+            "GET", f"/api/outbox?limit={page_size}&offset={offset}"
+        )
+        if outbox_status != 200 or not isinstance(page, list):
+            raise SmokeFailure("Admin outbox page was unavailable for reconciliation.")
+        try:
+            page_total = int(page_headers["x-total-count"])
+            reported_limit = int(page_headers["x-page-limit"])
+            reported_offset = int(page_headers["x-page-offset"])
+        except (KeyError, TypeError, ValueError):
+            raise SmokeFailure("Admin outbox pagination metadata was invalid.") from None
+        if (
+            page_total < 0
+            or page_total > 10_000
+            or reported_limit != page_size
+            or reported_offset != offset
+            or len(page) > page_size
+            or (total is not None and page_total != total)
+        ):
+            raise SmokeFailure("Admin outbox pagination metadata was inconsistent.")
+        total = page_total
+        outbox.extend(page)
+        if len(page) < page_size and len(outbox) < total:
+            raise SmokeFailure("Admin outbox pagination ended before the reported total.")
+        offset += len(page)
+        if not page and offset < total:
+            raise SmokeFailure("Admin outbox pagination returned an empty page before the total.")
+    event_ids = [row.get("event_id") for row in outbox]
+    if len(event_ids) != len(set(event_ids)) or len(outbox) != total:
+        raise SmokeFailure("Admin outbox pages contained duplicates or omitted events.")
+
     pending_rows = sum(row.get("status") != "delivered" for row in outbox)
     delivered_rows = sum(row.get("status") == "delivered" for row in outbox)
     if pending < pending_rows or delivered < delivered_rows:
         raise SmokeFailure("Dashboard outbox totals are lower than the visible event rows.")
-    if len(outbox) < 30 and (pending != pending_rows or delivered != delivered_rows):
+    if pending != pending_rows or delivered != delivered_rows:
         raise SmokeFailure("Dashboard outbox counters differ from the complete event list.")
     return {
         "order_count": order_count,
@@ -509,9 +563,8 @@ def inspect_admin_dashboard_consistency(client: PortalClient) -> dict:
         "outbox_pending": pending,
         "outbox_delivered": delivered,
         "visible_outbox_rows": len(outbox),
-        "outbox_reconciliation": (
-            "complete" if len(outbox) < 30 else "visible_rows_consistent_total_capped"
-        ),
+        "outbox_total": total,
+        "outbox_reconciliation": "complete_paginated",
     }
 
 

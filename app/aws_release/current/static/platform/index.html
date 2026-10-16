@@ -57,10 +57,17 @@
       </section>
 
       <section class="platform-section" aria-labelledby="fulfillment-heading">
-        <div class="section-heading"><div><p class="eyebrow">Trazabilidad multicloud</p><h2 id="fulfillment-heading">Entregas al WMS</h2><p class="section-copy">Sigue los eventos durables de AWS y consulta bajo demanda el resultado procesado por Azure. La integración actual puede estar en modo demostración.</p></div><button id="outbox-refresh" class="platform-button" type="button">Actualizar eventos</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Trazabilidad multicloud</p><h2 id="fulfillment-heading">Entregas al WMS</h2><p class="section-copy">Sigue los eventos durables de AWS y consulta bajo demanda el resultado procesado por Azure. Se muestran primero los eventos más recientes, con paginación.</p></div><button id="outbox-refresh" class="platform-button" type="button">Actualizar eventos</button></div>
         <div class="platform-panel">
           <div class="table-wrap"><table class="users-table fulfillment-table"><thead><tr><th>Evento / pedido</th><th>Entrega desde AWS</th><th>Resultado WMS</th><th>Acciones</th></tr></thead><tbody id="outbox-table-body"></tbody></table></div>
           <div id="outbox-empty" class="empty-state" hidden>No hay eventos de entrega todavía.</div>
+          <nav id="outbox-pagination" class="outbox-pagination" aria-label="Paginación de eventos" aria-busy="false">
+            <span id="outbox-page-summary" aria-live="polite">Cargando eventos…</span>
+            <div class="outbox-pagination-actions">
+              <button id="outbox-prev" class="platform-button" type="button" disabled>Anterior</button>
+              <button id="outbox-next" class="platform-button" type="button" disabled>Siguiente</button>
+            </div>
+          </nav>
         </div>
       </section>
 

@@ -93,6 +93,9 @@
 .users-table td:first-child strong, .users-table td:first-child small { display: block; }
 .users-table td:first-child small { color: var(--platform-muted); margin-top: 3px; }
 .fulfillment-table td small { color: var(--platform-muted); display: block; font-size: .72rem; line-height: 1.45; margin-top: 3px; max-width: 38ch; overflow-wrap: anywhere; }
+.outbox-pagination { align-items: center; border-top: 1px solid var(--platform-line); color: var(--platform-muted); display: flex; flex-wrap: wrap; font-size: .8rem; gap: 10px 14px; justify-content: space-between; margin-top: 12px; padding-top: 12px; }
+.outbox-pagination[hidden] { display: none; }
+.outbox-pagination-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .fulfillment-result { color: var(--platform-muted); font-size: .78rem; }
 .users-table select { background: var(--platform-page); border: 1px solid var(--platform-line); border-radius: 7px; color: var(--platform-ink); font-size: .78rem; max-width: 170px; padding: 7px 8px; }
 .users-table button { background: var(--platform-soft); border: 1px solid var(--platform-line); border-radius: 7px; color: var(--platform-ink); cursor: pointer; font-size: .74rem; font-weight: 750; margin: 2px; padding: 7px 9px; }
