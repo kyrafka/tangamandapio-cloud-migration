@@ -1,5 +1,23 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Revalidación desplegada AWS–Azure — 16/10/2026, 07:59–08:08 UTC
+
+CloudFormation terminó `UPDATE_COMPLETE`, el drift fresco fue `IN_SYNC` (0),
+las dos EC2 y destinos ALB estaban sanos y los volúmenes raíz cifrados. Portal
+HTTPS y Azure Function health respondieron 200; HTTP del portal redirigió a
+HTTPS. Terraform Azure `plan -refresh-only` y plan normal terminaron
+`No changes` con la configuración de receptores local protegida, sin `apply`.
+El E2E AWS→Azure pasó con venta/compra sintéticas compensadas, dos eventos
+correlacionados por ID con workers exitosos y ledger demo 10→10. Admin de solo
+lectura reconcilió 57/57 outbox y Admin módulos liquidó S/ 0.05 sintéticos y
+verificó correo `portal_only`; poison count fue 0 sin exponer payloads. El
+detalle y los límites abiertos están en
+[`CLOUD-REVALIDATION-2026-10-16-0808UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0808UTC.md).
+
+No se demostró carga sostenida, failover Multi-AZ, fallo live de reintento,
+ruta privada, recorrido visual de todos los roles ni WebRTC entre dos
+navegadores. El WMS sigue siendo un ledger sintético; el correo no usa SMTP.
+
 ## Revalidación integrada AWS–Azure — 16/10/2026, 06:39–06:54 UTC
 
 Con el token temporal aceptado, el portal HTTPS volvió a responder health 200;

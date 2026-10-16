@@ -1,4 +1,27 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 07:03 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 08:08 UTC
+
+## Estado operativo vigente — 16/10/2026, 07:59–08:08 UTC
+
+AWS STS aceptó el perfil temporal; CloudFormation está `UPDATE_COMPLETE` y el
+drift fresco terminó `IN_SYNC` (0) a las 07:59:34. ASG y targets ALB están 2/2
+sanos, con discos raíz cifrados. RDS está disponible/cifrada, pero continúa
+Single-AZ y con un día de backups. El dominio HTTPS respondió 200 y HTTP
+redirigió 301; Azure Function está `Running`/HTTPS-only y health 200. Terraform
+Azure `plan -refresh-only` terminó `No changes`, sin `apply`.
+
+El E2E desplegado 08:00 verificó venta y reposición sintéticas, dos entregas y
+ledger de demostración 10→10; Application Insights correlacionó los dos
+`event_id` con invocaciones del worker exitosas (`resultCode=0`). Los smokes
+Admin de solo lectura y módulos pasaron: 57/57 eventos entregados, permisos
+API 200/403, Finanzas QA S/ 0.05 `paid`, correo interno portal-only y poison
+count 0 sin revelar mensajes. No hubo pago externo ni cambio de infraestructura.
+
+Pendientes que esta prueba no cierra: navegador visual por cada rol/CSV, WebRTC
+entre dos navegadores, falla live/reintento del outbox, carga sostenida y
+escalado medido, failover Multi-AZ, red privada AWS–Azure, WAF y atribución de
+costo Azure. El WMS continúa siendo un ledger ficticio funcional para el caso
+académico; no se afirma que maneje inventario físico. Véase la
+[revalidación viva 08:08](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0808UTC.md).
 
 ## Estado operativo vigente — 16/10/2026, 06:39–07:03 UTC
 

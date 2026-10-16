@@ -1,14 +1,16 @@
 # Reconstrucción del WMS de demostración en Azure
 
-La comprobación más reciente, 16/10/2026 07:40 UTC, confirma la Function
-`Running`/HTTPS-only y siete Functions indexadas; el health respondió HTTP 200
-con TLS válido a las 07:23. ARM enumera diez recursos. El plan Terraform
-`-refresh-only` consultó el backend remoto y terminó `No changes` a las 07:14;
-no se ejecutó `apply`. El E2E compensado contra el portal desplegado AWS→Azure
-pasó a las 07:28: venta `completed_demo`, compra `received_demo`, dos eventos
-entregados y ledger sintético restaurado 10→10. El smoke posterior confirmó
-55/55 eventos entregados y cero pendientes. Véase el
-[corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0730UTC.md)
+La comprobación más reciente, 16/10/2026 08:08 UTC, confirma la Function
+`Running`/HTTPS-only, health HTTP 200 con TLS válido y el componente Application
+Insights `Succeeded`; ARM enumera la Function, colas, contenedores, Key Vault,
+alertas y recursos de monitorización. El E2E AWS→Azure pasó a las 08:00 con
+venta `completed_demo`, compra `received_demo`, dos eventos entregados y ledger
+sintético restaurado 10→10. Application Insights correlacionó ambos `event_id`
+con ejecuciones exitosas del worker (`resultCode=0`). Admin reconcilió 57/57
+eventos y cero pendientes. Terraform remoto `plan -refresh-only` con
+`rebuild.tfvars.example` y el plan normal con el archivo local protegido de
+receptores terminaron `No changes` a las 08:07; no se ejecutó `apply`. Véase el
+[corte cloud actual](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0808UTC.md)
 y la evidencia de despliegue y sondas.
 
 ## Revalidación viva — 16/10/2026, 02:40 UTC
