@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 16/10/2026, 06:10 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
+**Corte:** 16/10/2026, 06:22 UTC — STS acepta token nuevo; portal AWS 503 por target group vacío
 
 ## 1. Caso y objetivo
 
@@ -99,7 +99,7 @@ La puerta local terminó aprobada: 163 pruebas Python más 14 Node, PT-PERF-02 4
 
 La arquitectura empresarial, que separa portal B2B, ERP, WMS, correo e identidad y distingue objetivos de lo implementado, está organizada en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
-## 4.3 Estado vigente — 16/10/2026, 05:44–06:10 UTC
+## 4.3 Estado histórico — 16/10/2026, 05:44–06:10 UTC (superado)
 
 El estado descrito en la sección 4.1 ya no representa disponibilidad actual.
 El dominio HTTPS conserva TLS válido, pero `/` y `/health` responden HTTP 503;
@@ -122,6 +122,26 @@ El E2E local→Azure volvió a pasar a las 06:09 UTC con venta/restock sintétic
 y saldo de ledger restaurado; no se originó en EC2/RDS ni valida la aplicación
 AWS, que volvió a devolver 503 en la sonda de las 06:10 UTC. La Function
 Azure respondió health 200 en esa misma comprobación.
+
+## 4.4 Estado vigente — 16/10/2026, 06:13–06:22 UTC
+
+El token temporal más reciente se guardó en el perfil local `default` y AWS STS
+lo aceptó para la cuenta `841113066612`; el rechazo de las 06:04 pertenecía al
+token anterior. El stack `tangamandapio-live-20261013` reporta
+`UPDATE_COMPLETE` (último cambio 00:27:59 UTC), el ALB está `active` y RDS
+`available`, cifrada, privada, Single-AZ, con backup de un día. Sin embargo,
+el ASG conserva mínimo/deseado 2 y máximo 5 pero no tiene instancias; el target
+group tampoco tiene destinos. Los dos lanzamientos de las 06:07 terminaron con
+`Client.InternalError` en AZ distintas. CloudTrail muestra `RunInstances`
+aceptado pero no aporta la causa de la terminación; la salida de consola EC2 no
+estuvo disponible. El portal devolvió `/health` 503 a las 06:22. No se hicieron
+cambios en AWS; investigar el motivo de lanzamiento antes de desplegar cualquier
+corrección. Evidencia: [corte AWS 06:22 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md).
+
+Azure no se revalidó en esta ventana. Su último health HTTP 200 fue a las 06:10
+y el último E2E local→Azure pasó a las 06:09 con inventario/ledger sintético;
+no usó EC2/RDS. El plan Terraform remoto Azure de las 05:57 fue `No changes`,
+sin `apply`.
 
 ## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.3)
 

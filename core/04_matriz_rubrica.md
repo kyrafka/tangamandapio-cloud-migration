@@ -1,6 +1,19 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 06:10 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 06:22 UTC
 
-## Incidente operativo vigente — 16/10/2026, 05:44–06:10 UTC
+## Estado operativo vigente — 16/10/2026, 06:13–06:22 UTC
+
+AWS STS acepta el token temporal más reciente y el perfil local `default` quedó
+actualizado. El stack reporta `UPDATE_COMPLETE`; el ALB está `active`, pero el
+ASG (mínimo/deseado 2, máximo 5) tiene cero instancias y el target group cero
+destinos. Dos lanzamientos en AZ separadas acabaron `Client.InternalError`; no
+se pudo atribuir causa raíz con CloudTrail ni consola EC2. El health público
+respondió 503 a las 06:22. RDS está `available`, cifrada, privada, Single-AZ y
+con backup de un día. No se mutó AWS. La última evidencia Azure (06:09–06:10)
+fue E2E local→Azure aprobado y health 200; no se revalidó ahora y no pasó por
+EC2/RDS. El [corte detallado](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md)
+separa lo actual de los cortes históricos.
+
+## Incidente operativo anterior — 16/10/2026, 05:44–06:10 UTC (superado en acceso)
 
 El FQDN HTTPS conserva TLS válido, pero `/` y `/health` responden 503; la
 consulta directa al ALB confirma 503 desde `awselb/2.0` después de la

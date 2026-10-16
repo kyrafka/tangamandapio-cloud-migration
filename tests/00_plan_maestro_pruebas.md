@@ -1,17 +1,22 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 06:10 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 06:22 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
 
-- Antes del último cambio de credenciales, AWS Academy autenticó en `default`
-  (cuenta `841113066612`); CloudFormation seguía `UPDATE_COMPLETE` y una
-  detección fresca terminó `IN_SYNC` a las 05:00:46 UTC. El token nuevo
-  compartido después fue rechazado por STS (`InvalidClientTokenId`), así que la
-  CLI no puede hacer una relectura adicional en este corte. Una nueva llamada
-  STS aislada con el último token también fue rechazada; no se guardó y no se
-  modificaron recursos.
+- El token AWS más reciente quedó actualizado en `default` y STS lo aceptó a
+  las 06:13 UTC para la cuenta académica `841113066612`. Esto reemplaza el
+  rechazo (`InvalidClientTokenId`) del token anterior, observado a las 06:04.
+- La lectura autenticada de 06:14–06:16 encuentra CloudFormation
+  `UPDATE_COMPLETE` (último cambio 00:27:59), ALB `active`, ASG mínimo/deseado
+  2 y máximo 5 **sin instancias**, y target group sin destinos. Los dos
+  lanzamientos de las 06:07 terminaron con `Client.InternalError` en ambas AZ;
+  CloudTrail acepta `RunInstances` pero no expone la causa final, y la consola
+  EC2 no ofreció salida para esas instancias terminadas. El 503 ya no queda
+  solo como un síntoma: el target group vacío lo explica, aunque la falla raíz
+  de lanzamiento sigue sin determinarse. No se modificó AWS. Véase el
+  [corte AWS 06:22](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md).
 - La verificación pública más reciente (05:44–05:58 UTC) cambia el estado
   operativo: dominio HTTPS con TLS válido, pero `/` y `/health` responden 503.
   El ALB directo confirma 503 en 443 y 301 en 80→443. Por eso el estado 2/2 de
@@ -20,10 +25,8 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   ASG/target group y la causa del 503 quedan pendientes de lectura con credencial
   aceptada. Detalle:
   [corte de disponibilidad 05:58](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
-- La última lectura AWS autenticada (05:00 UTC) vio ACM `ISSUED` hasta
-  30/04/2027, ASG deseado/mínimo 2, máximo 5 y 2/2 instancias/destinos sanos.
-  Ese inventario es histórico frente al 503 observado después; no demuestra
-  salud actual del target group.
+- El inventario AWS sano de las 05:00 UTC es histórico y fue seguido por una
+  falla de lanzamiento: ahora hay cero instancias y cero destinos sanos.
 - A las 05:02:29 UTC el dominio HTTPS `/health` devolvió `200`; la respuesta
   pública mostró HSTS. La última lectura AWS autenticada verificó HTTP→HTTPS
   (`301`). Azure CLI reporta el grupo `Succeeded` y la Function `Running` /
@@ -47,14 +50,14 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 - A las 06:00 UTC, ARM enumeró diez recursos en el grupo de reconstrucción
   Azure: Function, plan, Storage, Key Vault, Log Analytics, Application
   Insights, dos alertas métricas y dos Action Groups.
-- A las 06:04 UTC, AWS STS rechazó el token recién proporcionado
-  (`InvalidClientTokenId`); no se actualizó el perfil local ni se mutó AWS.
+- A las 06:04 UTC, el token anterior fue rechazado por AWS STS. El token nuevo
+  sí quedó guardado en el perfil local `default` y autenticó a las 06:13 UTC.
 - A las 06:09 UTC, el E2E compensado local→Azure volvió a pasar: outbox
   entregado, venta `demo_fulfillment_completed`, recepción
   `demo_restock_completed`, ledger ficticio restaurado, salida 0. IDs de
   auditoría `evt-0cf05101ca0942a09ff51610ba99ab4c` y
   `evt-795a36230f7843c7978b675dbae3d58d`. No es origen EC2/RDS.
-- La sonda de las 06:10 UTC devolvió HTTP 503 para el health público del portal
+- La sonda de las 06:22 UTC devolvió HTTP 503 para el health público del portal
   (Cloudflare) y HTTP 200 para la Function Azure.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
@@ -109,8 +112,8 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 | ID | Prueba | Estado verificado | Qué falta |
 |---|---|---|---|
-| PT-HTTPS-01 | Dominio, TLS y redirect | HTTPS `/health` 200; respuesta con HSTS; última lectura confirmó redirect HTTP→HTTPS | Captura actual de Chrome/ACM cuando se reanude el navegador. |
-| PT-AWS-01 | Salud y disponibilidad | Stack `UPDATE_COMPLETE`/`IN_SYNC` a las 05:00 UTC; última lectura autenticada ALB y ASG 2/2 sanos | Renovar credenciales válidas para nueva inspección CLI y captura de consola/inventario. |
+| PT-HTTPS-01 | Dominio, TLS y redirect | TLS válido históricamente; en la sonda 06:22 `/health` respondió 503 porque el target group consultado está vacío | Recuperar EC2/targets; repetir `/`, `/health`, redirect y login. |
+| PT-AWS-01 | Salud y disponibilidad | STS aceptó el token nuevo; stack `UPDATE_COMPLETE`, ALB activo, ASG 2/2/5 pero cero instancias y cero targets. Lanzamientos 06:07 terminaron `Client.InternalError` | Identificar causa EC2 confirmada; recuperar dos `InService`/`healthy` y validar portal antes de marcar disponible. |
 | PT-AWS-02 | Login y roles | API Admin, Comercial y Operaciones pasó 200/403 por TLS | Recorrido visual autenticado completo. |
 | PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E desplegado por SSM/ALB/Azure; venta y compra sintéticas, ledger 10→10 | Repetición visual del flujo desde el portal. |
 | PT-OUTBOX-01 | Historial paginado | 51/51 eventos entregados leídos sin omisiones, cero pendientes | Comprobar tabla y paginación en recorrido visual. |
@@ -136,8 +139,9 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 3. Definir objetivo de capacidad y correr carga sostenida de bajo impacto por
    ALB con datos sintéticos, límites aprobados, reconciliación y limpieza
    documentada; observar el escalado gradualmente.
-4. Reconciliar template local/deployed en la próxima actualización CloudFormation
-   efectiva y generar change set; revisar cada reemplazo antes de ejecutarlo.
+4. Investigar el fallo EC2/ASG con evidencia de la cuenta/lab; no sustituir AMI,
+   plantilla o permisos hasta confirmar la causa. Luego generar change set y
+   revisar cada reemplazo antes de ejecutarlo.
 5. Revisar costo/permiso antes de Multi-AZ, WAF o VPN; no crear rutas privadas si
    la SCP/ausencia de VNet sigue bloqueando el diseño.
 6. Capturar evidencia AWS/Azure, terminar prueba WebRTC si sigue en el alcance y
