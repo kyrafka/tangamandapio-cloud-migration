@@ -30,6 +30,9 @@ su fecha y no reemplazan una comprobación fallida posterior.
 - Application Insights, ventana de 10 minutos consultada a las 01:24 UTC, mostró
   dos `202`, dos workers `resultCode=0`, el `400` esperado y cero fallidas.
   Correlación agregada; no sustituye el smoke que verificó cada ID de evento.
+- Lectura Azure 01:25: ambas alertas métricas habilitadas, cada una enlazada a
+  un Action Group; `tangama-ops-ag` activo con dos receptores. No se envió una
+  nueva notificación; el usuario confirmó entrega/recuperación previa.
 - Gate local: 209 pruebas, frontend/build, CloudFormation, Terraform format y
   validate, mocks de red y auditoría de dependencias aprobados. No ejecutó
   `apply` ni verifica la salud del portal remoto.
@@ -50,12 +53,12 @@ su fecha y no reemplazan una comprobación fallida posterior.
 | PT-NET-01 | Conectividad privada AWS–Azure | Túnel/rutas privadas y tráfico verificado entre redes | Pendiente; preflight de VPN denegado por AWS Academy. HTTPS público no satisface este criterio. |
 | PT-PERF-01 | Carga y autoescalado | Perfil de carga aprobado, errores/p95 definidos, escalado observado | Gate histórico corto (24 lecturas, concurrencia 6); no acredita 3,000 usuarios ni autoescalado. |
 | PT-SEC-01 | Roles, admin y navegador | Roles aislados, CSRF/sesión, vistas autenticadas y CSV correctos | API pasó en v17; visual y regresión v18 pendientes. WAF desactivado. |
-| PT-AZ-MON-01 | Azure y alertas | Invocaciones correlacionadas, métricas, alarma/recuperación y evidencia | Health 200; telemetría 01:24 con dos workers y dos eventos 202 sin fallidas; alertas habilitadas y entrega/recuperación confirmada antes. Falta captura visual y correlacionar una alerta actual. |
+| PT-AZ-MON-01 | Azure y alertas | Invocaciones correlacionadas, métricas, alarma/recuperación y evidencia | Health 200; telemetría 01:24 con dos workers y dos eventos 202 sin fallidas; alertas y Action Group vigentes, entrega/recuperación confirmada antes. Falta captura visual y correlacionar una alerta actual. |
 | PT-IAC-01 | CloudFormation/Terraform | fmt/validate/plan; drift y cambios revisados, sin reemplazos sorpresa | Gate local aprobado; CloudFormation v18 `UPDATE_COMPLETE`; drift AWS no consultable por IAM. No aplicar a ciegas. |
 | PT-APP-01 | CSV, correo y finanzas | Importar catálogo, comprobar ledger, finanzas y entrega de correo conforme alcance | Finanzas/correo interno `portal_only` pasaron en v17; CSV visual y SMTP saliente no verificados/desplegados. |
 | PT-RTC-01 | Telefonía WebRTC | Audio/video bidireccional, mute/cámara y grabación con consentimiento | No probado recientemente entre dos navegadores. Pendiente de producto, separado del 503. |
 | PT-COST-01 | Costos y limpieza | Costo AWS/Azure observado; solo temporales retirados tras verificar | AWS tiene estimación; Azure y consumo real del lab sin conciliación actual. |
-| PT-DOC-01 | Evidencia/entrega | Capturas, logs sanitizados, matriz y documentación sincronizados | Actions de e936c33 y e2aa8de pasaron; falta publicar este addendum IAM/origen, verificar su workflow y guardar capturas de consola/monitor. |
+| PT-DOC-01 | Evidencia/entrega | Capturas, logs sanitizados, matriz y documentación sincronizados | Actions de d234c1d, fdc3ea5 y 61d0fd5 pasaron; evidencia cloud está sincronizada. Faltan capturas actuales de consola/monitor. |
 
 ## Secuencia de cierre
 

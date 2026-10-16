@@ -25,7 +25,9 @@ habilitadas y enlazadas al Action Group. No se provocó una nueva alarma; el
 usuario había confirmado la entrega de alerta/recuperación en una prueba previa.
 Una consulta posterior a las 01:24 UTC (últimos 10 minutos) volvió a mostrar 2
 eventos `202`, 2 workers `resultCode=0`, el `400` esperado y cero solicitudes
-fallidas; falta la captura visual de consola y correlacionar una alerta actual.
+fallidas. A las 01:25, las dos reglas siguieron habilitadas y el Action Group
+activo con dos receptores; falta la captura visual de consola y correlacionar
+una alerta actual con una invocación concreta.
 Detalle en [la revalidación 01:25 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
 
 ### Estado cualitativo por criterio — 16/10/2026, 01:25 UTC
@@ -38,13 +40,13 @@ Detalle en [la revalidación 01:25 UTC](../evidence/current/CLOUD-REVALIDATION-2
 | 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El origen ALB devuelve 503; lecturas de EC2/ELB/ASG/RDS están denegadas. `/health` depende de `SELECT 1` a RDS, pero no hay prueba de que sea la causa. RDS sigue documentado Single-AZ/backup 1 día. |
 | 5 | Seguridad cloud · 2.5 | TLS/redirect comprobados; roles en API pasaron en v17. Falta repetir seguridad/roles en v18 y revisar configuración actual. WAF está desactivado. |
 | 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 y pruebas pequeñas constan históricamente; estado actual de targets no verificable. Falta carga y autoscaling representativos; 3,000 usuarios es objetivo, no capacidad probada. |
-| 7 | Monitoreo y observabilidad · 1.0 | App Insights: consulta 01:24 con 2 eventos 202, 2 workers `resultCode=0`, guarda 400 esperada y 0 solicitudes fallidas; alertas 5xx/latencia habilitadas y Action Group enlazado. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
+| 7 | Monitoreo y observabilidad · 1.0 | App Insights: consulta 01:24 con 2 eventos 202, 2 workers `resultCode=0`, guarda 400 esperada y 0 solicitudes fallidas; a las 01:25 ambas alertas estaban activas y Action Group tenía dos receptores. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation v18 aplicado y validaciones locales de Terraform pasan; CloudFormation/ELB/ASG/RDS de lectura reciben explicit deny, por lo que drift actual de AWS no se puede consultar. Reconciliar antes de aplicar más infraestructura. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado previo dejó RTO/RPO observados; no prueba una garantía ni failover. RDS Single-AZ y retención de un día siguen siendo límites. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Se documentó el acuerdo oral para AWS–Azure. E2E local→Azure pasó a las 01:20; v17 tuvo E2E desde EC2, pero falta repetir desde AWS en v18 y no hay ruta privada. No presentar Azure como OCI. |
 | 11 | Costos y optimización · 0.5 | Hay estimación AWS; faltan costo observado/Cost Analysis de Azure y reconciliación de consumo del lab. |
 | 12 | Pruebas técnicas · 1.0 | Gate local 209 y E2E Azure sintético pasan; AWS v18 está en 503. Faltan regresión autenticada post-v18, carga, CSV visual, red privada y pruebas WebRTC de producto. |
-| 13 | Documentación técnica · 0.5 | Cortes/matriz/plan del commit anterior están sincronizados y sus workflows pasaron. Falta publicar este addendum IAM/origen, verificar Actions y agregar capturas de consola/monitor. |
+| 13 | Documentación técnica · 0.5 | Cortes/matriz/plan y evidencia Azure actualizados en la rama; el workflow `61d0fd5` pasó a las 01:26:56 UTC. Falta captura visual actual de consola/monitor. |
 | 14 | Sustentación y defensa técnica · 0.5 | Pendiente de demostración oral: arquitectura, decisiones, límites, costos y resultados. |
 
 La rúbrica local suma 18.5 en los pesos aunque declara 20 y no define conversión

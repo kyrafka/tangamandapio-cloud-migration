@@ -5,6 +5,8 @@ smoke ERP local→Azure pasó a las 01:20 con compensación del saldo demo. La
 consulta de 10 minutos mostró dos `202`, dos workers exitosos, el `400` de
 guarda esperado y cero fallidas. Detalle en
 [`AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md`](AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md).
+La lectura de las 01:25 confirmó además las dos reglas habilitadas, el Action
+Group activo y sus dos receptores, sin revelar direcciones ni enviar alertas.
 
 **Prueba viva ERP→Azure compensada — 15/10/2026:** el release local con SQLite
 efímera recorrió la venta y recepción sintéticas contra la Function desplegada;

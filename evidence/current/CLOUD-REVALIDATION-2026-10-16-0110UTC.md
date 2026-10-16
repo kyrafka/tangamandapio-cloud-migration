@@ -61,6 +61,9 @@ minutos, mostró 2 respuestas `202`, 2 workers `process_fulfillment_message`
 con `resultCode=0`, 1 `400` esperado de la guarda y cero solicitudes marcadas
 fallidas. El smoke confirmó aparte los estados de ambos IDs. Ver
 [`revalidación Azure`](azure/AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md).
+La lectura de configuración a las 01:25 confirmó ambas reglas habilitadas,
+cada una enlazada a un Action Group; `tangama-ops-ag` está activo con dos
+receptores de correo. No se disparó una alerta nueva.
 
 Application Insights, consulta agregada de las 24 horas previas, mostró 22
 solicitudes: 2 eventos aceptados `202`, 2 ejecuciones de
@@ -85,9 +88,10 @@ Terraform, mocks de red y auditoría de dependencias. El commit
 `e936c332073b31c709f5c1067a06b582812842f9` sincronizó matriz y plan; su workflow
 de Actions terminó `success` a las 01:08:59 UTC. El corte de telemetría Azure
 `e2aa8de097d5d8b1ff5967ebb7e9aea685a6e57e` también terminó `success` a las
-01:12:13 UTC. Los workflows de `d234c1d` y `fdc3ea5` terminaron `success` a las
-01:19:42 y 01:23:51 UTC. El addendum con telemetría Azure 01:24 y denegación EC2
-01:25 queda pendiente de su propia corrida. Estas verificaciones no sustituyen
+01:12:13 UTC. Los workflows de `d234c1d`, `fdc3ea5` y `61d0fd5` terminaron
+`success` a las 01:19:42, 01:23:51 y 01:26:56 UTC. El registro de alertas
+Azure 01:25 se incluye en el siguiente commit, que tendrá su validación normal
+de Actions. Estas verificaciones no sustituyen
 el smoke AWS autenticado de v18.
 
 ## Pendientes

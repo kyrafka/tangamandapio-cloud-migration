@@ -38,6 +38,15 @@ requests
 | order by name asc
 ```
 
+## Alertas métricas — lectura de configuración a las 01:25 UTC
+
+Las reglas `tangama-wms-fn-5xx` (severity 2) y
+`tangama-wms-fn-latency` (severity 3) permanecían habilitadas y cada una
+apuntaba a un Action Group. `tangama-ops-ag` estaba habilitado y tenía dos
+receptores de correo (no se imprimieron ni copiaron las direcciones). No se
+disparó una alerta nueva; el usuario había confirmado previamente la entrega de
+alerta y recuperación.
+
 Esta evidencia acredita la ejecución del worker y el ledger **sintético** de
 Azure. No acredita la salud del portal AWS, tráfico originado en EC2, ruta
 privada AWS–Azure, inventario físico ni entrega de alertas en esta corrida.
