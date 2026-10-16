@@ -1,6 +1,6 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
-## Revalidación AWS–Azure — 16/10/2026, 09:34–09:50 UTC
+## Revalidación AWS–Azure — 16/10/2026, 09:34–09:56 UTC
 
 El drift CloudFormation terminó `IN_SYNC`/0; AWS y Azure health HTTPS/TLS
 200; ASG/ALB 2/2 sanos. E2E real de venta/compra sintéticas verificó Azure
@@ -14,6 +14,8 @@ CloudFormation y Terraform, sin `apply`. Límites: no prueba 3,000 usuarios,
 WebRTC ni reintento por falla inducida; VPN bloqueada por SCP, no hay VNet Azure,
 WAF apagado y RDS Single-AZ/backup de un día. Detalle en
 [`CLOUD-REVALIDATION-2026-10-16-0950UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+El plan normal y `refresh-only` de Terraform Azure también terminaron `No changes`
+en la consulta de las 09:56 UTC, sin aplicar cambios.
 
 ## Reconciliación CloudFormation — 16/10/2026, 09:25–09:26 UTC
 

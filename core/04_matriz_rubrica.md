@@ -1,6 +1,6 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 09:50 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 09:56 UTC
 
-## Suplemento vigente — revalidación funcional y de carga 16/10/2026, 09:34–09:50 UTC
+## Suplemento vigente — revalidación funcional y de carga 16/10/2026, 09:34–09:56 UTC
 
 CloudFormation sigue `UPDATE_COMPLETE`; el drift iniciado en este corte terminó
 `IN_SYNC`/0. Portal HTTPS/TLS y Azure Function health responden 200, ASG y ALB
@@ -15,9 +15,10 @@ PT-PERF-01 pasó directo al ALB con TLS verificado: 100/100 respuestas 200 a
 concurrencia 10 (p95 490 ms) y 500/500 a concurrencia 20 (p95 467 ms); no
 prueba 3,000 usuarios ni escalado transaccional. La puerta local aprobó 228
 pruebas Python, 14 Node y 40 transacciones aisladas, además de build, auditorías
-e IaC sin `apply`. Siguen pendientes WebRTC/inspección visual, falla transitoria
-live, carga de 3,000 usuarios, WAF y failover Multi-AZ. VPN sigue bloqueada por
-SCP de AWS Academy y no hay VNet Azure. [Evidencia 09:50 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+e IaC sin `apply`. Terraform normal y `refresh-only` Azure dieron `No changes`.
+Siguen pendientes WebRTC/inspección visual, falla transitoria live, carga de
+3,000 usuarios, WAF y failover Multi-AZ. VPN sigue bloqueada por SCP de AWS
+Academy y no hay VNet Azure. [Evidencia 09:56 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
 
 ## Suplemento vigente — reconciliación IaC y revalidación 16/10/2026, 09:25–09:26 UTC
 

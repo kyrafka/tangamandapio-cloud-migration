@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 09:34–09:50 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 09:34–09:56 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -21,6 +21,8 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   pública; el test directo al ALB evitó el proxy sin desactivar TLS.
 - Puerta local completa: 228 Python, 14 Node, 40 transacciones aisladas, build,
   auditorías, CloudFormation y Terraform aprobados; sin `apply`.
+- Terraform remoto Azure: plan normal y `refresh-only` terminaron `No changes`
+  con salida 0; no hubo `apply`.
 - Pendientes: visual/CSV en Chrome, WebRTC en dos navegadores, falla transitoria
   live/retry, 3,000 usuarios, WAF y failover Multi-AZ. VPN bloqueada por SCP; no
   existe VNet Azure para el proyecto.

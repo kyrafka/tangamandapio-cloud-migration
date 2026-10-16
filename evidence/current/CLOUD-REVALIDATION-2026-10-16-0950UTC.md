@@ -1,4 +1,4 @@
-# Revalidación AWS–Azure — 16/10/2026, 09:34–09:50 UTC
+# Revalidación AWS–Azure — 16/10/2026, 09:34–09:56 UTC
 
 ## Estado actual verificado
 
@@ -20,6 +20,10 @@
 - No se encontró ningún recurso VNet de Azure en la suscripción. El dry-run de
   `CreateCustomerGateway` AWS fue denegado por política del laboratorio. No se
   crearon gateways ni conexiones VPN. No sortear la SCP.
+- Terraform Azure (`azure-rebuild`) volvió a consultar ARM: plan normal y
+  `refresh-only` terminaron `No changes` (código 0, sin `apply`). El plan usó
+  el archivo local protegido de receptores; ningún valor de receptor se registró
+  en la evidencia.
 
 ## Pruebas funcionales y de rendimiento
 
