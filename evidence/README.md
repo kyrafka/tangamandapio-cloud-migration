@@ -1,6 +1,6 @@
 # Índice de evidencias del proyecto
 
-## Incidente de disponibilidad y Azure vivo — 16/10/2026, 05:44–06:05 UTC
+## Incidente de disponibilidad y Azure vivo — 16/10/2026, 05:44–06:10 UTC
 
 El dominio HTTPS sigue con TLS válido, pero tanto Cloudflare como el ALB
 respondieron 503. El listener HTTP del ALB redirige a HTTPS; la consulta directa
@@ -14,6 +14,10 @@ terminó `No changes` a las 05:57, sin
 restaurado y poison count cero. El token AWS recién proporcionado fue rechazado
 por STS a las 06:04 (`InvalidClientTokenId`); no se guardó ni hubo cambios en
 AWS. No prueba el portal AWS ni el flujo desde EC2.
+Un E2E compensado desde el release local se repitió a las 06:09: venta sintética
+entregada a Azure y recepción compensatoria completada, ledger demo restaurado
+(`LIVE_E2E=PASSED`, salida 0). Los IDs y límites están en el informe enlazado.
+La sonda a las 06:10 mantuvo portal 503 y Function Azure health 200.
 Véase la [revalidación vigente](current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
 
 ## Puerta local y E2E Azure — 16/10/2026, 05:37 UTC

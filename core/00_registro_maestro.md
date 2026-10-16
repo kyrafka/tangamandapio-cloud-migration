@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 16/10/2026, 06:05 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
+**Corte:** 16/10/2026, 06:10 UTC — Azure verificado; portal AWS responde 503 y requiere diagnóstico
 
 ## 1. Caso y objetivo
 
@@ -99,7 +99,7 @@ La puerta local terminó aprobada: 163 pruebas Python más 14 Node, PT-PERF-02 4
 
 La arquitectura empresarial, que separa portal B2B, ERP, WMS, correo e identidad y distingue objetivos de lo implementado, está organizada en [12_arquitectura_empresarial_portal_erp_correo.md](12_arquitectura_empresarial_portal_erp_correo.md).
 
-## 4.3 Estado vigente — 16/10/2026, 05:44–06:05 UTC
+## 4.3 Estado vigente — 16/10/2026, 05:44–06:10 UTC
 
 El estado descrito en la sección 4.1 ya no representa disponibilidad actual.
 El dominio HTTPS conserva TLS válido, pero `/` y `/health` responden HTTP 503;
@@ -108,7 +108,7 @@ listener HTTP redirige a HTTPS. STS rechazó el token AWS nuevo con
 `InvalidClientTokenId`, así que ASG, destinos, instancias y logs no se pudieron
 consultar ni modificar. No se declara el portal operativo hasta recuperar 200
 y repetir pruebas funcionales. El 503 del health público y del origen ALB se
-se repitió a las 05:51 y 05:58 UTC.
+repitió a las 05:51 y 05:58 UTC.
 
 Azure for Students está `Enabled`; `rg-tangamandapio-rebuild-wus` está
 `Succeeded` y `tangama-wms-261008` está `Running`/HTTPS-only. El health
@@ -117,7 +117,11 @@ el saldo ficticio en su línea base y poison count cero. Esto no ejercitó EC2 n
 RDS. El inventario ARM enumeró diez recursos, incluidos telemetría y alertas; el
 plan Terraform Azure consultó el backend remoto y quedó `No changes` a las
 05:57 UTC; no hubo `apply`. Evidencia:
-[corte cloud 06:05 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
+[corte cloud 06:10 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0547UTC.md).
+El E2E local→Azure volvió a pasar a las 06:09 UTC con venta/restock sintéticos
+y saldo de ledger restaurado; no se originó en EC2/RDS ni valida la aplicación
+AWS, que volvió a devolver 503 en la sonda de las 06:10 UTC. La Function
+Azure respondió health 200 en esa misma comprobación.
 
 ## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.3)
 

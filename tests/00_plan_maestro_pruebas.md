@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 06:05 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 06:10 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
@@ -49,6 +49,13 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   Insights, dos alertas métricas y dos Action Groups.
 - A las 06:04 UTC, AWS STS rechazó el token recién proporcionado
   (`InvalidClientTokenId`); no se actualizó el perfil local ni se mutó AWS.
+- A las 06:09 UTC, el E2E compensado local→Azure volvió a pasar: outbox
+  entregado, venta `demo_fulfillment_completed`, recepción
+  `demo_restock_completed`, ledger ficticio restaurado, salida 0. IDs de
+  auditoría `evt-0cf05101ca0942a09ff51610ba99ab4c` y
+  `evt-795a36230f7843c7978b675dbae3d58d`. No es origen EC2/RDS.
+- La sonda de las 06:10 UTC devolvió HTTP 503 para el health público del portal
+  (Cloudflare) y HTTP 200 para la Function Azure.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
   cloud.
