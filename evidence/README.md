@@ -1,6 +1,6 @@
 # Índice de evidencias del proyecto
 
-## E2E AWS–Azure, recuperación y HTTPS — 16/10/2026, 04:42–05:02 UTC
+## E2E AWS–Azure, recuperación y HTTPS — 16/10/2026, 04:42–05:09 UTC
 
 El E2E desplegado AWS→Azure completó venta/compra sintéticas con ledger demo
 10→10 y outbox 51/51 entregado; el smoke de roles devolvió los 200/403
@@ -11,7 +11,9 @@ con un día de backup. La detección fresca de CloudFormation fue `IN_SYNC` a la
 
 El token AWS pegado en este corte fue rechazado por STS; por ello el inventario
 CLI no se pudo revalidar después de esa hora. No hubo cambios de infraestructura
-en el corte. Véase la [evidencia detallada](current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
+en el corte. Azure CLI confirmó RG `Succeeded`, Function `Running`/HTTPS-only
+y GET `/api/health` HTTP 200 con TLS válido; el 404 de HEAD se debió a que la
+ruta solo acepta GET. Véase la [evidencia detallada](current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
 
 ## Revalidación puntual previa — 16/10/2026, 04:22–04:24 UTC
 

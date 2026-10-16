@@ -1,6 +1,6 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 05:02 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 05:09 UTC
 
-## Suplemento vivo — 16/10/2026, 04:42–05:02 UTC
+## Suplemento vivo — 16/10/2026, 04:42–05:09 UTC
 
 El E2E desplegado recorrió AWS/RDS/outbox → Azure Queue/Function → conciliación
 ERP con datos sintéticos: venta `completed_demo`, compra compensatoria
@@ -17,6 +17,11 @@ disponible, cifrado, privado, Single-AZ y con retención de un día; no se prob�
 failover. CloudFormation terminó una detección fresca `IN_SYNC` a las 05:00:46
 UTC. La revalidación pública de HTTPS `/health` devolvió 200 a las 05:02:29 UTC
 con HSTS.
+
+Azure CLI confirmó la suscripción habilitada, RG `Succeeded` y Function
+`Running`/HTTPS-only. GET `/api/health` devolvió 200 con TLS verificado y
+`status=ok`; una consulta HEAD previa recibió 404 porque la ruta solo declara
+GET. Véase la [evidencia del corte](../evidence/current/CLOUD-E2E-DR-2026-10-16-0500UTC.md).
 
 El token compartido en este corte fue escrito en `default`, pero STS respondió
 `InvalidClientTokenId`; por tanto, no se pudo hacer una lectura CLI posterior.
