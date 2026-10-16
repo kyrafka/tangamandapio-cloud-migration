@@ -1,5 +1,33 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Puerta local completa — 16/10/2026, 02:55 UTC
+
+`run_local_quality.ps1 -ValidateTerraform` terminó `QUALITY_GATE=APROBADA`
+sin llamadas de escritura a la nube: 209 pruebas unitarias, build Vite,
+auditoría de dependencias sin vulnerabilidades conocidas, validación
+CloudFormation y Terraform `fmt`/`init`/`validate` más cinco tests mock. Las
+pruebas de navegación por rol (8) y CSV de catálogo (6) también pasaron. La
+evidencia conjunta de cloud y esta puerta está en
+[`CLOUD-REVALIDATION-2026-10-16-0255UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
+
+## Evidencia viva más reciente — 16/10/2026, 02:31–02:40 UTC
+
+Con opt-in explícito, `run_live_aws_portal_azure_e2e.ps1` pasó en modo `full`
+contra `alb-origin-https`: RDS `ok`, venta/recepción demo compensadas y stock
+ficticio 10→10, permisos API de Comercial/Operaciones, importación de catálogo,
+dos eventos entregados y 24 lecturas 200 (concurrencia 6, p95 399.77 ms). El
+modo `admin-modules` también pasó: Finanzas creó y liquidó una operación
+sintética de S/ 0.05, correo entregó dentro del portal sin relay SMTP externo,
+y poison queue reportó conteo 0 sin exponer mensajes. Estas pruebas dejaron
+registros QA persistentes; no hicieron pagos ni cambiaron stock físico. La
+revalidación de HTTPS/Azure/red/DR está en
+[`CLOUD-REVALIDATION-2026-10-16-0240UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0240UTC.md).
+
+El FQDN proxied requiere además login y revisión visual de navegador; el probe
+automatizado de login recibió 403 de Cloudflare, mientras que el mismo smoke
+directo al ALB con TLS válido pasó. No se probó WebRTC entre dos navegadores en
+esta ejecución.
+
 La carpeta separa pruebas locales gratuitas de pruebas que requieren una sesión temporal del laboratorio. Ningún script inicia AWS Academy ni crea recursos sin una autorización explícita.
 
 ## Puerta local (sin costo cloud)

@@ -1,6 +1,6 @@
 # AWS CloudFormation — portal y reconstrucción
 
-CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 15/10/2026 13:56 UTC.** El stack `tangamandapio-live-20261013` está en `UPDATE_COMPLETE`; una detección posterior terminó `IN_SYNC`. `ApplicationURL` es `https://tangamandapio.kendellnm.me`. El ALB tiene dos destinos `healthy`; el ASG está mínimo/deseado 2, máximo 5. El certificado ACM de `us-east-1` está `ISSUED` y el CNAME de validación aparece `SUCCESS`. El listener 443 termina TLS y reenvía a la aplicación; el listener 80 redirige a HTTPS. Se comprobaron desde fuera `/health` y `/ready` con HTTP 200, HTTP→HTTPS con 301 y la cookie de sesión con `Secure`, `HttpOnly` y `SameSite=Lax`. La prueba integral dentro de EC2 pasó: roles, dos eventos a Azure, ledger sintético compensado y 24/24 lecturas autenticadas 200. Por el dominio, un probe de login fue bloqueado con HTTP 403 por Cloudflare (sin ID de petición del portal); queda revisar el evento de seguridad `CF-Ray` para validar el acceso de navegador. RDS está `available`, cifrada, Single-AZ y con un día de retención de backup. El historial y resultados están en [evidencia AWS live del 15/10](../../evidence/current/aws/AWS-ESTADO-LIVE-2026-10-15.md); los fallos v11 anteriores están en el [registro v11](../../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
+CloudFormation es la definición de reconstrucción del portal AWS. **Corte vigente: 16/10/2026 02:55 UTC.** El stack `tangamandapio-live-20261013` está `UPDATE_COMPLETE`; HTTPS 443 usa certificado ACM `ISSUED`, HTTP 80 redirige y `/`, `/health`, `/ready` respondieron 200. El ASG y target group tienen 2/2 saludables. E2E AWS→Azure y módulos Admin pasaron por HTTPS directo al ALB con validación TLS. Un probe automatizado al login por Cloudflare devolvió 403; Chrome real por el FQDN sigue sin verificarse. RDS está disponible, privada y cifrada, Single-AZ con un día de retención. PT-DR-01 pasó el 15/10 (RTO 260 s, límite superior RPO 8 s). El dry-run de VPN AWS está bloqueado por explicit deny en la SCP de Academy; no hay VNet Azure ni Web ACL regional AWS. El gate local de CloudFormation y Terraform volvió a pasar sin aplicar cambios. Véanse la [revalidación cloud 02:55](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md), el [E2E AWS→Azure](../../evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md) y la [revalidación HTTPS](../../evidence/current/aws/AWS-REVALIDACION-HTTPS-2026-10-16-0228UTC.md).
 
 Históricamente, el stack se eliminó el 08/10 y se reconstruyó el 09/10. Los snapshots y restauraciones anotados en los cortes anteriores no determinan el estado de hoy. `rebuild.sh` solo debe ejecutarse después de verificar el nombre exacto del stack, el snapshot y los secretos requeridos, reconciliar la plantilla con el inventario y aprobar el costo; ahora exige un `STACK_NAME` explícito.
 
@@ -14,17 +14,16 @@ La secuencia de `deploy.sh` exige un `STACK_NAME` explícito con el nombre exact
 
 El preflight HTTPS se prueba localmente con respuestas ACM simuladas: exige ambos valores, nombre DNS válido, misma región que el ALB, certificado `ISSUED` y SAN exacto o wildcard de un único nivel. La propia plantilla de CloudFormation también rechaza labels DNS vacíos, con guiones en los extremos o de más de 63 caracteres, incluso si se inicia desde la consola. Entradas inválidas se detienen antes de validar el template o crear un change set. La prueba no contacta AWS ni crea recursos.
 
-### Activación final de dominio y HTTPS
+### Dominio y HTTPS activos
 
-La plantilla conserva HTTP hasta tener un certificado emitido. El hostname
-acordado es `tangamandapio.kendellnm.me`; la solicitud ACM en `us-east-1` ya
-está `PENDING_VALIDATION`. Kendell debe publicar el CNAME que muestra ACM en su
-proveedor DNS con proxy desactivado para ese registro. Espera el estado
-`ISSUED`. El despliegue verifica que el ARN sea regional y que el certificado
-cubra exactamente el hostname (o un wildcard de un solo nivel), antes de
-crear el listener HTTPS 443. Con ambos valores, `deploy.sh` cambia el listener
-80 a redirección permanente HTTPS y la salida `ApplicationURL` usa el hostname,
-no el DNS interno `elb.amazonaws.com`.
+El hostname `tangamandapio.kendellnm.me` ya usa el listener 443 con ACM
+`ISSUED`; el listener 80 redirige a HTTPS y la salida `ApplicationURL` es el
+FQDN público. Cloudflare mantiene proxied el registro de aplicación y DNS-only
+los CNAME de validación ACM. No es necesario volver a desplegar el certificado
+ni cambiar DNS para mantener el estado actual. Si se cambia el dominio, sigue
+el procedimiento de cambio documentado en la sección “Dominio y HTTPS —
+activados el 15/10/2026”; revisar el change set y evitar reemplazar recursos con
+datos.
 
 ```bash
 STACK_NAME=tangamandapio-live-20261013 \
@@ -34,14 +33,10 @@ CERTIFICATE_ARN='<arn:aws:acm:us-east-1:...:certificate/...>' \
 ./deploy.sh
 ```
 
-Primero se revisa el change set; para aplicarlo se repite con `APPLY_CHANGE_SET=true`
-y `CONFIRM_STACK_NAME` igual al stack verificado. Después, crea en el proveedor
-DNS el registro CNAME/ALIAS del hostname al output `LoadBalancerDNS`, confirma
-HTTPS sin advertencias, redirección HTTP→HTTPS y cookie `Secure`. Esta fase
-queda preparada en IaC, pero aún no está activada en el release AWS v11; la
-lectura puntual del 15/10/2026 confirmó que el listener vivo sigue siendo solo
-HTTP/80. No se debe afirmar HTTPS activo hasta repetir las verificaciones del
-paso 5.
+El procedimiento para un dominio nuevo es revisar primero el change set; solo
+aplicar con `APPLY_CHANGE_SET=true` y `CONFIRM_STACK_NAME` idéntico al stack
+verificado. Después, apunta el CNAME/ALIAS al output `LoadBalancerDNS` y
+comprueba el certificado, HTTPS, redirect y cookie `Secure`.
 
 Si el DNS está en Route 53, usa un alias A/AAAA al ALB; en otro proveedor, un
 CNAME del subdominio `portal` al valor `LoadBalancerDNS`. El registro público

@@ -6,40 +6,47 @@ Proyecto académico de arquitectura para una distribuidora peruana ficticia. El 
 
 Portal B2B y ERP son dominios funcionales distintos: el portal sirve a distribuidores/clientes y el ERP a los equipos internos. Para este prototipo se presentan juntos en la misma web y usan el inicio de sesión y los permisos existentes; sus tablas y APIs están separadas por módulo. Si la escala operativa lo exige, el ERP puede extraerse después como servicio independiente. Azure conserva la autoridad del inventario WMS; el ERP envía ventas y recepciones, pero no mantiene otra copia de existencias. La mensajería ERP persiste dentro del portal y ahora admite un relay SMTP configurable; en local, Compose usa Mailpit como receptor de prueba, no como correo público ni buzones corporativos.
 
-El catálogo parte de 12 SKU sintéticos y se amplía desde ERP → Maestros con la plantilla Excel (guardar como CSV UTF-8 antes de importar). La carga admite hasta 500 productos y sincroniza el catálogo con el ledger de Azure; las ventas y recepciones modifican saldos ficticios de forma idempotente, no representan inventario físico. En la comprobación viva del 16/10 a las 02:10 UTC, la consola AWS mostró 14 SKU (12 de catálogo y 2 de QA), 45 eventos de outbox y la consulta autenticada de un evento a Azure devolvió `demo_restock_completed`. Detalles en la [importación de catálogo sintético](evidence/current/CATALOGO-SINTETICO-IMPORT-2026-10-14.md) y la [revalidación AWS](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
+El catálogo parte de 12 SKU sintéticos y se amplía desde ERP → Maestros con la plantilla Excel (guardar como CSV UTF-8 antes de importar). La carga admite hasta 500 productos y sincroniza el catálogo con el ledger de Azure; las ventas y recepciones modifican saldos ficticios de forma idempotente, no representan inventario físico. El E2E vivo del 16/10 desde EC2 recorrió portal/RDS/outbox/Azure, compensó el ledger de 10 a 10, y validó los permisos API; el smoke Admin verificó Finanzas y correo portal-only sin pago ni email externos. Evidencias: [E2E AWS→Azure](evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md), [módulos y estado cloud](evidence/current/CLOUD-REVALIDATION-2026-10-16-0240UTC.md) y [revalidación HTTPS](evidence/current/aws/AWS-REVALIDACION-HTTPS-2026-10-16-0228UTC.md).
 
 El proyecto hermano se usa como referencia del problema del datacenter corporativo centralizado, no como fuente de las cifras de Tangamandapio. La arquitectura objetivo, responsabilidades, candidatos ERP/correo y fases están en [core/12_arquitectura_empresarial_portal_erp_correo.md](core/12_arquitectura_empresarial_portal_erp_correo.md).
 
 ## Estado vigente
 
-**Última revalidación: 16/10/2026, 02:10 UTC.** El portal HTTPS, `/health` y
-`/ready` respondieron 200. CloudFormation informa `UPDATE_COMPLETE`; Auto Scaling
-tiene 2/2 instancias `InService`/`Healthy` y ambos destinos del ALB están
-saludables. La consola autenticada cargó métricas CloudWatch, catálogo, outbox
-paginado y las tres cuentas; la consulta de un evento existente desde la consola
-devolvió `demo_restock_completed` en Azure. El primer render mostró datos en
-carga y la tabla de usuarios se completó al refrescar; queda anotado como
-intermitencia visual, no como falla persistente.
+**Última revalidación: 16/10/2026, 02:55 UTC.** El dominio HTTPS, `/health` y
+`/ready` respondieron 200; HTTP redirige a HTTPS. CloudFormation sigue
+`UPDATE_COMPLETE`; el ASG y el target group tienen 2/2 instancias sanas. El E2E
+desde EC2 por HTTPS directo al ALB alcanzó Azure, completó una venta demo y su
+recepción compensatoria, validó los permisos de Comercial y Operaciones,
+importación sintética y 24/24 lecturas autenticadas (p95 399.77 ms). El smoke
+Admin también verificó Finanzas con una cuenta QA de S/ 0.05 y el buzón interno
+portal-only; no hubo pago real ni correo externo.
 
-RDS está `available`, Single-AZ, con retención de backup de un día. WAF no está
-desplegado. El drift `IN_SYNC` observado antes fue para 39 recursos compatibles
-de los 47 y no valida salud de aplicación. No se alteraron recursos cloud en
-esta revalidación. Las credenciales temporales AWS se actualizaron solo en el
-perfil local y no se copiaron a documentación.
+RDS sigue `available`, Single-AZ y con un día de retención. La prueba PT-DR-01
+del 15/10 restauró y validó un marcador SQL (RTO 260 s; límite superior RPO 8 s),
+pero no demuestra failover ni SLA. WAF AWS no está desplegado. El login
+automatizado por Cloudflare recibió 403, mientras que login/E2E directos al ALB
+con TLS válido pasaron; el recorrido visual por el FQDN sigue pendiente. El
+`dry-run` de VPN fue bloqueado por una SCP explícita y la suscripción Azure no
+tiene VNet, así que AWS→Azure sigue por HTTPS público.
 
-**Azure:** `Azure for Students` está `Enabled`; la Function sigue `Running` y
-HTTPS-only. El smoke vivo del 16/10 a la 01:47 ejecutó el paquete local hacia
-Azure: los guards devolvieron 401/400, una venta sintética se procesó y su
-compensación restauró el ledger demo. No acredita el recorrido desde EC2; los
-eventos sintéticos permanecen en el almacenamiento de auditoría.
+**Azure:** `Azure for Students` está `Enabled`; la Function está `Running`,
+HTTPS-only y `/api/health` respondió 200. Application Insights mostró actividad
+agregada y las dos alertas métricas siguen habilitadas. El ledger WMS es
+sintético, no un inventario físico.
+
+La pasada de 02:55 volvió a validar con el token Academy renovado: el perfil
+local AWS CLI `default` autentica, el ALB está `active`, el certificado ACM
+`ISSUED`, y sus dos destinos siguen sanos. La puerta local completa pasó con
+209 pruebas unitarias, build, auditorías y validación IaC sin aplicar cambios.
+Detalles en la [revalidación final de 02:55](evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
 La puerta local pasó 209 pruebas unitarias, build Vite, auditorías frontend y
 de dependencias, `cfn-lint`, validación AWS de CloudFormation y `fmt`/`init`/
 `validate` más cinco pruebas mock de Terraform; no aplicó infraestructura.
-GitHub Actions pasó el quality gate del commit `aab64cc` (run
-[38839629336](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38839629336)).
-Véanse la [evidencia AWS/Azure](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md),
-el [estado de IaC](iac/README.md) y la [matriz cualitativa](core/04_matriz_rubrica.md).
+Los últimos cambios documentales están publicados en
+`codex/aws-v11-deploy-sync`; el E2E actual y la matriz están en las evidencias
+enlazadas arriba. Véanse el [estado de IaC](iac/README.md) y la
+[matriz cualitativa](core/04_matriz_rubrica.md).
 
 ### Corte histórico (02:58 UTC)
 

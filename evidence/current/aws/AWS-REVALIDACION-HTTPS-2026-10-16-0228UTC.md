@@ -51,7 +51,9 @@ ese corte no atravesó AWS y precede a la recuperación del ALB documentada aqu�
 1. Corregir la regla/evento de Cloudflare y comprobar login y módulos por el
    FQDN en navegador.
 2. Revalidar permisos de todos los roles en AWS y probar carga CSV visual.
-3. Restaurar un snapshot en un entorno aislado y medir RTO/RPO de ese ejercicio.
+3. PT-DR-01 ya pasó el 15/10 con marcador SQL, RTO 260 s y límite superior
+   RPO 8 s; mantener RDS Single-AZ/retención de 1 día como limitaciones y no
+   repetir el restore con costo sin un motivo nuevo.
 4. Decidir si WAF administrado y Multi-AZ caben en el presupuesto del laboratorio;
    no habilitarlos sin estimación/cupo de créditos.
 5. Cerrar conectividad privada AWS–Azure, solo si AWS Academy permite los

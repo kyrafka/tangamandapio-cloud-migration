@@ -1,5 +1,21 @@
 # Reconstrucción del WMS de demostración en Azure
 
+La comprobación más reciente, 16/10/2026 02:55 UTC, confirma la suscripción
+`Azure for Students` `Enabled` y `/api/health` con HTTP 200. La Function y su
+telemetría agregada se documentan en el [corte de revalidación 02:55](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
+
+## Revalidación viva — 16/10/2026, 02:40 UTC
+
+La suscripción `Azure for Students` está `Enabled`; `tangama-wms-261008` sigue
+`Running`, HTTPS-only y `/api/health` devuelve 200. `tangama-wms-ai` se enlaza
+con `tangama-ops-law`; en la última hora Application Insights registró 94
+requests (códigos 200/202 y guardas 400 esperadas), y las alertas métricas 5xx y
+latencia y el Action Group están habilitados. El E2E completo iniciado desde
+EC2 en AWS entregó venta/recepción sintéticas a Azure y restauró el saldo del
+ledger a 10; no representa inventario físico. No hubo alerta disparada en esta
+pasada ni ruta privada AWS–Azure. Detalle en la
+[revalidación cloud](../../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0240UTC.md).
+
 ## Revalidación más reciente — 14/10/2026, 08:14–08:15 America/Chicago
 
 Terraform 1.16.0 volvió a consultar ARM con `rebuild.tfvars.example` y el
