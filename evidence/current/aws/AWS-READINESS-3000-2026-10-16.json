@@ -1,0 +1,48 @@
+{
+  "test": "aws-readiness-3000-vus",
+  "timestamp_utc": "2026-10-16T18:55:28Z",
+  "result": "passed",
+  "tool": "Grafana k6 2.3.0",
+  "target": {
+    "service": "Tangamandapio AWS portal",
+    "path": "GET /health",
+    "route": "HTTPS directly to the ALB origin, preserving the portal host/SNI",
+    "behavior": "Read-only readiness query that checks PostgreSQL with SELECT 1"
+  },
+  "profile": {
+    "maximum_concurrent_virtual_users": 3000,
+    "ramp_stages_vus": [300, 900, 1800, 3000],
+    "hold_at_maximum": "60s",
+    "think_time": "60s",
+    "duration": "4m35s including graceful ramp-down"
+  },
+  "metrics": {
+    "http_requests": 8468,
+    "http_request_failure_rate": 0,
+    "checks_passed": 16936,
+    "checks_failed": 0,
+    "http_request_duration_p95_ms": 146.61,
+    "http_request_duration_max_ms": 903.79
+  },
+  "thresholds": {
+    "http_request_failure_rate_below_1_percent": true,
+    "p95_below_2000_ms": true,
+    "checks_above_99_percent": true
+  },
+  "infrastructure_after_test": {
+    "rds_status": "available",
+    "rds_multi_az": true,
+    "rds_backup_retention_days": 1,
+    "asg_min_desired_max": [3, 3, 5],
+    "healthy_target_count": "3/3",
+    "waf_associated_to_alb": true,
+    "waf_xss_probe_http_status": 403,
+    "health_after_waf_probe_http_status": 200,
+    "cloudformation_stack_status": "UPDATE_ROLLBACK_FAILED"
+  },
+  "limitations": [
+    "This validates 3000 concurrent virtual sessions on the read-only readiness path, not 3000 users exercising sales, ERP, or telephony transactions.",
+    "The test held the maximum VU count for one minute; it is not a long-duration soak test.",
+    "The 2-to-3 autoscaling policy transition was not tested. The ASG minimum is currently 3, and the CloudFormation stack is in UPDATE_ROLLBACK_FAILED, so lowering capacity or changing the group directly would introduce risk/drift."
+  ]
+}

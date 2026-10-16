@@ -67,6 +67,20 @@ if [[ "$RESET_ADMINISTRATOR_PASSWORD" != "true" && "$RESET_ADMINISTRATOR_PASSWOR
   echo "RESET_ADMINISTRATOR_ON_RESTORE solo acepta true o false." >&2
   exit 2
 fi
+for override_name in DATABASE_MULTI_AZ ENABLE_WAF MANAGE_WAF_ASSOCIATION; do
+  override_value="${!override_name:-}"
+  if [[ -n "$override_value" && "$override_value" != "true" && "$override_value" != "false" ]]; then
+    echo "$override_name solo acepta true o false." >&2
+    exit 2
+  fi
+done
+if [[ -n "${WAF_RATE_LIMIT_PER_IP:-}" ]] && {
+  [[ ! "$WAF_RATE_LIMIT_PER_IP" =~ ^[0-9]+$ ]] ||
+  (( WAF_RATE_LIMIT_PER_IP < 1000 || WAF_RATE_LIMIT_PER_IP > 2000000000 ));
+}; then
+  echo "WAF_RATE_LIMIT_PER_IP debe ser un entero entre 1000 y 2000000000." >&2
+  exit 2
+fi
 
 DATABASE_SECRET_ARN=""
 RESTORE_MASTER_SECRET_AFTER_BOOTSTRAP=false
@@ -168,7 +182,7 @@ if [[ -n "$SNAPSHOT_IDENTIFIER" ]]; then
 else
   echo "La base se creará vacía; si existe un secreto maestro retenido, se reutilizará."
 fi
-echo "Para desplegar en el perfil de máxima disponibilidad del laboratorio, define DATABASE_MULTI_AZ=true ENABLE_WAF=true ENABLE_AWS_BACKUP=true."
+echo "El perfil nativo predeterminado mantiene RDS Multi-AZ, WAF asociado al ALB y retención de respaldo de un día. AWS Backup sigue siendo opt-in."
 read -r -p "Escribe REBUILD para continuar: " confirmation
 if [[ "$confirmation" != "REBUILD" ]]; then
   echo "Cancelado; no se crearon recursos."
@@ -200,12 +214,13 @@ PARAMETERS=(
   "ParameterKey=InternalErpEnabled,ParameterValue=true"
   "ParameterKey=AzureFulfillmentUrl,ParameterValue=$FUNCTION_URL"
   "ParameterKey=AzureFunctionKeySecret,ParameterValue=$FUNCTION_KEY_SECRET"
-  "ParameterKey=DatabaseMultiAZ,ParameterValue=${DATABASE_MULTI_AZ:-false}"
+  "ParameterKey=DatabaseMultiAZ,ParameterValue=${DATABASE_MULTI_AZ:-true}"
   "ParameterKey=DatabaseBackupRetentionDays,ParameterValue=${DATABASE_BACKUP_RETENTION_DAYS:-1}"
   "ParameterKey=ManageDatabaseMasterPassword,ParameterValue=false"
   "ParameterKey=ResetAdministratorPassword,ParameterValue=$RESET_ADMINISTRATOR_PASSWORD"
-  "ParameterKey=EnableWaf,ParameterValue=${ENABLE_WAF:-false}"
-  "ParameterKey=ManageWafAssociation,ParameterValue=true"
+  "ParameterKey=EnableWaf,ParameterValue=${ENABLE_WAF:-true}"
+  "ParameterKey=ManageWafAssociation,ParameterValue=${MANAGE_WAF_ASSOCIATION:-true}"
+  "ParameterKey=WafRateLimitPerIp,ParameterValue=${WAF_RATE_LIMIT_PER_IP:-30000}"
   "ParameterKey=EnableAwsBackup,ParameterValue=${ENABLE_AWS_BACKUP:-false}"
   "ParameterKey=BootstrapMode,ParameterValue=true"
 )

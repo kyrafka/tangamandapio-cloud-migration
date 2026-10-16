@@ -63,6 +63,14 @@ for override_name in DATABASE_MULTI_AZ ENABLE_WAF MANAGE_WAF_ASSOCIATION ENABLE_
   fi
 done
 
+if [[ -n "${WAF_RATE_LIMIT_PER_IP:-}" ]]; then
+  if [[ ! "$WAF_RATE_LIMIT_PER_IP" =~ ^[0-9]+$ ]] ||
+     (( WAF_RATE_LIMIT_PER_IP < 1000 || WAF_RATE_LIMIT_PER_IP > 2000000000 )); then
+    echo "WAF_RATE_LIMIT_PER_IP debe ser un entero entre 1000 y 2000000000." >&2
+    exit 2
+  fi
+fi
+
 if [[ -n "${DATABASE_BACKUP_RETENTION_DAYS:-}" ]]; then
   if [[ ! "$DATABASE_BACKUP_RETENTION_DAYS" =~ ^[0-9]+$ ]] ||
      (( DATABASE_BACKUP_RETENTION_DAYS < 1 || DATABASE_BACKUP_RETENTION_DAYS > 35 )); then
@@ -268,6 +276,13 @@ for key in $PARAMETER_KEYS; do
         PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
       fi
       ;;
+    WafRateLimitPerIp)
+      if [[ -n "${WAF_RATE_LIMIT_PER_IP:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$WAF_RATE_LIMIT_PER_IP")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
     EnableAwsBackup)
       if [[ -n "${ENABLE_AWS_BACKUP:-}" ]]; then
         PARAMETERS+=("ParameterKey=$key,ParameterValue=$ENABLE_AWS_BACKUP")
@@ -287,6 +302,9 @@ if [[ -n "${APPLICATION_ARTIFACT_SHA256:-}" && "$PARAMETER_KEYS" != *Application
 fi
 if [[ -n "$PORTAL_DOMAIN_NAME" && "$PARAMETER_KEYS" != *PortalDomainName* ]]; then
   PARAMETERS+=("ParameterKey=PortalDomainName,ParameterValue=$PORTAL_DOMAIN_NAME")
+fi
+if [[ "$PARAMETER_KEYS" != *WafRateLimitPerIp* ]]; then
+  PARAMETERS+=("ParameterKey=WafRateLimitPerIp,ParameterValue=${WAF_RATE_LIMIT_PER_IP:-30000}")
 fi
 
 CHANGE_SET_ID="$(aws cloudformation create-change-set \

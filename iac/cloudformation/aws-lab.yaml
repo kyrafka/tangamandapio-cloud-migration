@@ -79,9 +79,9 @@ Parameters:
     Description: Nombre DNS público cubierto por CertificateArn; el registro debe apuntar al ALB.
   DatabaseMultiAZ:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
-    Description: Activa alta disponibilidad Multi-AZ para RDS. Eleva el costo; usar solo con una ventana y presupuesto aprobados.
+    Description: Mantiene alta disponibilidad Multi-AZ para RDS. Eleva el costo; desactivar solo mediante un cambio revisado.
   DatabaseBackupRetentionDays:
     Type: Number
     Default: 1
@@ -122,14 +122,20 @@ Parameters:
     Description: En true crea el stack sin EC2; permite publicar el artefacto antes de habilitar capacidad.
   EnableWaf:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
-    Description: Crea y asocia AWS WAF al ALB. Tiene costo y requiere aprobaci??n expl??cita.
+    Description: Crea AWS WAF administrado por esta pila y lo asocia al ALB.
   ManageWafAssociation:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
-    Description: Permite que este stack cree la asociaci??n WAF-ALB. Mantener false si la asociaci??n preexiste.
+    Description: Permite que esta pila administre la asociación WAF-ALB.
+  WafRateLimitPerIp:
+    Type: Number
+    Default: 30000
+    MinValue: 1000
+    MaxValue: 2000000000
+    Description: Umbral WAF por IP en la ventana administrada por AWS; dimensionado para ráfagas de 3,000 sesiones de solo lectura desde una IP NAT.
   EnableAwsBackup:
     Type: String
     Default: 'false'
@@ -693,7 +699,7 @@ Resources:
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env
             WorkingDirectory=/opt/tangamandapio
-            ExecStart=/opt/tangamandapio/venv/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --capture-output --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
+            ExecStart=/opt/tangamandapio/venv/bin/gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 4 --capture-output --access-logfile /var/log/tangamandapio/access.log --error-logfile /var/log/tangamandapio/error.log app:app
             Restart=always
             RestartSec=5
             User=tangamandapio
@@ -1144,7 +1150,7 @@ Resources:
           Action: {Block: {}}
           Statement:
             RateBasedStatement:
-              Limit: 1000
+              Limit: !Ref WafRateLimitPerIp
               AggregateKeyType: IP
           VisibilityConfig:
             SampledRequestsEnabled: true

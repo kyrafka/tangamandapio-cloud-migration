@@ -32,6 +32,8 @@ assert_invalid_override_rejected DATABASE_MULTI_AZ maybe 'solo acepta true o fal
 assert_invalid_override_rejected ENABLE_WAF yes 'solo acepta true o false'
 assert_invalid_override_rejected DATABASE_BACKUP_RETENTION_DAYS 0 'entero entre 1 y 35'
 assert_invalid_override_rejected DATABASE_BACKUP_RETENTION_DAYS 36 'entero entre 1 y 35'
+assert_invalid_override_rejected WAF_RATE_LIMIT_PER_IP 999 'entero entre 1000 y 2000000000'
+assert_invalid_override_rejected WAF_RATE_LIMIT_PER_IP 2000000001 'entero entre 1000 y 2000000000'
 
 : >"$AWS_CALL_LOG"
 env \
@@ -41,6 +43,7 @@ env \
   DATABASE_BACKUP_RETENTION_DAYS=7 \
   ENABLE_WAF=true \
   MANAGE_WAF_ASSOCIATION=true \
+  WAF_RATE_LIMIT_PER_IP=30000 \
   ENABLE_AWS_BACKUP=false \
   bash "$DEPLOY_SCRIPT" >"$TEMP_DIR/valid.log" 2>&1
 
@@ -49,6 +52,7 @@ for expected in \
   'ParameterKey=DatabaseBackupRetentionDays,ParameterValue=7' \
   'ParameterKey=EnableWaf,ParameterValue=true' \
   'ParameterKey=ManageWafAssociation,ParameterValue=true' \
+  'ParameterKey=WafRateLimitPerIp,ParameterValue=30000' \
   'ParameterKey=EnableAwsBackup,ParameterValue=false' \
   'ParameterKey=ResetAdministratorPassword,UsePreviousValue=true'; do
   if ! grep -Fq -- "$expected" "$AWS_CALL_LOG"; then
