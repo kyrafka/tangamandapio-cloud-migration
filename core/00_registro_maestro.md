@@ -3,7 +3,7 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 16/10/2026, 06:22 UTC — STS acepta token nuevo; portal AWS 503 por target group vacío
+**Corte:** 16/10/2026, 07:03 UTC — AWS/Azure revalidados; E2E integrado y puerta local aprobados
 
 ## 1. Caso y objetivo
 
@@ -123,7 +123,7 @@ y saldo de ledger restaurado; no se originó en EC2/RDS ni valida la aplicación
 AWS, que volvió a devolver 503 en la sonda de las 06:10 UTC. La Function
 Azure respondió health 200 en esa misma comprobación.
 
-## 4.4 Estado vigente — 16/10/2026, 06:13–06:22 UTC
+## 4.4 Corte histórico — 16/10/2026, 06:13–06:28 UTC (superado por 4.5)
 
 El token temporal más reciente se guardó en el perfil local `default` y AWS STS
 lo aceptó para la cuenta `841113066612`; el rechazo de las 06:04 pertenecía al
@@ -132,16 +132,61 @@ token anterior. El stack `tangamandapio-live-20261013` reporta
 `available`, cifrada, privada, Single-AZ, con backup de un día. Sin embargo,
 el ASG conserva mínimo/deseado 2 y máximo 5 pero no tiene instancias; el target
 group tampoco tiene destinos. Los dos lanzamientos de las 06:07 terminaron con
-`Client.InternalError` en AZ distintas. CloudTrail muestra `RunInstances`
-aceptado pero no aporta la causa de la terminación; la salida de consola EC2 no
-estuvo disponible. El portal devolvió `/health` 503 a las 06:22. No se hicieron
-cambios en AWS; investigar el motivo de lanzamiento antes de desplegar cualquier
-corrección. Evidencia: [corte AWS 06:22 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md).
+`Client.InternalError` en AZ distintas. CloudTrail identificó dos denegaciones
+explícitas de `kms:Decrypt` por la SCP de AWS Academy al procesar el volumen
+raíz cifrado con `alias/aws/ebs`; por eso falló el aprovisionamiento y el portal
+devolvió `/health` 503. Se preparó un parámetro `EncryptRootVolume` con valor
+seguro predeterminado `true` y override explícito solo para el laboratorio,
+pero no se creó change set ni se modificó AWS mientras se decide la excepción.
+La puerta local posterior al cambio aprobó 218 pruebas unitarias, 14 Node,
+40 transacciones aisladas, build, auditorías, CloudFormation y Terraform, sin
+escrituras cloud.
+Evidencia: [estado 06:22 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md) y [diagnóstico KMS 06:28 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0628UTC.md).
 
 Azure no se revalidó en esta ventana. Su último health HTTP 200 fue a las 06:10
 y el último E2E local→Azure pasó a las 06:09 con inventario/ledger sintético;
 no usó EC2/RDS. El plan Terraform remoto Azure de las 05:57 fue `No changes`,
 sin `apply`.
+
+## 4.5 Revalidación vigente — 16/10/2026, 06:39–07:03 UTC
+
+El token temporal AWS autenticó en la cuenta `841113066612`. Sin cambiar la
+plantilla ni el stack, el ASG logró lanzar instancias con el Launch Template v18
+y volúmenes raíz EBS cifrados. Una detección fresca de drift terminó
+`IN_SYNC` a las 06:53:38 UTC; CloudFormation sigue `UPDATE_COMPLETE` y el ALB
+`active`. A las 06:53 había dos instancias `InService`/`Healthy` y dos destinos
+`healthy`; dos instancias previas estaban saliendo del grupo. El FQDN
+`https://tangamandapio.kendellnm.me/health` respondió 200 a las 06:53:42 UTC.
+
+CloudTrail registra que el rol de laboratorio `vocareum/resource` detuvo dos
+instancias anteriores a las 06:45:43–06:45:44 UTC; no se atribuye esa acción a
+un cambio de plantilla ni a una acción de esta revisión. El primer comando SSM
+`admin-modules` quedó sin empezar en una de esas instancias detenidas; se
+canceló tras confirmar `ExecutionStartDateTime=null`. Repetido una sola vez
+contra la instancia sana `i-04b97f0ae7a9eddb5`, el smoke pasó: gasto sintético
+de 0.05 liquidado y persistido, correo interno `portal_only` enviado/leído y
+conteo aproximado de poison queue Azure igual a 0 sin exponer payloads. El E2E
+AWS→Azure completo anterior también pasó en esta misma ventana: venta y compra
+demo compensadas, ledger sintético 10→10, dos eventos entregados, matriz de
+roles API y 24/24 lecturas concurrentes 200 (seis concurrentes, p95 346.89 ms).
+
+Azure CLI muestra la suscripción `Enabled` y Function `tangama-wms-261008`
+`Running`/HTTPS-only; `https://tangama-wms-261008.azurewebsites.net/api/health`
+respondió 200. La integración WMS continúa siendo un ledger sintético. No se
+habilitó VPN/red privada entre nubes, no se alteró el estado del stack, y no se
+revalidaron en este corte ni la experiencia visual completa en Chrome, WebRTC
+entre dos navegadores ni carga representativa. Evidencia:
+[revalidación de nube 06:54 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0654UTC.md).
+
+La puerta integral local se repitió a las 07:02 UTC y terminó aprobada: 218
+pruebas unitarias, 14 pruebas Node, 40 transacciones aisladas, build y auditoría
+de dependencias, validación CloudFormation y Terraform `fmt`/`validate`/tests;
+no ejecutó operaciones de nube. Evidencia:
+[QA local 07:02 UTC](../evidence/current/QA-LOCAL-2026-10-16-0702UTC.md).
+
+Reconsulta a las 07:03 UTC: el ASG ya quedó exactamente con dos instancias
+`InService`/`Healthy`, dos targets `healthy`, y ambos health endpoints (AWS y
+Azure) devolvieron 200.
 
 ## 5. Estado verificado al corte — 04/10/2026 (histórico; superado por la sección 4.3)
 

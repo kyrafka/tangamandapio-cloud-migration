@@ -15,6 +15,11 @@ for expected in \
   fi
 done
 
+if ! grep -Fq 'Encrypted: true' "$template_path"; then
+  echo 'El volumen raíz EC2 debe permanecer cifrado.' >&2
+  exit 1
+fi
+
 for expected in \
   'HealthCheckType: ELB' \
   'DefaultInstanceWarmup: 420' \

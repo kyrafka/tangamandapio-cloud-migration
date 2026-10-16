@@ -1,9 +1,36 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 06:22 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 07:03 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
+
+- Revalidación 06:39–06:54 UTC: AWS STS aceptó el token; stack
+  `UPDATE_COMPLETE`; drift fresco `IN_SYNC` (06:53:38); ASG con dos
+  `InService`/`Healthy`, dos targets `healthy`, health HTTPS 200. El incidente
+  KMS de las 06:07 no se corrigió con una excepción: el mismo template y
+  Launch Template cifrado volvió a lanzar correctamente. CloudTrail registró
+  detención de dos instancias anteriores por `vocareum/resource`; una prueba
+  SSM pendiente en una de ellas no llegó a iniciar y se canceló. El smoke
+  `admin-modules` pasó después en una instancia sana.
+- Smoke de módulos Admin desde EC2 por HTTPS: gasto sintético 0.05 persistido
+  y liquidado; correo del portal enviado y leído en modo `portal_only`, sin
+  SMTP externo; endpoint Azure de poison queue devolvió count 0 y ningún
+  payload. No se ejecutó pago real ni se modificó inventario físico.
+- E2E completo AWS→Azure: venta y compra sintéticas compensadas, saldo demo
+  10→10, dos eventos entregados, matriz de permisos API y 24/24 GET 200 con
+  concurrencia 6 (p95 346.89 ms). No equivale a carga sostenida ni a soporte
+  comprobado para 3,000 usuarios.
+- Azure: suscripción `Enabled`, Function `Running`/HTTPS-only y `/api/health`
+  200 a las 06:54 UTC.
+- Evidencia consolidada:
+  [revalidación de nube 06:54 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0654UTC.md).
+- La puerta integral local terminó `QUALITY_GATE=APROBADA` a las 07:02 UTC:
+  218 pruebas unitarias, 14 Node, 40 transacciones aisladas, build,
+  dependencias, CloudFormation y validaciones/tests Terraform. Sin operaciones
+  de nube. [Registro QA](../evidence/current/QA-LOCAL-2026-10-16-0702UTC.md).
+- Reconsulta a las 07:03: ASG estable con exactamente 2/2 instancias y targets
+  sanos; los health endpoints públicos de AWS y Azure devolvieron 200.
 
 - El token AWS más reciente quedó actualizado en `default` y STS lo aceptó a
   las 06:13 UTC para la cuenta académica `841113066612`. Esto reemplaza el
@@ -14,8 +41,9 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   lanzamientos de las 06:07 terminaron con `Client.InternalError` en ambas AZ;
   CloudTrail acepta `RunInstances` pero no expone la causa final, y la consola
   EC2 no ofreció salida para esas instancias terminadas. El 503 ya no queda
-  solo como un síntoma: el target group vacío lo explica, aunque la falla raíz
-  de lanzamiento sigue sin determinarse. No se modificó AWS. Véase el
+  solo como un síntoma: el target group vacío lo explica. A las 06:16 aún no se
+  había identificado la falla raíz; se determinó después con CloudTrail KMS.
+  No se modificó AWS. Véase el
   [corte AWS 06:22](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md).
 - La verificación pública más reciente (05:44–05:58 UTC) cambia el estado
   operativo: dominio HTTPS con TLS válido, pero `/` y `/health` responden 503.
@@ -59,6 +87,15 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   `evt-795a36230f7843c7978b675dbae3d58d`. No es origen EC2/RDS.
 - La sonda de las 06:22 UTC devolvió HTTP 503 para el health público del portal
   (Cloudflare) y HTTP 200 para la Function Azure.
+- La investigación KMS de las 06:24–06:28 encontró en CloudTrail dos `Decrypt`
+  denegados por una SCP de Academy. La plantilla pide cifrar el volumen raíz.
+  Esa propuesta local de excepción temporal se retiró luego; el corte actual
+  confirma que el mismo Launch Template cifrado volvió a iniciar sin cambiar la
+  plantilla. No se quitó el cifrado. Detalle en el
+  [diagnóstico KMS](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0628UTC.md).
+- Después del cambio, la puerta local completa aprobó 218 pruebas unitarias,
+  14 Node, 40 transacciones aisladas, build, auditorías, CloudFormation y
+  Terraform; no se aplicaron recursos cloud.
 - La puerta integral local a las 05:37 aprobó 216 pruebas Python, 14 Node,
   build/auditorías, CloudFormation y Terraform `fmt`/`validate`, sin mutaciones
   cloud.
@@ -112,19 +149,19 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 | ID | Prueba | Estado verificado | Qué falta |
 |---|---|---|---|
-| PT-HTTPS-01 | Dominio, TLS y redirect | TLS válido históricamente; en la sonda 06:22 `/health` respondió 503 porque el target group consultado está vacío | Recuperar EC2/targets; repetir `/`, `/health`, redirect y login. |
-| PT-AWS-01 | Salud y disponibilidad | STS aceptó el token nuevo; stack `UPDATE_COMPLETE`, ALB activo, ASG 2/2/5 pero cero instancias y cero targets. Lanzamientos 06:07 terminaron `Client.InternalError` | Identificar causa EC2 confirmada; recuperar dos `InService`/`healthy` y validar portal antes de marcar disponible. |
+| PT-HTTPS-01 | Dominio, TLS y redirect | Health público HTTPS 200 a las 06:53; TLS/hostname activos | Recorrido visual autenticado en navegador; no revalidado en este corte. |
+| PT-AWS-01 | Salud y disponibilidad | STS acepta token; stack `UPDATE_COMPLETE`, drift fresco `IN_SYNC`, dos instancias y targets sanos, health 200 | Observar estabilidad tras el reemplazo automatizado de instancias. |
 | PT-AWS-02 | Login y roles | API Admin, Comercial y Operaciones pasó 200/403 por TLS | Recorrido visual autenticado completo. |
-| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E desplegado por SSM/ALB/Azure; venta y compra sintéticas, ledger 10→10 | Repetición visual del flujo desde el portal. |
+| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E desplegado por SSM/ALB/Azure; venta/compra sintéticas, ledger 10→10 y dos eventos entregados | Repetición visual del flujo desde el portal. |
 | PT-OUTBOX-01 | Historial paginado | 51/51 eventos entregados leídos sin omisiones, cero pendientes | Comprobar tabla y paginación en recorrido visual. |
 | PT-RETRY-01 | Reintento y poison | Guards y metadata poison probados en Azure; outbox durable | Falla controlada y recuperación observada en el portal desplegado, sin borrar evidencia. |
 | PT-DR-01 | Backup/restore/failover | Restore aislado: RTO 289 s, RPO observado ≤10 s; marcador y limpieza verificados | Failover Multi-AZ no probado; origen Single-AZ y backup de un día. |
 | PT-NET-01 | Red privada AWS–Azure | E2E usa HTTPS público | VNet/ruta privada ausente; SCP bloquea Customer Gateway en AWS Academy. |
-| PT-PERF-01 | Carga y escalado | Escalado sintético 2↔3 histórico; 24 GET al origen ALB, concurrencia 6, 24/24 HTTP 200, p95 217.69 ms | Carga sostenida y representativa, medir escalado/capacidad; no se afirma soportar 3,000 usuarios. |
+| PT-PERF-01 | Carga y escalado | E2E actual: 24 GET al origen ALB, concurrencia 6, 24/24 HTTP 200, p95 346.89 ms; escalado 2↔3 solo histórico | Carga sostenida y representativa, medir escalado/capacidad; no se afirma soportar 3,000 usuarios. |
 | PT-SEC-01 | Seguridad y navegador | TLS, controles de rol por API; SNS y auditoría existentes | WAF ausente; validar vistas/CSV visualmente; no atribuir el 403 a la app sin origen confirmado. |
-| PT-AZ-MON-01 | Invocaciones y alertas | E2E 05:37 y App Insights: 2 workers `resultCode=0`, 0 fallidos agregado; poison metadata=0 | Captura actual de monitor e invocación, correlación directa por ID y alarma de métrica real. |
-| PT-IAC-01 | CloudFormation/Terraform | Validación local; detección fresca de drift `IN_SYNC` a las 05:00:46 UTC | Reconciliar defaults de artefacto v16/v18 en el siguiente cambio efectivo; no desplegar un cambio vacío. |
-| PT-APP-01 | CSV, correo y finanzas | Módulos con datos sintéticos y mensajería interna portal-only | CSV e interacción ERP en navegador; SMTP externo no forma parte del correo portal-only. |
+| PT-AZ-MON-01 | Invocaciones y alertas | Health Azure 200; endpoint protegido de poison queue reportó count 0 y no expuso payloads; telemetría agregada anterior muestra workers exitosos | Captura actual del monitor, invocación correlacionada por ID y alarma de métrica real. |
+| PT-IAC-01 | CloudFormation/Terraform | Detección fresca de drift CloudFormation `IN_SYNC` a las 06:53:38; gate local por repetir | Verificar Terraform remoto Azure por separado; no desplegar cambios vacíos. |
+| PT-APP-01 | CSV, correo y finanzas | Finanzas sintéticas persistida/liquidada; correo interno portal-only enviado y recibido por Comercial; no hubo SMTP externo | CSV e interacción ERP en navegador; SMTP externo no forma parte del correo portal-only. |
 | PT-RTC-01 | WebRTC | Controles mute/cámara implementados | Prueba de audio/video bidireccional entre dos navegadores. |
 | PT-COST-01 | Costos | AWS con créditos Academy que compensan el consumo medido | Importe Azure fiable y atribución por proyecto. |
 | PT-DOC-01 | Evidencia/entrega | 216 pruebas Python, 14 Node, CloudFormation/Terraform y E2E Azure documentados; CI `b1d36a9` es un corte anterior | Capturas recientes del inventario AWS y monitor Azure; estado CI del commit nuevo y defensa oral. |

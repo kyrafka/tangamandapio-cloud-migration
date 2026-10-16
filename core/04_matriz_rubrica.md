@@ -1,17 +1,20 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 06:22 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 07:03 UTC
 
-## Estado operativo vigente — 16/10/2026, 06:13–06:22 UTC
+## Estado operativo vigente — 16/10/2026, 06:39–07:03 UTC
 
-AWS STS acepta el token temporal más reciente y el perfil local `default` quedó
-actualizado. El stack reporta `UPDATE_COMPLETE`; el ALB está `active`, pero el
-ASG (mínimo/deseado 2, máximo 5) tiene cero instancias y el target group cero
-destinos. Dos lanzamientos en AZ separadas acabaron `Client.InternalError`; no
-se pudo atribuir causa raíz con CloudTrail ni consola EC2. El health público
-respondió 503 a las 06:22. RDS está `available`, cifrada, privada, Single-AZ y
-con backup de un día. No se mutó AWS. La última evidencia Azure (06:09–06:10)
-fue E2E local→Azure aprobado y health 200; no se revalidó ahora y no pasó por
-EC2/RDS. El [corte detallado](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0622UTC.md)
-separa lo actual de los cortes históricos.
+AWS STS acepta el token más reciente. CloudFormation sigue `UPDATE_COMPLETE`,
+ALB `active`, y la detección de drift fresca terminó `IN_SYNC` a las 06:53:38
+UTC. A las 07:03 el ASG operaba exactamente con dos instancias
+`InService`/`Healthy`, dos targets `healthy` y el health HTTPS público en 200. Las instancias activas
+mantienen los discos raíz cifrados; no se modificó la plantilla para sortear
+el error KMS previo. Pasó el E2E autenticado AWS→Azure, más la prueba de
+Finanzas sintéticas, correo interno portal-only y consulta segura de poison
+queue. Azure Function también está `Running`, HTTPS-only, health 200.
+La puerta local completa pasó a las 07:02 (218 pruebas unitarias, 14 Node,
+40 transacciones aisladas, build, auditoría, CloudFormation y Terraform).
+Persisten brechas: conectividad privada AWS–Azure, carga representativa,
+recorrido visual completo, WebRTC de dos navegadores y failover Multi-AZ.
+Detalle y límites en la [evidencia de 06:54 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0654UTC.md); el incidente KMS anterior permanece como antecedente en el [corte 06:28 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0628UTC.md).
 
 ## Incidente operativo anterior — 16/10/2026, 05:44–06:10 UTC (superado en acceso)
 

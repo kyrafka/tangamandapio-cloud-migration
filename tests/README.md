@@ -1,5 +1,31 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Revalidación integrada AWS–Azure — 16/10/2026, 06:39–06:54 UTC
+
+Con el token temporal aceptado, el portal HTTPS volvió a responder health 200;
+CloudFormation quedó `UPDATE_COMPLETE`, un drift check fresco terminó
+`IN_SYNC` y dos targets estaban saludables con sus instancias InService. Se
+ejecutó el E2E AWS→Azure completo y luego `admin-modules` en una EC2 sana:
+venta/reposición sintéticas compensadas (saldo 10→10), dos eventos entregados,
+24/24 lecturas 200; Finanzas persistió/liquidó 0.05 y el correo del portal se
+envió/leyó sin SMTP externo. El endpoint Azure de poison queue informó 0 sin
+exponer mensajes. Azure Function `Running`/HTTPS-only y health 200. No se
+deshabilitó el cifrado EBS. Detalle y pendientes en
+[`CLOUD-REVALIDATION-2026-10-16-0654UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0654UTC.md).
+
+No equivale a prueba de carga sostenida, red privada AWS–Azure, vista visual
+completa, WebRTC entre navegadores, ni failover Multi-AZ; esas pruebas siguen
+pendientes.
+
+## Puerta local completa — 16/10/2026, 07:02 UTC
+
+`run_local_quality.ps1 -ValidateTerraform` terminó
+`QUALITY_GATE=APROBADA`: 218 pruebas unitarias, 14 Node, 40 transacciones
+aisladas, build frontend, auditoría de dependencias, validación CloudFormation,
+Terraform `fmt`/`validate`/tests y mocks de red/costo. No se modificaron
+recursos cloud. Véase
+[`QA-LOCAL-2026-10-16-0702UTC.md`](../evidence/current/QA-LOCAL-2026-10-16-0702UTC.md).
+
 ## Puerta local completa — 16/10/2026, 05:37 UTC
 
 `run_local_quality.ps1 -ValidateTerraform` terminó `QUALITY_GATE=APROBADA`
