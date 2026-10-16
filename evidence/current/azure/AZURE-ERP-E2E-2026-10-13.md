@@ -1,4 +1,26 @@
-# E2E vivo ERP local → Azure Function — 13/10/2026
+# E2E vivo ERP local → Azure Function — historial actualizado al 16/10/2026
+
+## Repetición compensada más reciente — 16/10/2026, 01:20 UTC
+
+El smoke opt-in verificó la suscripción `Azure for Students`, Function en
+`Running` y HTTPS-only, e inventario marcado explícitamente como demo antes de
+escribir. Comprobó que el ingreso sin clave devuelve 401 y el origen no
+autorizado devuelve 400 sin persistir un evento. Luego ejecutó el release ERP
+local con SQLite temporal: venta por outbox→Queue→Function y compra
+compensatoria por el mismo recorrido. La Function reportó
+`demo_fulfillment_completed` y `demo_restock_completed`; el saldo del SKU demo
+regresó exactamente al baseline. La cola poison reportó cero antes y después;
+solo se leyó metadato.
+
+| Paso | Evento | Resultado |
+|---|---|---|
+| Venta sintética | `evt-48d2bfcb51574f0c90c951122d3346db` | `demo_fulfillment_completed`; una unidad menos |
+| Recepción compensatoria | `evt-ff800324c0804b3fab34dec6ac5eca41` | `demo_restock_completed`; baseline restaurado |
+
+`LIVE_E2E=PASSED`. La base SQLite temporal se eliminó y quedaron en Azure los
+dos eventos sintéticos de auditoría. Este proceso usó el artefacto
+`app/aws_release/current` localmente: **no** fue iniciado por EC2, no valida la
+conectividad privada AWS–Azure y no representa stock físico.
 
 ## Repetición compensada más reciente — 13/10/2026, 23:00 America/Chicago
 
