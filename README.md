@@ -12,7 +12,7 @@ El proyecto hermano se usa como referencia del problema del datacenter corporati
 
 ## Estado vigente
 
-**Última revalidación: 16/10/2026, 02:55 UTC.** El dominio HTTPS, `/health` y
+**Última revalidación: 16/10/2026, 03:04 UTC.** El dominio HTTPS, `/health` y
 `/ready` respondieron 200; HTTP redirige a HTTPS. CloudFormation sigue
 `UPDATE_COMPLETE`; el ASG y el target group tienen 2/2 instancias sanas. El E2E
 desde EC2 por HTTPS directo al ALB alcanzó Azure, completó una venta demo y su
@@ -21,11 +21,18 @@ importación sintética y 24/24 lecturas autenticadas (p95 399.77 ms). El smoke
 Admin también verificó Finanzas con una cuenta QA de S/ 0.05 y el buzón interno
 portal-only; no hubo pago real ni correo externo.
 
+El login público por HTTPS se probó con las tres cuentas existentes: Admin,
+Comercial y Operaciones; cookies/CSRF, logout y permisos API coincidieron con
+el rol. El smoke SSM/EC2 hacia el FQDN sí recibió 403 antes de que Flask
+registrara la petición, por lo que no se presenta como un fallo general del
+login público. La revisión visual de Chrome sigue pendiente.
+
 RDS sigue `available`, Single-AZ y con un día de retención. La prueba PT-DR-01
 del 15/10 restauró y validó un marcador SQL (RTO 260 s; límite superior RPO 8 s),
-pero no demuestra failover ni SLA. WAF AWS no está desplegado. El login
-automatizado por Cloudflare recibió 403, mientras que login/E2E directos al ALB
-con TLS válido pasaron; el recorrido visual por el FQDN sigue pendiente. El
+pero no demuestra failover ni SLA. WAF AWS no está desplegado. El smoke desde
+EC2/SSM al FQDN recibió 403 antes de llegar a Flask; los logins públicos de los
+tres roles pasaron desde la ruta local. Falta inspección visual de Chrome y
+atribuir el rechazo del cliente SSM a su egress/proxy. El
 `dry-run` de VPN fue bloqueado por una SCP explícita y la suscripción Azure no
 tiene VNet, así que AWS→Azure sigue por HTTPS público.
 
@@ -38,7 +45,7 @@ La pasada de 02:55 volvió a validar con el token Academy renovado: el perfil
 local AWS CLI `default` autentica, el ALB está `active`, el certificado ACM
 `ISSUED`, y sus dos destinos siguen sanos. La puerta local completa pasó con
 209 pruebas unitarias, build, auditorías y validación IaC sin aplicar cambios.
-Detalles en la [revalidación final de 02:55](evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
+Detalles en la [revalidación final de 02:55](evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md) y la [prueba pública de roles de 03:04](evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md).
 
 La puerta local pasó 209 pruebas unitarias, build Vite, auditorías frontend y
 de dependencias, `cfn-lint`, validación AWS de CloudFormation y `fmt`/`init`/

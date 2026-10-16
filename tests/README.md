@@ -10,7 +10,7 @@ pruebas de navegación por rol (8) y CSV de catálogo (6) también pasaron. La
 evidencia conjunta de cloud y esta puerta está en
 [`CLOUD-REVALIDATION-2026-10-16-0255UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
-## Evidencia viva más reciente — 16/10/2026, 02:31–02:40 UTC
+## Evidencia viva más reciente — 16/10/2026, 02:31–03:04 UTC
 
 Con opt-in explícito, `run_live_aws_portal_azure_e2e.ps1` pasó en modo `full`
 contra `alb-origin-https`: RDS `ok`, venta/recepción demo compensadas y stock
@@ -23,10 +23,13 @@ registros QA persistentes; no hicieron pagos ni cambiaron stock físico. La
 revalidación de HTTPS/Azure/red/DR está en
 [`CLOUD-REVALIDATION-2026-10-16-0240UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0240UTC.md).
 
-El FQDN proxied requiere además login y revisión visual de navegador; el probe
-automatizado de login recibió 403 de Cloudflare, mientras que el mismo smoke
-directo al ALB con TLS válido pasó. No se probó WebRTC entre dos navegadores en
-esta ejecución.
+El FQDN público ya pasó login real de Admin, Comercial y Operaciones desde la
+ruta local: CSRF, logout y permisos API dieron el resultado esperado. El
+smoke de SSM/EC2 hacia el FQDN recibió 403 sin que Flask registrara ese POST;
+la causa es específica de ese egress/proxy y no se atribuye a Cloudflare sin
+ver sus eventos. La inspección visual de Chrome y WebRTC entre dos navegadores
+siguen pendientes. Evidencia en
+[`CLOUD-REVALIDATION-2026-10-16-0304UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md).
 
 La carpeta separa pruebas locales gratuitas de pruebas que requieren una sesión temporal del laboratorio. Ningún script inicia AWS Academy ni crea recursos sin una autorización explícita.
 
