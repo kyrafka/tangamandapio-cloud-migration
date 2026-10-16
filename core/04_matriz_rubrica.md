@@ -1339,3 +1339,9 @@ build y auditorías; el adaptador ICE suma 5 pruebas aprobadas y está publicado
 en `codex/aws-v11-deploy-sync`, pero no en el portal cloud. El origen AWS debe
 recuperarse antes de probar roles, desplegar o afirmar funcionalidad total.
 Detalle: [estado vivo 16/10, 10:39 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1039UTC.md).
+
+Una reconsulta de 10:41 UTC confirmó que AWS CLI usa `shared-credentials-file`
+sin overrides de entorno, aunque `elbv2:DescribeLoadBalancers` sigue denegado y
+el portal HTTPS continúa en 503. Application Insights correlacionó los dos
+eventos sintéticos de la última corrida con sus resultados de fulfill y
+reposición; no se repitió la mutación. Véase [seguimiento 10:41](../evidence/current/CLOUD-REVALIDATION-2026-10-16-1041UTC.md).
