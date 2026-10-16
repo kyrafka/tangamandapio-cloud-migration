@@ -12,14 +12,16 @@ cifrada, pero Single-AZ y con backup de un día. El smoke autenticado
 WMS/outbox. SNS tiene dos suscripciones confirmadas.
 
 CloudWatch mantiene la alarma de escala-baja en `ALARM` por CPU cercana a 1%,
-debajo del umbral 42%; la capacidad mínima 2 impide reducir el ASG. No se
-demostró escalado bajo carga. No hay ruta privada AWS–Azure (SCP bloquea
-Customer Gateway y no existe VNet Azure), WAF, failover RDS, carga
-representativa, prueba WebRTC entre navegadores, alarma sintética con entrega
-verificada, ni recorrido visual completo en esta pasada. El historial contiene
-lanzamientos cancelados por `Client.InternalError`, seguidos por dos
-lanzamientos exitosos y el estado actual sano; la causa inicial no está
-atribuida. Evidencia: [revalidación completa 03:41 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
+debajo del umbral 42%; el ASG conserva su mínimo de 2. El scale-out/in sí tiene
+pruebas sintéticas históricas (13–14/10), pero no se midió throughput de
+transacciones por ALB ni capacidad de 3,000 usuarios. El ciclo sintético de
+alarma/recuperación SNS también pasó el 14/10 y el usuario confirmó recibir los
+avisos; no se repitió ahora ni prueba un umbral métrico real. Siguen abiertos:
+ruta privada AWS–Azure (SCP bloquea Customer Gateway y no existe VNet Azure),
+WAF, failover RDS, carga representativa, WebRTC bidireccional y recorrido visual
+completo. El historial contiene lanzamientos cancelados por
+`Client.InternalError`, seguidos por dos lanzamientos exitosos; la causa
+inicial no está atribuida. Evidencia: [revalidación completa 03:41 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md).
 
 ### Fuentes de evaluación
 
@@ -55,8 +57,8 @@ recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/curre
 | 3 | Redes VPC/VCN | Dry-run de Customer Gateway denegado por SCP `p-qa2qn8qf`; la suscripción Azure no tiene VNet. No hay ruta privada AWS–Azure. |
 | 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; historial de inicio incluye `Client.InternalError` transitorios, seguido por recuperación; causa inicial no atribuida. RDS sigue Single-AZ con backup de 1 día. |
 | 5 | Seguridad cloud | HTTPS/redirect y matriz API pasan por TLS directo al ALB. Cloudflare devolvió 403 en automatización antes de Flask; causa exacta pendiente. Falta recorrido visual; no hay WAF. |
-| 6 | Alta disponibilidad y escalabilidad | ASG 2/2 y máximo 5, con política target tracking CPU 60%; falta carga por ALB que demuestre escalado. Alarma de CPU baja activa bajo 42%, capacidad mínima 2 preservada. |
-| 7 | Monitoreo y observabilidad | SNS tiene dos suscripciones confirmadas y alarms con acciones; falta disparar una alarma sintética y verificar entrega/recuperación. La alarma actual de CPU baja es señal de escala-in, no prueba de notificación recibida. |
+| 6 | Alta disponibilidad y escalabilidad | ASG 2/2, máximo 5 y target tracking CPU 60%. Pruebas históricas lograron scale-out 2→3 y scale-in 3→2; falta carga transaccional por ALB y capacidad para 3,000 usuarios. La alarma baja actual refleja CPU reducida con mínimo 2. |
+| 7 | Monitoreo y observabilidad | Dos suscripciones SNS confirmadas; el test sintético 14/10 hizo `OK→ALARM→OK`, ejecutó acciones y el usuario confirmó recepción. Falta vincular una alerta a un umbral de métrica real y telemetría de entrega. |
 | 8 | Infrastructure as Code | Detección fresca `IN_SYNC`, 0 recursos desviados; CloudFormation/Terraform local validados. La plantilla original del stack conserva defaults de artefacto v16 mientras los parámetros efectivos usan v18. AWS rechazó el change set vacío, así que este detalle de plantilla no se actualizó. |
 | 9 | Backup y recuperación | PT-DR-01 restauró con sonda SQL el 15/10 (RTO 260 s, RPO observado ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin prueba de failover. |
 | 10 | Multicloud AWS–Azure | E2E desde portal AWS a Azure pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |

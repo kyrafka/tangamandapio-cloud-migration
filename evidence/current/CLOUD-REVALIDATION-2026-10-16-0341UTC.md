@@ -17,12 +17,18 @@
   `Client.InternalError` entre 00:51 y 01:20 UTC, seguidos por dos lanzamientos
   exitosos que elevaron la capacidad de 0 a 2 a las 01:52 UTC. La causa de los
   fallos iniciales no queda explicada; la capacidad actual sí está sana.
+- Hay evidencia histórica de prueba sintética del mecanismo: scale-out
+  automático 2→3 con CPU el 14/10 y scale-in automático 3→2 tras preparar
+  capacidad 3 el 13/10; los nodos/destinos terminaron sanos y el stack quedó
+  `IN_SYNC`. No se repitió en este corte. No mide carga de transacciones ni
+  capacidad para 3,000 usuarios. Detalles: [scale-in del 13/10](aws/AWS-AUTOSCALING-2026-10-13.md)
+  y [scale-out del 14/10](aws/AWS-AUTOSCALING-TEST-2026-10-14.json).
 - La alarma target-tracking de CPU baja está `ALARM`: registró tres puntos
   1.158%, 1.352% y 1.175%, debajo de su umbral de 42%. Es coherente con escala
   hacia abajo; la política no puede bajar de la capacidad mínima de dos. Las
   alarmas de CPU alta, capacidad InService, RDS CPU, 5xx y destinos no sanos
-  están `OK`, habilitadas y con una acción cada una. Esta observación no prueba
-  escalado bajo carga ni una notificación de usuario.
+  están `OK`, habilitadas y con una acción cada una. El estado actual de CPU
+  baja no prueba entrega de notificación.
 - RDS PostgreSQL 18.3 está `available`, `db.t3.micro`, cifrada y no pública;
   permanece **Single-AZ** con retención de backup de **un día**.
 - WAFv2 no lista Web ACL regional para esta cuenta/región.
@@ -42,6 +48,9 @@ gastos ni movimientos de stock.
 - Operaciones: WMS y outbox `200`; ventas, administración y suscripciones `403`.
 - El smoke no disparó una alarma de prueba. La alarma de escala-baja descrita
   arriba ya estaba activa por CPU reducida.
+- El test sintético del 14/10 registró `OK→ALARM→OK`, ejecutó ambas acciones
+  SNS y el usuario confirmó recibir alerta y recuperación. No se repitió ahora;
+  el test no simula un umbral real de métrica. [Registro de la prueba](aws/AWS-ALARM-TEST-2026-10-14.md).
 - La autenticación automatizada a través del FQDN proxied recibió 403 de
   Cloudflare en una tentativa previa. No se identificó la regla exacta. No se
   cambió ni evitó la configuración de Cloudflare.
@@ -53,9 +62,9 @@ gastos ni movimientos de stock.
 - El gate local vigente: 213 pruebas Python, 14 Node, build Vite, auditorías de
   dependencias, `cfn-lint`, Terraform `fmt`/`init`/`validate` y pruebas mock;
   todo pasó sin `terraform apply`.
-- Commit `84b97bfb31d442181e618dba26f4043fd0dc82ed` quedó en la rama GitHub
-  `codex/aws-v11-deploy-sync`. Sus tres jobs concluyeron `success`: validación
-  AWS/Azure, backend/worker/flujo y build/auditoría frontend.
+- Commit documental `dacce5fe136ef61a6d0b7a1e7a8c34fb4c22446d` quedó en la rama
+  GitHub `codex/aws-v11-deploy-sync`. Sus tres jobs concluyeron `success`:
+  validación AWS/Azure, backend/worker/flujo y build/auditoría frontend.
 - La plantilla almacenada originalmente en CloudFormation todavía conserva
   defaults del artefacto v16; los parámetros efectivos desplegados usan v18 y
   coinciden con el origen local. AWS rechazó el change set que no producía
@@ -86,10 +95,14 @@ gastos ni movimientos de stock.
 - Resiliencia RDS: no es Multi-AZ, tiene un día de retención y no se midió un
   failover. La restauración PITR con RTO/RPO documentados es evidencia anterior,
   no repetida aquí.
-- Capacidad: no se ejecutó carga representativa por ALB ni se demostró que el
-  ASG escale. Las 24 lecturas previas fueron una sonda loopback pequeña.
-- Protección/observabilidad: no hay WAF; falta disparar y recuperar una alarma
-  sintética con evidencia de entrega. Las suscripciones SNS están confirmadas.
+- Capacidad: el scale-out/in sintético del ASG ya está demostrado en evidencia
+  del 13–14/10. Falta medir carga representativa de transacciones a través del
+  ALB; las 24 lecturas previas fueron una sonda loopback pequeña y no acreditan
+  3,000 usuarios.
+- Protección/observabilidad: no hay WAF. Las dos suscripciones SNS están
+  confirmadas y el ciclo sintético de alarma/recuperación fue probado el 14/10,
+  con recepción reportada por el usuario. Falta una correlación de alarma
+  disparada por métricas reales, si el criterio exige ese tipo de señal.
 - Interfaz: falta recorrido manual visual por módulos y carga CSV en navegador;
   WebRTC bidireccional entre dos navegadores tampoco se probó en este corte.
 - Costos: AWS mostró US$26.0033 de uso bruto y −US$26.0033 de créditos para toda

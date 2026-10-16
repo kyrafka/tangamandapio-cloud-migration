@@ -12,8 +12,11 @@ vigentes](current/CLOUD-REVALIDATION-2026-10-16-0341UTC.md) y la
 [matriz cualitativa](../core/04_matriz_rubrica.md).
 
 Siguen pendientes la ruta privada AWS–Azure (bloqueada por SCP y sin VNet),
-failover/RDS Multi-AZ, carga que demuestre escalado, WAF, alarma sintética con
-entrega comprobada, recorrido visual completo y capturas recientes. La base
+failover/RDS Multi-AZ, carga transaccional que mida capacidad por ALB, WAF,
+recorrido visual completo y capturas recientes. El mecanismo ASG sí tiene
+pruebas sintéticas históricas de scale-out/in; el ciclo sintético de alarma SNS
+también pasó y el usuario confirmó recepción. Falta correlacionar alarmas con
+métricas reales. La base
 está Single-AZ con un día de retención. La alarma de CPU baja actualmente en
 `ALARM` porque el promedio quedó cerca de 1%, pero el ASG conserva su mínimo de
 dos instancias. Las fuentes de evaluación también discrepan: la hoja cloud suma
