@@ -7,8 +7,9 @@ El servicio se recuperó tras la prueba de capacidad temporal: CloudFormation
 saludables; ambas raíces EBS siguen cifradas. HTTPS público `/health` respondió
 200 con HSTS y HTTP redirigió 301. RDS permanece privada/cifrada, Single-AZ y
 retención de un día. La alarma low de target tracking está en `ALARM` por CPU
-baja bajo el mínimo 2; la alarma 5xx no tenía datapoints y trata faltantes como
-`notBreaching`.
+baja bajo el mínimo 2. La alarma 5xx no tuvo puntos de error, pero `RequestCount`
+registró 291 solicitudes en 12 periodos de cinco minutos durante la última
+hora; se mantiene `notBreaching`, adecuado para esta métrica dispersa.
 
 Pasaron tres verificaciones vivas desde AWS: E2E AWS→Azure (venta/recepción
 sintéticas, dos eventos entregados, ledger 10→10, catálogo y matriz API de

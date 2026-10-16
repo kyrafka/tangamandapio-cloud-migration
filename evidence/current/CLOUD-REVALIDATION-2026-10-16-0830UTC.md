@@ -30,9 +30,13 @@
   revisión separada.
 - No hay Web ACL regional de AWS. La alarma de escala-baja está `ALARM` porque
   CPU (~1%) está debajo del umbral; el ASG conserva su mínimo 2. La alarma de
-  5xx figura `OK` sin datapoints y configura datos faltantes como
-  `notBreaching`, por lo que ese verde no prueba que se hayan observado
-  solicitudes.
+  5xx figura `OK` sin puntos de error y configura faltantes como
+  `notBreaching`. La métrica independiente `RequestCount` sí registró 291
+  solicitudes en 12 periodos de cinco minutos durante la última hora. Se
+  conserva `notBreaching`, apropiado para una métrica de error dispersa; la
+  ausencia de puntos 5xx por sí sola no reemplaza una prueba de disponibilidad.
+  Véase [missing data en CloudWatch](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html)
+  y [métricas del ALB](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html).
 
 ## Pruebas funcionales vivas
 
