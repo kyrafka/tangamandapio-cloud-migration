@@ -1,4 +1,4 @@
-# Revalidación AWS–Azure y pruebas del portal — 16/10/2026, 03:35 UTC
+# Revalidación AWS–Azure y pruebas del portal — 16/10/2026, 03:37 UTC
 
 ## Infraestructura observada
 
@@ -7,7 +7,7 @@
 - CloudFormation `tangamandapio-live-20261013`: `UPDATE_COMPLETE` (última
   actualización 00:27:59 UTC). El ALB está activo, internet-facing; el listener
   443 usa ACM `ISSUED` para `tangamandapio.kendellnm.me`, y el listener 80
-  redirige a HTTPS.
+  redirige a HTTPS. El certificado ACM consultado vence el 30/04/2027.
 - `https://tangamandapio.kendellnm.me/`, `/health` y `/ready`: HTTP 200 con
   verificación TLS correcta. La Function Azure `/api/health`: HTTP 200 con TLS
   correcto.
@@ -53,6 +53,18 @@
 dependencias sin vulnerabilidades conocidas, `cfn-lint`, Terraform `fmt`,
 `init`/`validate` y pruebas mock de VPN/red privada. No se ejecutó `terraform
 apply` ni hubo mutación de infraestructura.
+
+## Costos observados y límites de atribución
+
+- AWS Cost Explorer, cuenta Academy completa, del 01 al 15/10: uso bruto
+  `US$26.0033000468`, créditos `−US$26.0033011861`, neto
+  `−US$0.0000011393`. No es una medición exclusiva de Tangamandapio ni un
+  pronóstico; la cuenta agrupa otros servicios del laboratorio.
+- Azure for Students reportó 255 filas de consumo para el mismo periodo, pero
+  `pretaxCost` fue `None` en las 255; no hubo moneda/importe numérico para sumar.
+
+Por tanto, hay lectura parcial de gasto/créditos AWS, pero la reconciliación
+multinube por proyecto y el monto Azure siguen pendientes.
 
 El runner `run_public_portal_admin_readonly.ps1` tiene opt-in separado, verifica
 la identidad Academy, admite la ruta pública o diagnóstico directo al ALB con

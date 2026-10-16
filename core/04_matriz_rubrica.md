@@ -1,6 +1,6 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 03:35 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 03:37 UTC
 
-## Revalidación vigente — 16/10/2026, 03:35 UTC
+## Revalidación vigente — 16/10/2026, 03:37 UTC
 
 Con el token del laboratorio, AWS STS autenticó en la cuenta Academy desde el
 perfil `default`. CloudFormation está `UPDATE_COMPLETE`; ALB activo, ACM
@@ -20,7 +20,7 @@ Customer Gateway y no existe VNet Azure), WAF AWS, carga representativa de
 esta pasada. El restore PT-DR-01 y alerta/recuperación previos siguen como
 evidencia histórica, no se repitieron. El gate local aprobó 213 pruebas Python,
 14 Node, build, auditorías, CloudFormation y Terraform sin aplicar recursos.
-Detalle: [revalidación completa 03:35 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0335UTC.md).
+Detalle: [revalidación completa 03:37 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0337UTC.md).
 
 ## Corte anterior — 16/10/2026, 02:20–03:04 UTC
 
@@ -39,7 +39,7 @@ confirma explicit deny de SCP en AWS y no hay VNet Azure. No existe Web ACL
 regional. La puerta local pasó 209 pruebas, build y validación IaC sin aplicar
 recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md) y [estado cloud 02:55 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
-### Estado por criterio — brechas vigentes tras 03:35 UTC
+### Estado por criterio — brechas vigentes tras 03:37 UTC
 
 | # | Criterio | Brecha que queda tras esta revalidación |
 |---:|---|---|
@@ -51,7 +51,7 @@ recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/curre
 | 8 | Infrastructure as Code | Detección fresca `IN_SYNC`, 0 recursos desviados; CloudFormation/Terraform local validados. La plantilla original del stack conserva defaults de artefacto v16 mientras los parámetros efectivos usan v18. AWS rechazó el change set vacío, así que este detalle de plantilla no se actualizó. |
 | 9 | Backup y recuperación | PT-DR-01 restauró con sonda SQL el 15/10 (RTO 260 s, RPO observado ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin prueba de failover. |
 | 10 | Multicloud AWS–Azure | E2E desde portal AWS a Azure pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
-| 11 | Costos | Falta reconciliar consumo real de ambas nubes con el presupuesto/créditos del laboratorio. |
+| 11 | Costos | AWS CE: US$26.0033 uso y −US$26.0033 créditos en la cuenta Academy, no atribuible solo al proyecto; Azure entregó 255 filas pero `pretaxCost=None`. Falta el gasto Azure y atribución por proyecto. |
 | 12 | Pruebas técnicas | E2E AWS→Azure, Admin/Finanzas/correo portal-only/poison y permisos API de los tres roles pasaron; faltan recorrido interactivo completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
 | 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure; faltan capturas recientes de las consolas y del monitor/invocación. |
 
