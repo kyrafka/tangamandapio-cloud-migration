@@ -1,34 +1,38 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 01:25 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 02:10 UTC
 
-## Corte vigente — 16/10/2026, 01:25 UTC (release v18)
+## Corte vigente — 16/10/2026, 02:10 UTC (release v18)
 
-El cambio de paginación del historial WMS se empaquetó y desplegó como v18;
-CloudFormation terminó `UPDATE_COMPLETE` a las 00:42:53 UTC. El gate local
-aprobó 209 pruebas y los tests dirigidos cubren el total de 45 eventos en dos
-páginas, compatibilidad de la API anterior, valores inválidos y duplicados.
+El release v18 está desplegado en `tangamandapio-live-20261013`, estado
+`UPDATE_COMPLETE`; su objeto y SHA-256 existen en S3. CloudFormation drift
+terminó `IN_SYNC` en 39 recursos compatibles de 47. HTTPS 443 y la redirección
+HTTP→HTTPS están activos. Al 02:10 UTC, `/`, `/health` y `/ready` devolvieron
+200, el ASG tenía 2/2 instancias `InService`/`Healthy` y ambos destinos del ALB
+estaban saludables. Hubo una caída breve 503 entre 01:37 y 01:49 UTC; el grupo
+se recuperó y la causa del reemplazo automático no quedó atribuida.
 
-El dominio TLS funciona y HTTP redirige a HTTPS, pero al 16/10 01:25 UTC la app
-sigue en 503. Las cuatro rutas dieron 503 al conectar directo con ambas IP del
-ALB a las 01:11. AWS STS autentica, pero lecturas de EC2, CloudFormation,
-ELB/ASG/RDS son denegadas por IAM/`voc-cancel-cred`; el estado de targets/drift/RDS no se
-confirma. No se afirma v18 operativo de extremo a extremo.
+En Chrome autenticado como Administrador, la consola mostró métricas AWS,
+inventario (14 filas: 12 SKU de catálogo y dos artículos sintéticos de QA),
+outbox paginado (45 eventos, páginas 30 + 15) y las tres cuentas activas. La
+consulta del estado de un evento existente llegó desde el portal AWS hasta
+Azure y devolvió `demo_restock_completed`. La primera carga de esa vista dejó
+placeholders y una tabla de usuarios vacía por un momento; la recarga completó
+los datos y se verificó la segunda página, así que queda una intermitencia de
+presentación por regresionar.
 
-Azure Function está `Running`, `httpsOnly=true` y `/api/health` dio 200 a las
-01:17 UTC. El smoke vivo local→Azure pasó de nuevo a las 01:20: guardas 401/400,
-venta y recepción compensatoria procesadas, saldo demo restaurado y poison count
-0 antes/después. La prueba no se originó desde AWS. La puerta local de 209
-pruebas, build y validaciones IaC pasó.
-Application Insights consultado a las 01:09 UTC registró 22 solicitudes en 24 h,
-con 2 eventos `202`, 2 ejecuciones del worker con `resultCode=0`, 1 rechazo `400`
-esperado y 0 respuestas `5xx`. Las alertas Azure de 5xx y latencia están
-habilitadas y enlazadas al Action Group. No se provocó una nueva alarma; el
-usuario había confirmado la entrega de alerta/recuperación en una prueba previa.
-Una consulta posterior a las 01:24 UTC (últimos 10 minutos) volvió a mostrar 2
-eventos `202`, 2 workers `resultCode=0`, el `400` esperado y cero solicitudes
-fallidas. A las 01:25, las dos reglas siguieron habilitadas y el Action Group
-activo con dos receptores; falta la captura visual de consola y correlacionar
-una alerta actual con una invocación concreta.
-Detalle en [la revalidación 01:25 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
+RDS está `available`, PostgreSQL, Single-AZ, con un día de backups. WAF no está
+desplegado. La integración de estado AWS→Azure usa el endpoint HTTPS público;
+no existe ruta privada AWS–Azure y el ledger WMS es ficticio.
+
+Azure for Students está `Enabled`; la Function `tangama-wms-261008` continúa
+`Running` y HTTPS-only. El smoke vivo del 16/10 a las 01:47 ejecutó el artefacto
+local→Azure: guardas 401/400, venta sintética y reposición compensatoria
+procesadas, ledger demo restaurado. No se originó desde AWS; los eventos
+sintéticos permanecen en el almacenamiento de auditoría.
+
+La puerta local aprobó 209 pruebas unitarias, build Vite, auditorías,
+`cfn-lint`, `validate-template` de AWS y Terraform `fmt`/`init`/`validate` más
+cinco pruebas mock; no aplicó recursos. Detalle en la [evidencia AWS (incluye la recuperación 02:10 UTC)](../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md) y el
+[smoke Azure 01:47 UTC](../evidence/current/azure/AZURE-ERP-SMOKE-LIVE-2026-10-16-0147UTC.md).
 
 ### Estado cualitativo por criterio — 16/10/2026, 01:25 UTC
 
@@ -36,17 +40,17 @@ Detalle en [la revalidación 01:25 UTC](../evidence/current/CLOUD-REVALIDATION-2
 |---:|---|---|
 | 1 | Análisis del problema y requerimientos · 1.0 | Documentado; falta cerrar la trazabilidad requisito→componente→prueba y defender supuestos en la exposición. |
 | 2 | Diseño de arquitectura cloud · 2.0 | Arquitectura AWS–Azure documentada; falta demostrar el dimensionamiento y explicar límites/costos. |
-| 3 | Redes VPC/VCN · 2.0 | VPC AWS existente; falta conectividad/ruta privada AWS–Azure. La VPN fue denegada por AWS Academy en preflight. |
-| 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El origen ALB devuelve 503; lecturas de EC2/ELB/ASG/RDS están denegadas. `/health` depende de `SELECT 1` a RDS, pero no hay prueba de que sea la causa. RDS sigue documentado Single-AZ/backup 1 día. |
-| 5 | Seguridad cloud · 2.5 | TLS/redirect comprobados; roles en API pasaron en v17. Falta repetir seguridad/roles en v18 y revisar configuración actual. WAF está desactivado. |
-| 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 y pruebas pequeñas constan históricamente; estado actual de targets no verificable. Falta carga y autoscaling representativos; 3,000 usuarios es objetivo, no capacidad probada. |
+| 3 | Redes VPC/VCN · 2.0 | VPC AWS existente y portal público HTTPS operativo; falta conectividad/ruta privada AWS–Azure. La VPN fue denegada por AWS Academy en preflight. |
+| 4 | Cómputo, almacenamiento y BD · 1.5 | v18 responde 200; ASG 2/2 y dos destinos sanos. RDS `available`, Single-AZ y backup 1 día. La caída temporal 503 se recuperó automáticamente; causa raíz no atribuida. |
+| 5 | Seguridad cloud · 2.5 | HTTPS/redirect, cookies Secure/HttpOnly, CSRF y roles visibles activos. WAF no desplegado; falta una regresión de autorización por cada rol en navegador y revisión de controles actuales. |
+| 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2 sano y reemplazo automático recuperó el servicio; una caída breve ocurrió. Falta carga representativa y medición de escalado; 3,000 usuarios es objetivo, no capacidad probada. |
 | 7 | Monitoreo y observabilidad · 1.0 | App Insights: consulta 01:24 con 2 eventos 202, 2 workers `resultCode=0`, guarda 400 esperada y 0 solicitudes fallidas; a las 01:25 ambas alertas estaban activas y Action Group tenía dos receptores. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
-| 8 | Infrastructure as Code · 1.5 | CloudFormation v18 aplicado y validaciones locales de Terraform pasan; CloudFormation/ELB/ASG/RDS de lectura reciben explicit deny, por lo que drift actual de AWS no se puede consultar. Reconciliar antes de aplicar más infraestructura. |
+| 8 | Infrastructure as Code · 1.5 | Defaults CFN locales alineados a v18, validación AWS y `cfn-lint` pasan; drift `IN_SYNC` en 39 recursos compatibles de 47. Terraform `fmt`/`init`/`validate` y cinco tests mock pasan; no se aplicaron recursos. Drift no demuestra disponibilidad runtime. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado previo dejó RTO/RPO observados; no prueba una garantía ni failover. RDS Single-AZ y retención de un día siguen siendo límites. |
-| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Se documentó el acuerdo oral para AWS–Azure. E2E local→Azure pasó a las 01:20; v17 tuvo E2E desde EC2, pero falta repetir desde AWS en v18 y no hay ruta privada. No presentar Azure como OCI. |
+| 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Acuerdo oral para AWS–Azure documentado. La consola autenticada consultó un estado guardado en Azure a través del portal AWS; no hay ruta privada. No presentar Azure como OCI. |
 | 11 | Costos y optimización · 0.5 | Hay estimación AWS; faltan costo observado/Cost Analysis de Azure y reconciliación de consumo del lab. |
-| 12 | Pruebas técnicas · 1.0 | Gate local 209 y E2E Azure sintético pasan; AWS v18 está en 503. Faltan regresión autenticada post-v18, carga, CSV visual, red privada y pruebas WebRTC de producto. |
-| 13 | Documentación técnica · 0.5 | Cortes/matriz/plan y evidencia Azure actualizados en la rama; el workflow `61d0fd5` pasó a las 01:26:56 UTC. Falta captura visual actual de consola/monitor. |
+| 12 | Pruebas técnicas · 1.0 | Portal v18 autenticado y consulta AWS→Azure verificados; gate local con Terraform en curso. Faltan regresión completa de roles, CSV visual, carga, red privada y WebRTC entre dos navegadores. |
+| 13 | Documentación técnica · 0.5 | Evidencias AWS/Azure, `README` e IaC actualizados con el corte 16/10. Falta captura visual de consola/monitor y conservar el resultado del workflow del commit de esta actualización. |
 | 14 | Sustentación y defensa técnica · 0.5 | Pendiente de demostración oral: arquitectura, decisiones, límites, costos y resultados. |
 
 La rúbrica local suma 18.5 en los pesos aunque declara 20 y no define conversión

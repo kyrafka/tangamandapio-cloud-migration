@@ -6,38 +6,39 @@ Proyecto académico de arquitectura para una distribuidora peruana ficticia. El 
 
 Portal B2B y ERP son dominios funcionales distintos: el portal sirve a distribuidores/clientes y el ERP a los equipos internos. Para este prototipo se presentan juntos en la misma web y usan el inicio de sesión y los permisos existentes; sus tablas y APIs están separadas por módulo. Si la escala operativa lo exige, el ERP puede extraerse después como servicio independiente. Azure conserva la autoridad del inventario WMS; el ERP envía ventas y recepciones, pero no mantiene otra copia de existencias. La mensajería ERP persiste dentro del portal y ahora admite un relay SMTP configurable; en local, Compose usa Mailpit como receptor de prueba, no como correo público ni buzones corporativos.
 
-El catálogo trae 12 SKU sintéticos y se amplía desde ERP → Maestros con la plantilla Excel (editar y guardar como CSV UTF-8 antes de importar). La carga admite hasta 500 productos, valida el archivo completo y sincroniza el catálogo con el ledger de Azure. El saldo inicial solo se aplica a SKU nuevos; actualizar fichas conserva existencias. Las ventas y recepciones modifican saldos sintéticos de forma idempotente; no representan inventario físico. En la consola AWS, el 15/10 a las 19:22 UTC se observó el stack `UPDATE_COMPLETE`, 2/2 destinos saludables y el artefacto v12 en el prefijo principal de S3; el CLI local devolvió `ExpiredToken`, RDS y drift no se revalidaron. v13 sigue como candidato local y no apareció entre los 10 objetos listados. Detalles: [importación de catálogo sintético](evidence/current/CATALOGO-SINTETICO-IMPORT-2026-10-14.md), [evidencia histórica de v11](evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md) y [corte v12/v13](evidence/current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md).
+El catálogo parte de 12 SKU sintéticos y se amplía desde ERP → Maestros con la plantilla Excel (guardar como CSV UTF-8 antes de importar). La carga admite hasta 500 productos y sincroniza el catálogo con el ledger de Azure; las ventas y recepciones modifican saldos ficticios de forma idempotente, no representan inventario físico. En la comprobación viva del 16/10 a las 02:10 UTC, la consola AWS mostró 14 SKU (12 de catálogo y 2 de QA), 45 eventos de outbox y la consulta autenticada de un evento a Azure devolvió `demo_restock_completed`. Detalles en la [importación de catálogo sintético](evidence/current/CATALOGO-SINTETICO-IMPORT-2026-10-14.md) y la [revalidación AWS](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
 
 El proyecto hermano se usa como referencia del problema del datacenter corporativo centralizado, no como fuente de las cifras de Tangamandapio. La arquitectura objetivo, responsabilidades, candidatos ERP/correo y fases están en [core/12_arquitectura_empresarial_portal_erp_correo.md](core/12_arquitectura_empresarial_portal_erp_correo.md).
 
 ## Estado vigente
 
-**Última revalidación: 15/10/2026, 19:21–19:23 UTC.** El portal HTTPS,
-`/health` y `/ready` respondieron 200; los headers HSTS/CSP y otros controles
-se registraron en el corte público de las 19:13. Azure for Students está
-Enabled y `/api/health` de la Function devolvió 200.
+**Última revalidación: 16/10/2026, 02:10 UTC.** El portal HTTPS, `/health` y
+`/ready` respondieron 200. CloudFormation informa `UPDATE_COMPLETE`; Auto Scaling
+tiene 2/2 instancias `InService`/`Healthy` y ambos destinos del ALB están
+saludables. La consola autenticada cargó métricas CloudWatch, catálogo, outbox
+paginado y las tres cuentas; la consulta de un evento existente desde la consola
+devolvió `demo_restock_completed` en Azure. El primer render mostró datos en
+carga y la tabla de usuarios se completó al refrescar; queda anotado como
+intermitencia visual, no como falla persistente.
 
-**AWS:** la sesión de Chrome permitió revisar en modo de solo lectura el stack
-`tangamandapio-live-20261013` (`UPDATE_COMPLETE`, 47 recursos), el grupo de
-destino (2/2 `Healthy`) y el prefijo principal de S3 (10 objetos, incluido el
-paquete v12). No se hizo detección de drift. El AWS CLI local sigue en
-`ExpiredToken`; v13 no aparece en los objetos enumerados y RDS no se revalidó.
-La consola web activa no demuestra que el CLI esté vigente ni que el release
-v13 se haya desplegado.
+RDS está `available`, Single-AZ, con retención de backup de un día. WAF no está
+desplegado. El drift `IN_SYNC` observado antes fue para 39 recursos compatibles
+de los 47 y no valida salud de aplicación. No se alteraron recursos cloud en
+esta revalidación. Las credenciales temporales AWS se actualizaron solo en el
+perfil local y no se copiaron a documentación.
 
-La Function de Azure pasó un E2E de venta/outbox/Queue/Function y recepción
-compensatoria con ledger sintético restaurado; lo ejecutó el paquete local
-contra Azure, no las EC2/RDS. En Chrome el portal sigue en inicio de sesión:
-las vistas internas, roles, ERP, CSV y telefonía no se marcan como probados
-visualmente en sesión autenticada; la consola del navegador no registró errores
-JavaScript en la portada. La puerta local pasó 181 pruebas Python,
-14 Node, build Vite, auditorías, CloudFormation, Terraform en seis raíces y
-cinco tests mock; no aplicó infraestructura. GitHub Actions
-[`38792459084`](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/38792459084)
-pasó para `977f437`. Véanse el [corte vigente](evidence/current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md),
-[evidencia de HTTPS/headers](evidence/current/CLOUD-REVALIDATION-2026-10-15-1913UTC.md),
-la [evidencia AWS/Azure de 18:56](evidence/current/CLOUD-REVALIDATION-2026-10-15-1856UTC.md)
-y la [matriz cualitativa](core/04_matriz_rubrica.md).
+**Azure:** `Azure for Students` está `Enabled`; la Function sigue `Running` y
+HTTPS-only. El smoke vivo del 16/10 a la 01:47 ejecutó el paquete local hacia
+Azure: los guards devolvieron 401/400, una venta sintética se procesó y su
+compensación restauró el ledger demo. No acredita el recorrido desde EC2; los
+eventos sintéticos permanecen en el almacenamiento de auditoría.
+
+La puerta local pasó 209 pruebas unitarias, build Vite, auditorías frontend y
+de dependencias, `cfn-lint`, validación AWS de CloudFormation y `fmt`/`init`/
+`validate` más cinco pruebas mock de Terraform; no aplicó infraestructura.
+Véanse la [evidencia AWS](evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md),
+el [smoke Azure](evidence/current/azure/AZURE-ERP-SMOKE-LIVE-2026-10-16-0147UTC.md),
+el [estado de IaC](iac/README.md) y la [matriz cualitativa](core/04_matriz_rubrica.md).
 
 ### Corte histórico (02:58 UTC)
 

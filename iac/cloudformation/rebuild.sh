@@ -184,7 +184,7 @@ if [[ ! "$ARTIFACT_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
   exit 2
 fi
 if [[ -z "$ARTIFACT_KEY" ]]; then
-  ARTIFACT_KEY="releases/tangamandapio/portal-${REVISION}-${ARTIFACT_SHA256}.tar.gz"
+  ARTIFACT_KEY="releases/tangamandapio/portal-b2b-${REVISION}-${ARTIFACT_SHA256}.tar.gz"
 elif [[ "$ARTIFACT_KEY" != *"$ARTIFACT_SHA256"* ]]; then
   echo "APPLICATION_ARTIFACT_KEY debe incluir el SHA-256 completo para conservar releases inmutables y permitir rollback." >&2
   exit 2

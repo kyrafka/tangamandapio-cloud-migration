@@ -421,6 +421,12 @@ AllowedPattern: '^$|^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9]
   if ($awsTemplateText -notmatch $shaParameterContract) {
     throw 'CloudFormation no valida el parámetro SHA-256 del artefacto del portal.'
   }
+  $releaseRevision = (Get-Content -Raw (Join-Path $workspacePath 'app\aws_release\current\BUILD_REVISION')).Trim()
+  $escapedRevision = [regex]::Escape($releaseRevision)
+  $releaseDefaultsPattern = "(?s)ApplicationArtifactKey:\s+Type: String\s+Default: releases/tangamandapio/portal-b2b-$escapedRevision-([a-f0-9]{64})\.tar\.gz.*?ApplicationArtifactRevision:\s+Type: String\s+Default: $escapedRevision.*?ApplicationArtifactSha256:\s+Type: String\s+Default: ([a-f0-9]{64})"
+  if ($awsTemplateText -notmatch $releaseDefaultsPattern -or $Matches[1] -ne $Matches[2]) {
+    throw 'Los valores por defecto de CloudFormation deben coincidir con BUILD_REVISION y el mismo digest del artefacto.'
+  }
   if ($awsTemplateText -notmatch '(?s)aws s3 cp .*?ARTIFACT_SHA256_ACTUAL=.*?if \[ -n ''\$\{ApplicationArtifactSha256\}'' \].*?tar -xzf') {
     throw 'Las instancias deben comprobar el SHA-256 antes de extraer el paquete.'
   }
@@ -435,7 +441,7 @@ AllowedPattern: '^$|^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z0-9]
       $deployScriptText -notmatch 'Certificate\.SubjectAlternativeNames') {
     throw 'El paso HTTPS debe exigir dominio + certificado, validar cobertura DNS y emitir el dominio correcto.'
   }
-  if ($rebuildScriptText -notmatch '(?s)ARTIFACT_SHA256=.*?portal-\$\{REVISION\}-\$\{ARTIFACT_SHA256\}\.tar\.gz.*?ApplicationArtifactSha256,ParameterValue=\$ARTIFACT_SHA256') {
+  if ($rebuildScriptText -notmatch '(?s)ARTIFACT_SHA256=.*?portal-b2b-\$\{REVISION\}-\$\{ARTIFACT_SHA256\}\.tar\.gz.*?ApplicationArtifactSha256,ParameterValue=\$ARTIFACT_SHA256') {
     throw 'La reconstrucción no usa una clave de paquete inmutable y fija el hash en CloudFormation.'
   }
   & $cfnLintPath $awsTemplatePath `

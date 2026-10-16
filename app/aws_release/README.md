@@ -2,12 +2,13 @@
 
 > Último release preparado: v18, `20261015-outbox-pagination-v18-python312`,
 > SHA-256 `c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f`.
-> CloudFormation terminó `UPDATE_COMPLETE` el 16/10 a las 00:42:53 UTC. A las
-> 01:25 UTC la app seguía en 503; AWS STS autentica, pero lecturas de EC2,
-> CloudFormation, ELB, ASG y RDS son denegadas por la autorización del lab; la disponibilidad y
-> el smoke autenticado v18 no están confirmados. Azure Function está `Running`,
-> health 200 y el smoke vivo local→Azure pasó de nuevo a la 01:20 UTC. Véase
-> [la revalidación 01:25 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
+> El objeto v18 existe en el bucket privado y el stack actual informa
+> `UPDATE_COMPLETE`. A las 02:10 UTC del 16/10 el dominio HTTPS y las rutas
+> `/health` y `/ready` respondieron 200; ASG y target group tenían 2/2 destinos
+> saludables. Se completó una consulta autenticada desde la consola AWS al
+> resultado de un evento Azure (`demo_restock_completed`). Hubo una ventana 503
+> entre 01:37 y 01:49 UTC y no quedó determinada la causa de la recuperación
+> automática. Evidencia: [revalidación AWS 01:37–02:10 UTC](../../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
 
 ## Release v18 desplegado — paginación íntegra del outbox
 
@@ -20,9 +21,9 @@ el índice correspondiente a las migraciones SQLite y PostgreSQL.
 El artefacto inmutable se subió al bucket privado con SSE-S3 y metadato SHA-256
 verificado. La puerta local aprobó 209 pruebas. Las pruebas específicas
 verificaron 45 eventos en dos páginas de 30 + 15, compatibilidad del arreglo
-anterior y rechazo de parámetros fuera de rango. El código v18 está desplegado,
-pero su disponibilidad final no quedó confirmada por la denegación del
-laboratorio.
+anterior y rechazo de parámetros fuera de rango. El v18 está desplegado; la
+consola Admin recorrió visualmente ambas páginas y confirmó el resultado de un
+evento en Azure. La función conserva el carácter sintético del ledger.
 
 ## Corte anterior — 15/10/2026, 23:24 UTC (v17)
 

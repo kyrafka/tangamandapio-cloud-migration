@@ -23,17 +23,17 @@ Parameters:
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-20261015-edge-cache-safe-landing-v16-python312-94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261015-outbox-pagination-v18-python312-c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261015-edge-cache-safe-landing-v16-python312
+    Default: 20261015-outbox-pagination-v18-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: 94b9bea7808368fb46f771196bdae792e26babd6aaf22718a9d1917daf0996fe
+    Default: c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:

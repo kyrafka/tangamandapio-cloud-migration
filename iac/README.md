@@ -1,6 +1,6 @@
-# Infraestructura como código — corte 15/10/2026
+# Infraestructura como código — revalidación 16/10/2026
 
-Última actualización: 15/10/2026, 19:23 UTC. Portal HTTPS, `/health`, `/ready` y Azure `/api/health` respondieron 200; Azure for Students está `Enabled`. En la consola AWS, CloudFormation mostró `UPDATE_COMPLETE` con 47 recursos, el target group 2/2 `Healthy` y el prefijo principal de S3 10 objetos incluyendo v12. La sesión AWS CLI local devuelve `ExpiredToken`; no se hizo drift detection ni se revalidó RDS. v13 no figura entre los objetos de release enumerados y no se confirmó desplegado. La microcarga directa al origen ALB de 16:43 (100/100 `/health`, p95 101.79 ms) es evidencia histórica y no midió transacciones. Véanse la [revalidación actual](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md), la [revalidación HTTPS/headers 19:13](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1913UTC.md), el [corte AWS/Azure 18:56](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1856UTC.md) y la [prueba de origen ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643.md).
+Última comprobación AWS: 16/10/2026, 02:10 UTC. STS acepta el token temporal actual; el stack informa `UPDATE_COMPLETE`, el ALB está `active` y tiene HTTPS 443 con redirección 80→443. `/`, `/health` y `/ready` respondieron 200; ASG y target group tienen 2/2 instancias/destinos saludables. Una caída 503 anterior (01:37–01:49 UTC) se recuperó automáticamente, pero no se identificó la causa. RDS está `available`, Single-AZ y con un día de backups. El paquete v18 y su SHA-256 están presentes en S3; los defaults de CloudFormation locales coinciden con BUILD_REVISION. Drift terminó `IN_SYNC` en 39 recursos compatibles de 47, lo cual no evalúa la salud runtime. La consola Admin consultó un evento existente y Azure devolvió `demo_restock_completed`; la integración usa HTTPS público y el ledger es ficticio. Evidencia detallada en la [revalidación AWS 01:37–02:10 UTC](../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md).
 
 El intento v11 del 14/10 quedó registrado con el resultado observado en ese momento; sus notas de “estado desconocido” son históricas y quedaron superadas por la actualización completada el 15/10. Véase la [evidencia del intento v11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
 
@@ -30,9 +30,16 @@ mock que PT-MON-01 devuelve la alarma al estado original si ocurre un error y
 cubre el diagnóstico AWS de solo lectura con tres escenarios mock:
 sano, degradado y acceso denegado.
 
+La puerta local vigente pasó CloudFormation `cfn-lint`/`validate-template` y
+Terraform `fmt`, `init`, `validate` en las seis raíces configuradas, más cinco
+pruebas mock de costo/red. No se ejecutó `plan` contra recursos vivos ni
+`apply`; estas validaciones no prueban que todos los estados Terraform
+administren los recursos desplegados.
+
 | Dominio | Fuente de verdad actual | Estado de despliegue |
 |---|---|---|
-| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | Consola web a las 19:22: stack `UPDATE_COMPLETE`, 47 recursos; target group 2/2 `Healthy`; prefijo S3 10 objetos con v12 y sin v13 en la lista. CLI `ExpiredToken`. No hubo drift detection ni consulta RDS. El candidato v13 local no está confirmado desplegado. [Corte actual](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1923UTC.md) · [última verificación de headers](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1913UTC.md). |
+| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | Verificado 16/10 02:10 UTC: stack `UPDATE_COMPLETE`; HTTPS y `/health`/`/ready` 200; ASG y target group 2/2 sanos; v18 activo. RDS disponible, Single-AZ, backup 1 día. Se observó caída temporal 503 que se recuperó sola, causa sin confirmar. [Corte actual](../evidence/current/aws/AWS-REVALIDACION-LIVE-2026-10-16-0137UTC.md). |
+
 | AWS grabaciones | CloudFormation: `cloudformation/voice-recordings.yaml`, creado por `cloudformation/rebuild.sh` | Último registro 09/10: `CREATE_COMPLETE`, drift `IN_SYNC`; sin objetos grabados. Estado actual no revalidado. |
 | Red AWS de ejemplo | Terraform: `environments/demo` → `modules/aws_network` | Formato y validación correctos; no tiene state y no administra el stack vivo. Un `apply` crearía una VPC adicional. |
 | WMS Azure anterior | Terraform histórico: `environments/azure-demo` → `modules/azure_operations` | Su state sigue apuntando al grupo anterior; no usarlo. El Resource Group anterior fue eliminado. |
