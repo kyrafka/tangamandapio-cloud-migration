@@ -1,5 +1,30 @@
 # Pruebas reproducibles de Tangamandapio S.A.C.
 
+## Revalidación AWS–Azure — 16/10/2026, 09:34–09:50 UTC
+
+El drift CloudFormation terminó `IN_SYNC`/0; AWS y Azure health HTTPS/TLS
+200; ASG/ALB 2/2 sanos. E2E real de venta/compra sintéticas verificó Azure
+Function (dos ejecuciones exitosas y ledger demo 10→10). Admin read-only
+reconcilió 63/63 eventos, 0 pendientes y 24/24 GET 200. Matriz ERP 48/48 en seis
+roles; cuatro usuarios temporales inactivos. Finanzas demo, correo interno y
+poison queue también verificados. PT-PERF-01 directo al ALB pasó 100/10 y
+500/20, con certificado TLS validado. La puerta local completa terminó con
+228 pruebas Python, 14 Node, 40 transacciones aisladas, build, auditorías,
+CloudFormation y Terraform, sin `apply`. Límites: no prueba 3,000 usuarios,
+WebRTC ni reintento por falla inducida; VPN bloqueada por SCP, no hay VNet Azure,
+WAF apagado y RDS Single-AZ/backup de un día. Detalle en
+[`CLOUD-REVALIDATION-2026-10-16-0950UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+
+## Reconciliación CloudFormation — 16/10/2026, 09:25–09:26 UTC
+
+La plantilla local y la desplegada coinciden en las 53 definiciones de recursos,
+defaults del artefacto v18 y reglas de seguridad. CloudFormation aplicó una
+actualización in-place a la descripción de una alarma, sin reemplazos de EC2,
+RDS o red; drift posterior `IN_SYNC`/0. AWS/Azure health HTTPS 200. La puerta
+local posterior aprobó 225 Python, 14 Node, 40 transacciones, build, auditorías,
+CloudFormation y Terraform sin apply. Detalle en
+[`CLOUD-REVALIDATION-2026-10-16-0926UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0926UTC.md).
+
 ## Recuperación cloud revalidada — 16/10/2026, 09:05–09:17 UTC
 
 Drift CloudFormation fresco `IN_SYNC`/0; los dos targets del ALB están sanos,

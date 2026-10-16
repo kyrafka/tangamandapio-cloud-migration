@@ -1,4 +1,36 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 09:17 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 09:50 UTC
+
+## Suplemento vigente — revalidación funcional y de carga 16/10/2026, 09:34–09:50 UTC
+
+CloudFormation sigue `UPDATE_COMPLETE`; el drift iniciado en este corte terminó
+`IN_SYNC`/0. Portal HTTPS/TLS y Azure Function health responden 200, ASG y ALB
+siguen 2/2 sanos. El E2E AWS→Azure procesó venta y reposición sintéticas,
+confirmadas en Application Insights con `DequeueCount: 1`, y devolvió el saldo
+demo 10→10. La conciliación Admin final fue 63/63 outbox entregados, 0
+pendientes y 24/24 lecturas 200. La matriz ERP pasó 48/48 sondas para seis
+perfiles; cuatro cuentas QA quedaron desactivadas. Finanzas demo, correo interno
+y conteo seguro poison queue también pasaron.
+
+PT-PERF-01 pasó directo al ALB con TLS verificado: 100/100 respuestas 200 a
+concurrencia 10 (p95 490 ms) y 500/500 a concurrencia 20 (p95 467 ms); no
+prueba 3,000 usuarios ni escalado transaccional. La puerta local aprobó 228
+pruebas Python, 14 Node y 40 transacciones aisladas, además de build, auditorías
+e IaC sin `apply`. Siguen pendientes WebRTC/inspección visual, falla transitoria
+live, carga de 3,000 usuarios, WAF y failover Multi-AZ. VPN sigue bloqueada por
+SCP de AWS Academy y no hay VNet Azure. [Evidencia 09:50 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+
+## Suplemento vigente — reconciliación IaC y revalidación 16/10/2026, 09:25–09:26 UTC
+
+La plantilla CloudFormation desplegada se actualizó mediante change set que
+preservó los parámetros vivos y modificó solo `InServiceCapacityAlarm` sin
+reemplazo. Defaults v18, reglas de seguridad y definiciones de 53 recursos
+coinciden con el repo; drift posterior `IN_SYNC`/0. Portal/Azure health HTTPS/TLS
+200; ASG y targets 2/2 sanos. La puerta local posterior aprobó 225 pruebas
+Python, 14 Node, 40 transacciones aisladas, build, auditorías, CloudFormation y
+Terraform sin `apply`. RDS sigue cifrada, privada, Single-AZ y con backup de un
+día; PT-DR-01 pasó con RTO 258 s/RPO superior observado 8 s. WAF apagado a la
+espera de aprobación de costo; VPN continúa bloqueada por SCP. Persisten vista
+visual/CSV, WebRTC, reintento live y carga sostenida. [Evidencia 09:26 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0926UTC.md).
 
 ## Suplemento vigente — revalidación 16/10/2026, 09:05–09:17 UTC
 

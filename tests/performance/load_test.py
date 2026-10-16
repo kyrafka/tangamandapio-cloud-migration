@@ -3,14 +3,64 @@
 
 import argparse
 from collections import Counter
+import http.client
 import json
 import math
 import statistics
+import ssl
+import socket
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener, urlopen
+
+
+class _DirectHTTPSConnection(http.client.HTTPSConnection):
+    """Reach a fixed origin while retaining the URL host for TLS SNI/validation."""
+
+    def __init__(self, host, *, connect_host, **kwargs):
+        super().__init__(host, **kwargs)
+        self.connect_host = connect_host
+
+    def connect(self):
+        raw_socket = socket.create_connection(
+            (self.connect_host, self.port), self.timeout, self.source_address
+        )
+        try:
+            self.sock = self._context.wrap_socket(
+                raw_socket,
+                server_hostname=self.host,
+            )
+        except Exception:
+            raw_socket.close()
+            raise
+
+
+class _DirectHTTPSHandler(HTTPSHandler):
+    """HTTPS transport that bypasses DNS/proxies without disabling TLS checks."""
+
+    def __init__(self, connect_host):
+        super().__init__(context=ssl.create_default_context())
+        self.connect_host = connect_host
+
+    def https_open(self, request):
+        return self.do_open(
+            _DirectHTTPSConnection,
+            request,
+            connect_host=self.connect_host,
+            context=self._context,
+        )
+
+
+def build_opener_for_direct_https(url, connect_host):
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("--connect-to requires a normal HTTPS URL without embedded credentials")
+    if not connect_host or any(character.isspace() for character in connect_host):
+        raise ValueError("--connect-to must be a hostname or IP address")
+    return build_opener(ProxyHandler({}), _DirectHTTPSHandler(connect_host))
 
 
 def percentile(values, fraction):
@@ -21,12 +71,18 @@ def percentile(values, fraction):
     return ordered[index]
 
 
-def request_once(url, timeout):
+def request_once(url, timeout, opener=None):
     started = time.perf_counter()
     status = 0
     error = None
     try:
-        with urlopen(Request(url, headers={"Accept": "application/json"}), timeout=timeout) as response:
+        request = Request(url, headers={"Accept": "application/json"})
+        response_context = (
+            opener.open(request, timeout=timeout)
+            if opener is not None
+            else urlopen(request, timeout=timeout)
+        )
+        with response_context as response:
             response.read()
             status = response.status
     except HTTPError as exc:
@@ -52,6 +108,10 @@ def summarize_outcomes(results):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
+    parser.add_argument(
+        "--connect-to",
+        help="Connect to this origin host while preserving the HTTPS URL host for Host/SNI/certificate validation.",
+    )
     parser.add_argument("--requests", type=int, default=100)
     parser.add_argument("--concurrency", type=int, default=10)
     parser.add_argument("--timeout", type=float, default=5)
@@ -60,10 +120,17 @@ def main():
     parser.add_argument("--output")
     args = parser.parse_args()
 
+    opener = None
+    if args.connect_to:
+        try:
+            opener = build_opener_for_direct_https(args.url, args.connect_to)
+        except ValueError as error:
+            parser.error(str(error))
+
     started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
         futures = [
-            executor.submit(request_once, args.url, args.timeout)
+            executor.submit(request_once, args.url, args.timeout, opener)
             for _ in range(args.requests)
         ]
         results = [future.result() for future in as_completed(futures)]
@@ -73,6 +140,7 @@ def main():
     result = {
         "test_id": "PT-PERF-01",
         "url": args.url,
+        "connect_to": args.connect_to,
         "requests": len(results),
         "concurrency": args.concurrency,
         "elapsed_seconds": round(time.perf_counter() - started, 3),

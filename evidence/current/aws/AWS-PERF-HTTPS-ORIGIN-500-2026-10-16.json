@@ -1,0 +1,25 @@
+{
+  "test_id": "PT-PERF-01",
+  "url": "https://tangamandapio.kendellnm.me/health",
+  "connect_to": "tangamandapio-alb-1120317898.us-east-1.elb.amazonaws.com",
+  "requests": 500,
+  "concurrency": 20,
+  "elapsed_seconds": 11.517,
+  "latency_ms": {
+    "min": 425.85,
+    "mean": 451.97,
+    "p95": 466.93,
+    "max": 724.4
+  },
+  "errors": 0,
+  "error_rate": 0.0,
+  "thresholds": {
+    "max_p95_ms": 2000,
+    "max_error_rate": 0.01
+  },
+  "status_counts": {
+    "200": 500
+  },
+  "error_types": {},
+  "passed": true
+}

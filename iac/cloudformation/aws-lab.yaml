@@ -917,7 +917,7 @@ Resources:
     Condition: ProductionServingMode
     Properties:
       AlarmName: !Sub '${ProjectName}-in-service-capacity'
-      AlarmDescription: Menos de dos instancias InService o faltan métricas de capacidad del Auto Scaling Group.
+      AlarmDescription: Menos de dos instancias InService indica capacidad base degradada; la ausencia de datos aparece como INSUFFICIENT_DATA.
       Namespace: AWS/AutoScaling
       MetricName: GroupInServiceInstances
       Dimensions:

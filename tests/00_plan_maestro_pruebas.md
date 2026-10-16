@@ -1,9 +1,43 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 09:05–09:17 UTC. Los antecedentes conservan su fecha;
+**Corte vigente:** 16/10/2026, 09:34–09:50 UTC. Los antecedentes conservan su fecha;
 una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 ## Estado actual
+
+- CloudFormation terminó drift fresco `IN_SYNC`/0; portal y Azure health
+  HTTPS/TLS 200; ASG y ALB 2/2 sanos. RDS sigue cifrada y privada,
+  Single-AZ/retención de un día; restauración probada, failover Multi-AZ no.
+- E2E AWS→Azure procesó venta y reposición demo; Application Insights confirma
+  dos invocaciones exitosas, `DequeueCount: 1`, estado final y stock sintético
+  10→10. Admin read-only final reconcilió 63/63 outbox, 0 pendientes, dos SNS
+  confirmadas y 24/24 lecturas 200.
+- Matriz ERP: 48/48 permisos para seis perfiles; cuatro QA temporales inactivos.
+  Finanzas demo y correo interno pasaron; poison queue informa cero sin revelar
+  cuerpos.
+- PT-PERF-01 al origen ALB, TLS verificado: 100/100 y 500/500 HTTP 200 con
+  concurrencia 10/20 (p95 490/467 ms). Esto no acredita 3,000 usuarios ni
+  escalado transaccional. Cloudflare devolvió 403 a la ruta de automatización
+  pública; el test directo al ALB evitó el proxy sin desactivar TLS.
+- Puerta local completa: 228 Python, 14 Node, 40 transacciones aisladas, build,
+  auditorías, CloudFormation y Terraform aprobados; sin `apply`.
+- Pendientes: visual/CSV en Chrome, WebRTC en dos navegadores, falla transitoria
+  live/retry, 3,000 usuarios, WAF y failover Multi-AZ. VPN bloqueada por SCP; no
+  existe VNet Azure para el proyecto.
+  [Evidencia 09:50](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+
+- IaC desplegada reconciliada: el change set preservó todos los parámetros vivos,
+  modificó solo la descripción de una alarma sin reemplazos y desplegó defaults
+  de artefacto v18 y reglas de seguridad del repo. Definiciones de 53 recursos
+  iguales; drift fresco `IN_SYNC`/0 a las 09:26 UTC.
+- Tras el update, AWS portal HTTPS/TLS 200, HTTP 301, ASG/targets 2/2 sanos;
+  Azure health HTTPS/TLS 200. La alarma de capacidad sigue en estado sano.
+- Gate local repetida después del cambio de IaC: `QUALITY_GATE=APROBADA`, 225
+  Python, 14 Node, 40 transacciones aisladas, build, auditorías, validación de
+  CloudFormation y Terraform sin `apply`.
+- Pendientes: vista visual/CSV y WebRTC, reintento live inducido, carga
+  sostenida, VPN (SCP), WAF (aprobación de costo) y failover Multi-AZ.
+  [Evidencia 09:26](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0926UTC.md).
 
 - PT-DR-01 se reejecutó en AWS y aprobó: copia desde snapshot privada/cifrada,
   marcador y conteos de negocio coincidentes, RTO 258 s, RPO superior observado
@@ -242,15 +276,15 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
 
 | ID | Prueba | Estado verificado | Qué falta |
 |---|---|---|---|
-| PT-HTTPS-01 | Dominio, TLS y redirect | Health público HTTPS/TLS 200 a las 09:17; HTTP redirige 301; HSTS estuvo presente en el smoke HTTPS anterior | Mantener monitoreo TLS/DNS; carga automatizada anterior fue bloqueada por Cloudflare 1010 antes de llegar a la app. |
-| PT-AWS-01 | Salud y disponibilidad | STS acepta token; stack `UPDATE_COMPLETE`, drift `IN_SYNC`/0 a las 09:05, ASG/targets 2/2 sanos y EBS raíz cifrados a las 09:17 | ASG permanece en su mínimo 2; no hay prueba de failover regional. |
+| PT-HTTPS-01 | Dominio, TLS y redirect | Health portal HTTPS/TLS 200, HTTP 301; 500/500 GET directos al origen ALB con TLS certificado, p95 467 ms | Mantener monitoreo; el proxy Cloudflare respondió 403 al script público, sin eludirlo. |
+| PT-AWS-01 | Salud y disponibilidad | STS acepta token; stack `UPDATE_COMPLETE`, drift `IN_SYNC`/0 a las 09:50, ASG/targets 2/2 sanos y EBS raíz cifrados | ASG permanece en mínimo 2; no hay prueba de failover regional. |
 | PT-AWS-02 | Login y roles | Smokes HTTPS y matriz ERP API 48/48 para seis perfiles: lecturas permitidas 200, prohibidas 403, POST de validación 400 | Recorrido visual por rol no confirmado; la automatización de Chrome se detuvo sin URL verificable. |
-| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E AWS→Azure 08:53: venta `completed_demo`, compra `received_demo`, dos eventos entregados y ledger 10→10; Application Insights correlacionó eventos previos | Integración es un WMS/ledger ficticio; conectarlo a un WMS autorizado queda fuera del demo. |
-| PT-OUTBOX-01 | Historial paginado | Admin read-only 08:53 reconcilió 61/61 entregados, cero pendientes y 24/24 lecturas HTTP 200 | Verificar visualmente paginación en Chrome y revisar conjuntos mayores. |
+| PT-WMS-01 | ERP→AWS→Azure→ledger sintético | E2E AWS→Azure 09:37: venta `completed_demo`, compra `received_demo`, Function procesó ambos (DequeueCount 1), ledger 10→10 | Integración es un WMS/ledger ficticio; conectar un WMS autorizado queda fuera del demo. |
+| PT-OUTBOX-01 | Historial paginado | Admin read-only final reconcilió 63/63 entregados, 0 pendientes y 24/24 lecturas HTTP 200 | Verificar visualmente paginación en Chrome y revisar conjuntos mayores. |
 | PT-RETRY-01 | Reintento y poison | Barrido automático a 60 s, máximo 10 intentos, backoff capado a 1 h (primera espera 120 s); cuatro pruebas aisladas cubren HTTP 503, backoff y recuperación; poison count 0 sin exponer payloads | Falla transitoria inducida y recuperación live aún pendientes; no se leyó ni manipuló poison message. |
 | PT-DR-01 | Backup/restore/failover | Restore aislado 09:06–09:17: RTO 258 s, RPO superior observado 8 s; marcador/conteos coinciden y temporales eliminados | RDS Single-AZ y backup 1 día; failover no probado. |
 | PT-NET-01 | Red privada AWS–Azure | E2E usa HTTPS público | VNet/ruta privada ausente; SCP bloquea Customer Gateway en AWS Academy. |
-| PT-PERF-01 | Carga y escalado | 24 GET autenticados por ALB HTTPS 24/24 HTTP 200, concurrencia 6 (p95 545.86 ms en Admin read-only) | Carga sostenida y observar 2↔3; no se afirma soportar 3,000 usuarios. |
+| PT-PERF-01 | Carga y escalado | 100/100 y 500/500 HTTPS GET al origen ALB HTTP 200, concurrencia 10/20 (p95 490/467 ms); los 24 GET autenticados también pasaron | Carga transaccional sostenida y observar 2↔3; no se afirma soportar 3,000 usuarios. |
 | PT-SEC-01 | Seguridad y navegador | TLS, cookies `Secure`/`HttpOnly`, matriz API ERP de seis roles, SNS y auditoría activos; WAF sigue sin despliegue | WAF requiere aprobar costo; recorrido visual/CSV pendiente. Cloudflare bloqueó un User-Agent de prueba y no se eludió el control. |
 | PT-AZ-MON-01 | Invocaciones y alertas | E2E 08:00: dos recepciones 202 y dos ejecuciones `process_fulfillment_message` exitosas; correlación exacta por `event_id`/`operation_Id`; alertas 5xx/latencia habilitadas | Confirmar entrega real de una alarma Azure; la prueba 08:00 no disparó alarma nueva. |
 | PT-IAC-01 | CloudFormation/Terraform | Drift CloudFormation `IN_SYNC` (0) a las 09:05; Terraform Azure no se volvió a planear en este corte | Terraform remoto no revalidado hoy; no desplegar planes vacíos ni afirmar que el state representa todo AWS. |
