@@ -8,10 +8,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $region = 'us-east-1'
-$expectedOptIn = 'I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES'
+$writeOptIn = 'I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES'
+$readOnlyOptIn = 'I_ACKNOWLEDGE_LIVE_ADMIN_READONLY_CHECK'
+$optInVariable = if ($Mode -eq 'admin-readonly') { 'RUN_LIVE_AWS_ERP_READONLY' } else { 'RUN_LIVE_AWS_ERP_E2E' }
+$expectedOptIn = if ($Mode -eq 'admin-readonly') { $readOnlyOptIn } else { $writeOptIn }
 
-if ($env:RUN_LIVE_AWS_ERP_E2E -cne $expectedOptIn) {
-    throw 'Refused: set RUN_LIVE_AWS_ERP_E2E to the documented opt-in value before running this live synthetic test.'
+if ([Environment]::GetEnvironmentVariable($optInVariable, 'Process') -cne $expectedOptIn) {
+    throw "Refused: set $optInVariable to the documented opt-in value before running this live test."
 }
 
 $identity = aws sts get-caller-identity --query Arn --output text --region $region

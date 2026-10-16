@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Opt-in end-to-end smoke from a deployed AWS portal instance to Azure.
+"""Opt-in live smoke tests for the deployed portal and Azure demo WMS.
 
-Run only through SSM on an authorized Tangamandapio EC2 instance. It reads the
-admin password from that instance's SSM role, creates/reuses a synthetic QA
-partner and SKU, sells one unit, receives one unit, and requires the Azure demo
-ledger to return to its initial balance. The target is restricted to loopback,
-the known public ALB, or the configured HTTPS portal domain (through Cloudflare
-or directly to the ALB with hostname-validated TLS). It never prints
-credentials or API responses containing personal data.
+Full and module-writing tests run through SSM on an authorized EC2 instance.
+The `admin-readonly` mode may also run locally against the public HTTPS FQDN
+with the dedicated read-only opt-in. It reads credentials from AWS SSM
+Parameter Store, never prints them, and performs only login/logout plus
+read-only checks. The full mode writes compensating synthetic sale/receipt
+events and verifies that the Azure demo ledger returns to its initial balance.
+Targets are allowlisted; TLS verification remains enabled.
 """
 
 from __future__ import annotations
@@ -76,6 +76,7 @@ ROLE_ACCOUNTS = (
 )
 REGION = "us-east-1"
 OPT_IN = "I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES"
+READ_ONLY_OPT_IN = "I_ACKNOWLEDGE_LIVE_ADMIN_READONLY_CHECK"
 FIXED_SKU = "SKU-QA-V10-20261014"
 PARTNER_NAME = "QA LIVE AWS Azure v10"
 REQUEST_TIMEOUT = 20
@@ -162,7 +163,7 @@ def get_secure_parameter(parameter_name: str) -> str:
     except (OSError, subprocess.TimeoutExpired) as error:
         raise SmokeFailure("Could not retrieve the QA credential from SSM.") from error
     if result.returncode != 0:
-        raise SmokeFailure("The EC2 instance role cannot read the QA credential.")
+        raise SmokeFailure("The active AWS identity cannot read the QA credential.")
     # AWS CLI's text formatter appends one newline after the secret value.
     password = result.stdout.rstrip("\r\n")
     if len(password) < 12 or "\n" in password or "\r" in password:
@@ -247,7 +248,25 @@ class PortalClient:
                 }
                 return error.code, None, response_headers
             # Do not echo the response body; it may contain account data.
-            raise SmokeFailure(f"{method} {path} returned HTTP {error.code}.") from None
+            server = (error.headers.get("server") or "").lower()
+            if "cloudflare" in server:
+                edge = "cloudflare"
+            elif "awselb" in server:
+                edge = "alb"
+            elif server:
+                edge = "other"
+            else:
+                edge = "unknown"
+            ray = error.headers.get("cf-ray") or ""
+            if not ray.isascii() or not ray.replace("-", "").isalnum() or len(ray) > 100:
+                ray = ""
+            detail = f" (edge={edge}"
+            if ray:
+                detail += f", cf-ray={ray}"
+            detail += ")"
+            raise SmokeFailure(
+                f"{method} {path} returned HTTP {error.code}{detail}."
+            ) from None
         except (URLError, TimeoutError, json.JSONDecodeError) as error:
             raise SmokeFailure(
                 f"{method} {path} failed ({type(error).__name__})."
@@ -575,6 +594,7 @@ def main_admin_readonly_smoke(target: str) -> int:
         print(f"Refused: {error}")
         return 2
     try:
+        roles = verify_role_authorization(target)
         client.login()
         access = client.json("GET", "/api/erp/access")
         if "erp_admin" not in access.get("roles", []):
@@ -586,6 +606,7 @@ def main_admin_readonly_smoke(target: str) -> int:
                 {
                     "result": "LIVE_ADMIN_READONLY_SMOKE_PASSED",
                     "target": client.target,
+                    "role_authorization": roles,
                     "dashboard": dashboard,
                     "alarm_subscriptions": alarms,
                     "alarm_triggered": False,
@@ -831,18 +852,19 @@ def main_admin_module_smoke(target: str) -> int:
 
 
 def main() -> int:
-    if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != OPT_IN:
-        print("Refused: set the exact opt-in only for the approved live synthetic smoke.")
-        return 2
     target = os.environ.get("LIVE_E2E_TARGET", "loopback")
     mode = os.environ.get("LIVE_E2E_MODE", "full")
+    if mode not in {"full", "admin-readonly", "admin-modules"}:
+        print("Refused: use the approved full, admin-readonly, or admin-modules test mode.")
+        return 2
+    expected_opt_in = READ_ONLY_OPT_IN if mode == "admin-readonly" else OPT_IN
+    if os.environ.get("RUN_LIVE_DEPLOYED_E2E") != expected_opt_in:
+        print("Refused: set the exact opt-in appropriate to this live test mode.")
+        return 2
     if mode == "admin-readonly":
         return main_admin_readonly_smoke(target)
     if mode == "admin-modules":
         return main_admin_module_smoke(target)
-    if mode not in {"full", "admin-readonly", "admin-modules"}:
-        print("Refused: use the approved full, admin-readonly, or admin-modules test mode.")
-        return 2
     try:
         client = PortalClient(target)
     except SmokeFailure as error:

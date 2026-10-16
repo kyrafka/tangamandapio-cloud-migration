@@ -1,6 +1,28 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 03:04 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 03:35 UTC
 
-## Revalidación vigente — 16/10/2026, 02:20–03:04 UTC
+## Revalidación vigente — 16/10/2026, 03:35 UTC
+
+Con el token del laboratorio, AWS STS autenticó en la cuenta Academy desde el
+perfil `default`. CloudFormation está `UPDATE_COMPLETE`; ALB activo, ACM
+`ISSUED`, HTTPS y redirección 80→443 operativos, ASG y targets 2/2 sanos. Las
+rutas HTTPS `/`, `/health`, `/ready` de AWS y `/api/health` de Azure dieron 200
+con TLS válido. El E2E AWS→Azure pasó: saldo sintético 10→10 y 24/24 lecturas
+HTTP 200 (p95 287.75 ms). También pasaron Finanzas, correo portal-only, poison
+queue, Admin y la matriz de permisos de Comercial/Operaciones por HTTPS directo
+al ALB. El tablero concilió 49 eventos entregados y 0 pendientes; SNS tiene dos
+suscripciones confirmadas.
+
+La autenticación automatizada al FQDN público recibió 403 de Cloudflare antes
+de Flask; no se ha identificado una regla concreta del proxy. RDS sigue
+Single-AZ, con backup de un día. No hay ruta privada AWS–Azure (SCP bloquea el
+Customer Gateway y no existe VNet Azure), WAF AWS, carga representativa de
+3,000 usuarios, prueba WebRTC de dos navegadores ni alarma métrica disparada en
+esta pasada. El restore PT-DR-01 y alerta/recuperación previos siguen como
+evidencia histórica, no se repitieron. El gate local aprobó 213 pruebas Python,
+14 Node, build, auditorías, CloudFormation y Terraform sin aplicar recursos.
+Detalle: [revalidación completa 03:35 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0335UTC.md).
+
+## Corte anterior — 16/10/2026, 02:20–03:04 UTC
 
 Con el token nuevo se autenticó también desde el perfil local AWS CLI `default`.
 Se confirmó `UPDATE_COMPLETE`, HTTPS público 200 en portada, health y readiness,
@@ -17,20 +39,20 @@ confirma explicit deny de SCP en AWS y no hay VNet Azure. No existe Web ACL
 regional. La puerta local pasó 209 pruebas, build y validación IaC sin aplicar
 recursos. Detalle: [revalidación pública de roles 03:04 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0304UTC.md) y [estado cloud 02:55 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0255UTC.md).
 
-### Estado actualizado por criterio
+### Estado por criterio — brechas vigentes tras 03:35 UTC
 
 | # | Criterio | Brecha que queda tras esta revalidación |
 |---:|---|---|
 | 3 | Redes VPC/VCN | Dry-run de Customer Gateway denegado por SCP `p-qa2qn8qf`; la suscripción Azure no tiene VNet. No hay ruta privada AWS–Azure. |
-| 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; RDS permanece Single-AZ y con backup de 1 día; causa del 503 previo no atribuida. |
-| 5 | Seguridad cloud | TLS/redirect y login/permisos API de Admin, Comercial y Operaciones pasaron por el FQDN público. Solo el cliente SSM/EC2 recibió 403 antes de Flask; revisar el camino egress/proxy, sin atribuirlo a regla Cloudflare sin evidencia. Falta visual Chrome; WAF AWS no está desplegado. |
+| 4 | Cómputo, almacenamiento y BD | Portal y 2/2 targets sanos; RDS sigue Single-AZ y con backup de 1 día; causa del 503 previo no atribuida. |
+| 5 | Seguridad cloud | HTTPS/redirect y permisos API pasaron por TLS directo al ALB. El login automatizado al FQDN recibió 403 de Cloudflare antes de Flask; causa exacta pendiente de sus registros. Falta recorrido interactivo completo; WAF AWS no está desplegado. |
 | 6 | Alta disponibilidad y escalabilidad | ASG 2/2 y 2/2 targets sanos; falta carga representativa y medir escalado/RTO durante una falla. |
-| 7 | Monitoreo y observabilidad | Azure AI registró 94 requests/última hora y las dos alertas métricas están habilitadas; falta correlacionar disparo y recuperación reciente con evidencia visual. SNS tiene dos suscripciones confirmadas; no se disparó alarma en este corte. |
-| 8 | Infrastructure as Code | Stack desplegado `UPDATE_COMPLETE`; gate local CloudFormation y Terraform validado a 02:55 sin aplicar cambios. Drift en 39/47 recursos es un corte anterior y no prueba runtime. |
+| 7 | Monitoreo y observabilidad | SNS tiene dos suscripciones confirmadas; no se disparó alarma en este corte. Falta correlacionar una alerta métrica reciente con invocación/recuperación y evidencia visual. |
+| 8 | Infrastructure as Code | Detección fresca `IN_SYNC`, 0 recursos desviados; CloudFormation/Terraform local validados. La plantilla original del stack conserva defaults de artefacto v16 mientras los parámetros efectivos usan v18. AWS rechazó el change set vacío, así que este detalle de plantilla no se actualizó. |
 | 9 | Backup y recuperación | PT-DR-01 restauró con sonda SQL el 15/10 (RTO 260 s, RPO observado ≤8 s); RDS sigue Single-AZ y retención de 1 día, sin prueba de failover. |
 | 10 | Multicloud AWS–Azure | E2E desde portal AWS a Azure pasó por HTTPS público; ruta privada no desplegable con SCP actual y no existe VNet Azure. Azure no se presenta como OCI. |
 | 11 | Costos | Falta reconciliar consumo real de ambas nubes con el presupuesto/créditos del laboratorio. |
-| 12 | Pruebas técnicas | E2E, módulos Admin/Finanzas/correo portal-only y login/permisos de los tres roles por FQDN pasaron; faltan Chrome visual, CSV visual, carga representativa y WebRTC de dos navegadores. |
+| 12 | Pruebas técnicas | E2E AWS→Azure, Admin/Finanzas/correo portal-only/poison y permisos API de los tres roles pasaron; faltan recorrido interactivo completo, CSV visual, carga representativa y WebRTC de dos navegadores. |
 | 13 | Documentación/evidencia | Se añadieron cortes vivos AWS/Azure; faltan capturas recientes de las consolas y del monitor/invocación. |
 
 El estado anterior de v18, incluidas las métricas y capturas autenticadas, se

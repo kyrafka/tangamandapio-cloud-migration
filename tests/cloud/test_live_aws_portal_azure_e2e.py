@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import sys
 import unittest
+from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import live_aws_portal_azure_e2e as live_e2e  # noqa: E402
@@ -157,6 +159,84 @@ class PortalRequestHeaderTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, [])
         self.assertEqual(headers["x-total-count"], "45")
+
+    def test_http_error_reports_safe_edge_diagnostics_without_body(self) -> None:
+        client = live_e2e.PortalClient("https")
+        headers = Message()
+        headers["Server"] = "cloudflare"
+        headers["CF-Ray"] = "8fabc1234-ORD"
+        error = HTTPError(
+            "https://tangamandapio.kendellnm.me/api/admin/users",
+            403,
+            "Forbidden",
+            headers,
+            None,
+        )
+        with patch.object(client.opener, "open", side_effect=error):
+            with self.assertRaises(live_e2e.SmokeFailure) as caught:
+                client.request_with_headers("GET", "/api/admin/users")
+        message = str(caught.exception)
+        self.assertIn("edge=cloudflare", message)
+        self.assertIn("cf-ray=8fabc1234-ORD", message)
+        self.assertNotIn("Forbidden", message)
+
+
+class LiveModeOptInTests(unittest.TestCase):
+    def test_readonly_mode_requires_its_own_non_mutating_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "https",
+                    "LIVE_E2E_MODE": "admin-readonly",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(live_e2e, "main_admin_readonly_smoke") as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 2)
+        smoke.assert_not_called()
+
+    def test_readonly_mode_runs_only_with_dedicated_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "https",
+                    "LIVE_E2E_MODE": "admin-readonly",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.READ_ONLY_OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(live_e2e, "main_admin_readonly_smoke", return_value=0) as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 0)
+        smoke.assert_called_once_with("https")
+
+
+class AdminReadonlySmokeTests(unittest.TestCase):
+    def test_admin_readonly_smoke_includes_role_matrix(self) -> None:
+        client = MagicMock()
+        client.target = "alb-origin-https"
+        client.json.return_value = {"roles": ["erp_admin"]}
+        role_matrix = {
+            "comercial": {"/api/erp/sales/orders": 200},
+            "operaciones": {"/api/wms/inventory": 200},
+        }
+        with (
+            patch.object(live_e2e, "PortalClient", return_value=client),
+            patch.object(live_e2e, "verify_role_authorization", return_value=role_matrix) as roles,
+            patch.object(live_e2e, "inspect_admin_dashboard_consistency", return_value={"order_count": 1}),
+            patch.object(live_e2e, "verify_admin_alarm_subscriptions", return_value={"subscription_count": 2}),
+            patch("builtins.print") as output,
+        ):
+            result = live_e2e.main_admin_readonly_smoke("alb-origin-https")
+        self.assertEqual(result, 0)
+        roles.assert_called_once_with("alb-origin-https")
+        payload = live_e2e.json.loads(output.call_args.args[0])
+        self.assertEqual(payload["role_authorization"], role_matrix)
+        client.logout.assert_called_once_with()
 
 
 class ReadOnlyLoadTransportTests(unittest.TestCase):

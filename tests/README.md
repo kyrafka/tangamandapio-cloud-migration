@@ -193,15 +193,39 @@ de la compuerta local gratuita.
 
 ### E2E desde el portal AWS desplegado hasta Azure
 
-`cloud/live_aws_portal_azure_e2e.py` se ejecuta solo mediante
-`cloud/run_live_aws_portal_azure_e2e.ps1`, dentro de una EC2 `Online` por SSM.
-Requiere una sesión AWS Academy vigente y el opt-in explícito siguiente:
+`cloud/live_aws_portal_azure_e2e.py` ofrece un modo público de solo lectura y
+modos de prueba integral que escriben datos sintéticos. El primero corre desde
+la estación local contra el FQDN HTTPS; los modos que escriben corren dentro
+de una EC2 `Online` por SSM. Ambos requieren una sesión AWS Academy vigente.
+
+Para verificar el portal público sin crear órdenes ni modificar el ledger:
+
+```powershell
+$env:RUN_PUBLIC_PORTAL_ADMIN_READONLY = 'I_ACKNOWLEDGE_PUBLIC_ADMIN_READONLY_LOGIN'
+./tests/cloud/run_public_portal_admin_readonly.ps1
+Remove-Item Env:RUN_PUBLIC_PORTAL_ADMIN_READONLY
+```
+
+El runner exige el perfil AWS Academy de la cuenta esperada y lee las claves
+QA desde SSM solo en memoria. Además de login/logout, rol, tablero y alarmas,
+comprueba la matriz de permisos Comercial/Operaciones con solicitudes GET.
+TLS se verifica normalmente; no imprime claves, contraseñas ni cuerpos de
+errores. La autenticación genera eventos normales de auditoría, pero no altera
+pedidos, finanzas, WMS ni alarmas. Para aislar un bloqueo del proxy Cloudflare,
+se puede elegir `-PortalTarget alb-origin-https`: conecta al ALB pero conserva
+el hostname y la validación TLS del dominio. El destino predeterminado sigue
+siendo el dominio público detrás de Cloudflare.
+
+Para la prueba integral sintética:
 
 ```powershell
 $env:RUN_LIVE_AWS_ERP_E2E = 'I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES'
 ./tests/cloud/run_live_aws_portal_azure_e2e.ps1
 Remove-Item Env:RUN_LIVE_AWS_ERP_E2E
 ```
+
+El modo remoto `admin-readonly`, si se elige, usa el opt-in separado
+`RUN_LIVE_AWS_ERP_READONLY=I_ACKNOWLEDGE_LIVE_ADMIN_READONLY_CHECK`.
 
 La prueba obtiene la contraseña QA desde `SecureString` usando el rol de la
 instancia, no imprime el secreto ni lo envía por el ALB HTTP público. Exige que
@@ -210,12 +234,23 @@ crea una venta de una unidad y su recepción compensatoria, comprueba ambos
 estados/outbox y requiere saldo final igual al inicial. Las órdenes y entradas
 de auditoría de QA quedan persistidas; solo el saldo vuelve a su línea base.
 Después del flujo mutante ejecuta 24 lecturas autenticadas de pedidos, compras
-y outbox con concurrencia 6; en la última corrida hubo 24/24 HTTP 200 y p95
-304.09 ms. La medición es loopback en una sola EC2 con base de datos, no incluye
-ALB/ASG ni demuestra capacidad para 3,000 usuarios.
+y outbox con concurrencia 6; el 16/10 hubo 24/24 HTTP 200 y p95 287.75 ms. La
+medición es loopback en una sola EC2 con base de datos, no incluye ALB/ASG ni
+demuestra capacidad para 3,000 usuarios.
 Revisa el resultado de SSM y el saldo antes de reintentar si una ejecución queda
 en estado desconocido. El último éxito está documentado en
-[`DEPLOY-CATALOGO-SINTETICO-2026-10-14.md`](../evidence/current/DEPLOY-CATALOGO-SINTETICO-2026-10-14.md).
+[`CLOUD-REVALIDATION-2026-10-16-0335UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0335UTC.md).
+
+Para probar los módulos administrativos con datos QA:
+
+```powershell
+$env:RUN_LIVE_AWS_ERP_E2E = 'I_ACKNOWLEDGE_SYNTHETIC_RDS_AND_AZURE_WRITES'
+./tests/cloud/run_live_aws_portal_azure_e2e.ps1 -Mode admin-modules
+Remove-Item Env:RUN_LIVE_AWS_ERP_E2E
+```
+
+Este smoke deja una cuenta por pagar sintética liquidada y un mensaje interno
+de prueba enviado/leído; no usa SMTP externo ni envía pagos reales.
 
 - `pt-sto-01-s3.sh <STACK_NAME>`: requiere un stack `tangamandapio-live-YYYYMMDD` verificado; escribe, descarga, compara SHA-256 y elimina el objeto temporal.
 - `pt-mon-01-alarm.sh <STACK_NAME>`: requiere el stack verificado y `DEMO_ALARM_STATE=YES`; identifica la alarma desde el recurso CloudFormation, fuerza brevemente su estado y restaura el estado anterior incluso si una lectura falla. Esto prueba la ruta operativa, no simula CPU real.

@@ -74,7 +74,9 @@ $powerShellScripts = @(
   'iac\scripts\connect_azure_vpn.ps1',
   'iac\scripts\check_aws_azure_vpn.ps1',
   'iac\scripts\disconnect_azure_vpn.ps1',
-  'iac\scripts\inspect_aws_runtime.ps1'
+  'iac\scripts\inspect_aws_runtime.ps1',
+  'tests\cloud\run_live_aws_portal_azure_e2e.ps1',
+  'tests\cloud\run_public_portal_admin_readonly.ps1'
 )
 foreach ($relativePath in $powerShellScripts) {
   $parseTokens = $null
