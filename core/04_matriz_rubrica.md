@@ -1,16 +1,16 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 01:21 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 01:25 UTC
 
-## Corte vigente — 16/10/2026, 01:21 UTC (release v18)
+## Corte vigente — 16/10/2026, 01:25 UTC (release v18)
 
 El cambio de paginación del historial WMS se empaquetó y desplegó como v18;
 CloudFormation terminó `UPDATE_COMPLETE` a las 00:42:53 UTC. El gate local
 aprobó 209 pruebas y los tests dirigidos cubren el total de 45 eventos en dos
 páginas, compatibilidad de la API anterior, valores inválidos y duplicados.
 
-El dominio TLS funciona y HTTP redirige a HTTPS, pero al 16/10 01:21 UTC la app
+El dominio TLS funciona y HTTP redirige a HTTPS, pero al 16/10 01:25 UTC la app
 sigue en 503. Las cuatro rutas dieron 503 al conectar directo con ambas IP del
-ALB a las 01:11. AWS STS autentica, pero CloudFormation/ELB/ASG/RDS de lectura
-son denegados por `voc-cancel-cred`; el estado de targets/drift/RDS no se
+ALB a las 01:11. AWS STS autentica, pero lecturas de EC2, CloudFormation,
+ELB/ASG/RDS son denegadas por IAM/`voc-cancel-cred`; el estado de targets/drift/RDS no se
 confirma. No se afirma v18 operativo de extremo a extremo.
 
 Azure Function está `Running`, `httpsOnly=true` y `/api/health` dio 200 a las
@@ -23,19 +23,22 @@ con 2 eventos `202`, 2 ejecuciones del worker con `resultCode=0`, 1 rechazo `400
 esperado y 0 respuestas `5xx`. Las alertas Azure de 5xx y latencia están
 habilitadas y enlazadas al Action Group. No se provocó una nueva alarma; el
 usuario había confirmado la entrega de alerta/recuperación en una prueba previa.
-Detalle en [la revalidación 01:21 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
+Una consulta posterior a las 01:24 UTC (últimos 10 minutos) volvió a mostrar 2
+eventos `202`, 2 workers `resultCode=0`, el `400` esperado y cero solicitudes
+fallidas; falta la captura visual de consola y correlacionar una alerta actual.
+Detalle en [la revalidación 01:25 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
 
-### Estado cualitativo por criterio — 16/10/2026, 01:21 UTC
+### Estado cualitativo por criterio — 16/10/2026, 01:25 UTC
 
 | # | Criterio | Estado vigente y pendiente principal |
 |---:|---|---|
 | 1 | Análisis del problema y requerimientos · 1.0 | Documentado; falta cerrar la trazabilidad requisito→componente→prueba y defender supuestos en la exposición. |
 | 2 | Diseño de arquitectura cloud · 2.0 | Arquitectura AWS–Azure documentada; falta demostrar el dimensionamiento y explicar límites/costos. |
 | 3 | Redes VPC/VCN · 2.0 | VPC AWS existente; falta conectividad/ruta privada AWS–Azure. La VPN fue denegada por AWS Academy en preflight. |
-| 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El origen ALB devuelve 503 por ambas direcciones; ELB/ASG/RDS de lectura reciben explicit deny. `/health` depende de `SELECT 1` a RDS, pero no hay prueba de que sea la causa. RDS sigue documentado Single-AZ/backup 1 día. |
+| 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El origen ALB devuelve 503; lecturas de EC2/ELB/ASG/RDS están denegadas. `/health` depende de `SELECT 1` a RDS, pero no hay prueba de que sea la causa. RDS sigue documentado Single-AZ/backup 1 día. |
 | 5 | Seguridad cloud · 2.5 | TLS/redirect comprobados; roles en API pasaron en v17. Falta repetir seguridad/roles en v18 y revisar configuración actual. WAF está desactivado. |
 | 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 y pruebas pequeñas constan históricamente; estado actual de targets no verificable. Falta carga y autoscaling representativos; 3,000 usuarios es objetivo, no capacidad probada. |
-| 7 | Monitoreo y observabilidad · 1.0 | App Insights: 22 solicitudes/24 h, 0 respuestas 5xx, 2 eventos 202 y 2 workers `resultCode=0`; alertas 5xx/latencia habilitadas y Action Group enlazado. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
+| 7 | Monitoreo y observabilidad · 1.0 | App Insights: consulta 01:24 con 2 eventos 202, 2 workers `resultCode=0`, guarda 400 esperada y 0 solicitudes fallidas; alertas 5xx/latencia habilitadas y Action Group enlazado. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation v18 aplicado y validaciones locales de Terraform pasan; CloudFormation/ELB/ASG/RDS de lectura reciben explicit deny, por lo que drift actual de AWS no se puede consultar. Reconciliar antes de aplicar más infraestructura. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado previo dejó RTO/RPO observados; no prueba una garantía ni failover. RDS Single-AZ y retención de un día siguen siendo límites. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Se documentó el acuerdo oral para AWS–Azure. E2E local→Azure pasó a las 01:20; v17 tuvo E2E desde EC2, pero falta repetir desde AWS en v18 y no hay ruta privada. No presentar Azure como OCI. |
@@ -125,7 +128,7 @@ inicio de este archivo; es cualitativa y lista brechas, no puntos.
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-La evidencia vigente es la revalidación del 16/10 a las 01:21 UTC
+La evidencia vigente es la revalidación del 16/10 a las 01:25 UTC
 [post-v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md); el
 corte de infraestructura con inventario completo de AWS sigue siendo el de
 23:21–23:24 UTC del 15/10 porque la lectura actual está denegada.

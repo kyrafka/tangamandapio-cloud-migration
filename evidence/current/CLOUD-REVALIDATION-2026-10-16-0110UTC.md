@@ -1,4 +1,4 @@
-# Revalidación post-v18 — 16/10/2026, 01:10 UTC (addenda hasta 01:21 UTC)
+# Revalidación post-v18 — 16/10/2026, 01:10 UTC (addenda hasta 01:25 UTC)
 
 Este corte supersede el estado de salud del informe 01:05 UTC; la causa del
 503 de AWS continúa sin diagnóstico por falta de permiso de lectura.
@@ -10,7 +10,9 @@ El dominio negocia TLS correctamente y HTTP redirige a HTTPS con `301`. A las
 HTTPS; health/readiness/plataforma seguían en 503 a las 01:14 UTC, y las cuatro
 rutas —incluida la portada— seguían en 503 al probar el dominio a las 01:17 UTC.
 A las 01:21 `/health` seguía en 503 y ELB `DescribeTargetGroups` continuaba
-denegado.
+denegado. A las 01:25, EC2 `DescribeInstances` también devolvió explicit
+authorization deny, así que tampoco es posible confirmar si el lab mantiene
+instancias activas mediante el CLI actual.
 A las 01:11
 se repitieron esas cuatro rutas contra las dos direcciones
 IPv4 que resuelve el ALB, forzando conexión directa pero conservando dominio y
@@ -54,6 +56,12 @@ El smoke se repitió a las 01:20 UTC. Venta
 saldo demo; poison count siguió en cero. El test se originó en proceso local con
 SQLite temporal, no desde EC2.
 
+Una consulta agregada de Application Insights a las 01:24 UTC, ventana de diez
+minutos, mostró 2 respuestas `202`, 2 workers `process_fulfillment_message`
+con `resultCode=0`, 1 `400` esperado de la guarda y cero solicitudes marcadas
+fallidas. El smoke confirmó aparte los estados de ambos IDs. Ver
+[`revalidación Azure`](azure/AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md).
+
 Application Insights, consulta agregada de las 24 horas previas, mostró 22
 solicitudes: 2 eventos aceptados `202`, 2 ejecuciones de
 `process_fulfillment_message` con `resultCode=0`, 1 rechazo `400` esperado de la
@@ -77,9 +85,9 @@ Terraform, mocks de red y auditoría de dependencias. El commit
 `e936c332073b31c709f5c1067a06b582812842f9` sincronizó matriz y plan; su workflow
 de Actions terminó `success` a las 01:08:59 UTC. El corte de telemetría Azure
 `e2aa8de097d5d8b1ff5967ebb7e9aea685a6e57e` también terminó `success` a las
-01:12:13 UTC. El workflow del commit `d234c1d` terminó `success` a las 01:19:42
-UTC. El nuevo smoke Azure 01:20 y el estado AWS 01:21 se registran en este
-addendum; su workflow queda pendiente de esta publicación. Estas verificaciones no sustituyen
+01:12:13 UTC. Los workflows de `d234c1d` y `fdc3ea5` terminaron `success` a las
+01:19:42 y 01:23:51 UTC. El addendum con telemetría Azure 01:24 y denegación EC2
+01:25 queda pendiente de su propia corrida. Estas verificaciones no sustituyen
 el smoke AWS autenticado de v18.
 
 ## Pendientes

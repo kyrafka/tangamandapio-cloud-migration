@@ -3,11 +3,11 @@
 > Último release preparado: v18, `20261015-outbox-pagination-v18-python312`,
 > SHA-256 `c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f`.
 > CloudFormation terminó `UPDATE_COMPLETE` el 16/10 a las 00:42:53 UTC. A las
-> 01:21 UTC la app seguía en 503; AWS STS autentica, pero CloudFormation, ELB,
-> ASG y RDS de lectura son denegados por `voc-cancel-cred`; la disponibilidad y
+> 01:25 UTC la app seguía en 503; AWS STS autentica, pero lecturas de EC2,
+> CloudFormation, ELB, ASG y RDS son denegadas por la autorización del lab; la disponibilidad y
 > el smoke autenticado v18 no están confirmados. Azure Function está `Running`,
 > health 200 y el smoke vivo local→Azure pasó de nuevo a la 01:20 UTC. Véase
-> [la revalidación 01:21 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
+> [la revalidación 01:25 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
 
 ## Release v18 desplegado — paginación íntegra del outbox
 

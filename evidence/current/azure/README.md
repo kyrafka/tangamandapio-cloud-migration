@@ -1,5 +1,11 @@
 # Evidencias Azure
 
+**Revalidación Function + Application Insights — 16/10/2026, 01:24 UTC:** el
+smoke ERP local→Azure pasó a las 01:20 con compensación del saldo demo. La
+consulta de 10 minutos mostró dos `202`, dos workers exitosos, el `400` de
+guarda esperado y cero fallidas. Detalle en
+[`AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md`](AZURE-APPINSIGHTS-REVALIDACION-2026-10-16-0124UTC.md).
+
 **Prueba viva ERP→Azure compensada — 15/10/2026:** el release local con SQLite
 efímera recorrió la venta y recepción sintéticas contra la Function desplegada;
 Azure procesó ambos eventos y el ledger demo regresó a la línea base. Pasaron
