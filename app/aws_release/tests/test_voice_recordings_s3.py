@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError
@@ -170,6 +171,22 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
         )
         self.assertEqual(portal.default_voice_recordings_bucket(""), "")
 
+    def test_recording_expiration_normalizes_postgres_datetime_and_sqlite_text(self):
+        timestamp = "2026-10-16T15:18:29+00:00"
+        expected = portal.normalize_utc_datetime(timestamp)
+        self.assertEqual(
+            portal.normalize_utc_datetime(datetime.fromisoformat(timestamp)),
+            expected,
+        )
+        self.assertEqual(
+            portal.normalize_utc_datetime("2026-10-16T10:18:29-05:00"),
+            expected,
+        )
+        self.assertEqual(
+            portal.normalize_utc_datetime("2026-10-16T15:18:29Z"),
+            expected,
+        )
+
     def test_late_sign_in_can_answer_and_consented_audio_is_private_in_s3(self):
         sales, sales_csrf = self.login("sales@example.test", "Temporary-Password-2026")
         call_response = sales.post(
@@ -255,6 +272,45 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
         self.assertEqual(file_response.status_code, 200)
         self.assertEqual(file_response.data, audio)
         self.assertEqual(file_response.headers["Cache-Control"], "private, no-store")
+
+        class StaticCursor:
+            def __init__(self, row):
+                self.row = row
+
+            def fetchone(self):
+                return self.row
+
+        class PostgreSQLDatetimeConnection:
+            def __init__(self, target):
+                self.connection = portal.sqlite3.connect(target)
+                self.connection.row_factory = portal.sqlite3.Row
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                self.connection.close()
+
+            def execute(self, statement, params=()):
+                cursor = self.connection.execute(statement, params)
+                if statement.lstrip().startswith(
+                    "SELECT storage_name, mime_type, expires_at"
+                ):
+                    row = cursor.fetchone()
+                    if row is not None:
+                        row = dict(row)
+                        row["expires_at"] = datetime.fromisoformat(row["expires_at"])
+                        return StaticCursor(row)
+                return cursor
+
+        # psycopg2 returns TIMESTAMPTZ columns as datetime objects, unlike SQLite's text.
+        with patch.object(
+            portal, "connect", side_effect=PostgreSQLDatetimeConnection
+        ), patch.object(portal, "purge_expired_voice_recordings"):
+            postgres_file_response = self.admin.get(recordings["recordings"][0]["file_url"])
+        self.assertEqual(postgres_file_response.status_code, 200)
+        self.assertEqual(postgres_file_response.data, audio)
+
         video_upload = sales.post(
             f"/api/voice/calls/{call_id}/recording/upload",
             data={"recording": (BytesIO(b"video-payload"), "call.webm", "video/webm")},

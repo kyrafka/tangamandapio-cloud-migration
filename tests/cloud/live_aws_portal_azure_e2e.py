@@ -624,6 +624,7 @@ def main_admin_readonly_smoke(target: str) -> int:
             raise SmokeFailure("The authenticated account lacks the ERP admin role.")
         dashboard = inspect_admin_dashboard_consistency(client)
         alarms = verify_admin_alarm_subscriptions(client)
+        recording_playback = verify_saved_voice_recording_playback(client)
         read_load = measure_read_only_database_load(client)
         print(
             json.dumps(
@@ -633,6 +634,7 @@ def main_admin_readonly_smoke(target: str) -> int:
                     "role_authorization": roles,
                     "dashboard": dashboard,
                     "alarm_subscriptions": alarms,
+                    "recording_playback": recording_playback,
                     "read_only_load": read_load,
                     "alarm_triggered": False,
                 },
@@ -642,6 +644,95 @@ def main_admin_readonly_smoke(target: str) -> int:
         return 0
     except SmokeFailure as error:
         print(f"LIVE_ADMIN_READONLY_SMOKE_FAILED: {error}")
+        return 1
+    finally:
+        client.logout()
+
+
+def verify_saved_voice_recording_playback(client: PortalClient) -> dict[str, Any]:
+    """Verify one consented recording through the same private portal route as the UI."""
+    status, catalog = client.request("GET", "/api/voice/recordings")
+    if status != 200 or not isinstance(catalog, dict):
+        raise SmokeFailure("The authenticated voice recording catalog was unavailable.")
+    recordings = catalog.get("recordings")
+    if not isinstance(recordings, list):
+        raise SmokeFailure("The voice recording catalog returned an unexpected response.")
+    if not recordings:
+        return {"saved_recordings": 0, "playback": "no_saved_recordings"}
+
+    recording = recordings[0]
+    file_url = recording.get("file_url") if isinstance(recording, dict) else None
+    if (
+        not isinstance(file_url, str)
+        or not file_url.startswith("/api/voice/recordings/")
+        or not file_url.endswith("/file")
+    ):
+        raise SmokeFailure("The saved recording did not contain a same-origin file route.")
+    try:
+        request = Request(
+            client.base_url + file_url,
+            headers={"Accept": "*/*"},
+            method="GET",
+        )
+        with client.opener.open(request, timeout=REQUEST_TIMEOUT) as response:
+            content = response.read()
+            content_type = (
+                response.headers.get("Content-Type", "")
+                .split(";", 1)[0]
+                .lower()
+            )
+            response_status = response.status
+    except HTTPError as error:
+        raise SmokeFailure(
+            f"Saved voice recording playback returned HTTP {error.code}."
+        ) from None
+    except (URLError, TimeoutError) as error:
+        raise SmokeFailure(
+            f"Saved voice recording playback failed ({type(error).__name__})."
+        ) from None
+
+    expected_size = recording.get("size_bytes")
+    if (
+        response_status != 200
+        or not content
+        or not content_type.startswith("audio/")
+        or type(expected_size) is not int
+        or len(content) != expected_size
+    ):
+        raise SmokeFailure("Saved voice recording playback returned invalid media or size.")
+    return {
+        "saved_recordings": len(recordings),
+        "playback": "passed",
+        "bytes": len(content),
+        "content_type": content_type,
+    }
+
+
+def main_admin_recording_readonly_smoke(target: str) -> int:
+    """Check one saved recording without running unrelated role/dashboard probes."""
+    try:
+        client = PortalClient(target)
+    except SmokeFailure as error:
+        print(f"Refused: {error}")
+        return 2
+    try:
+        client.login()
+        playback = verify_saved_voice_recording_playback(client)
+        if playback.get("playback") != "passed":
+            raise SmokeFailure("No saved audio was available for the playback check.")
+        print(
+            json.dumps(
+                {
+                    "result": "LIVE_ADMIN_RECORDING_READONLY_SMOKE_PASSED",
+                    "target": client.target,
+                    "recording_playback": playback,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    except SmokeFailure as error:
+        print(f"LIVE_ADMIN_RECORDING_READONLY_SMOKE_FAILED: {error}")
         return 1
     finally:
         client.logout()
@@ -1178,11 +1269,11 @@ def main_admin_idempotency_smoke(target: str) -> int:
 def main() -> int:
     target = os.environ.get("LIVE_E2E_TARGET", "loopback")
     mode = os.environ.get("LIVE_E2E_MODE", "full")
-    if mode not in {"full", "admin-readonly", "admin-modules", "admin-role-matrix", "admin-idempotency"}:
-        print("Refused: use the approved full, admin-readonly, admin-modules, admin-role-matrix, or admin-idempotency test mode.")
+    if mode not in {"full", "admin-readonly", "admin-recording-readonly", "admin-modules", "admin-role-matrix", "admin-idempotency"}:
+        print("Refused: use the approved full, admin-readonly, admin-recording-readonly, admin-modules, admin-role-matrix, or admin-idempotency test mode.")
         return 2
     expected_opt_in = (
-        READ_ONLY_OPT_IN if mode == "admin-readonly"
+        READ_ONLY_OPT_IN if mode in {"admin-readonly", "admin-recording-readonly"}
         else ROLE_MATRIX_OPT_IN if mode == "admin-role-matrix"
         else OPT_IN
     )
@@ -1191,6 +1282,8 @@ def main() -> int:
         return 2
     if mode == "admin-readonly":
         return main_admin_readonly_smoke(target)
+    if mode == "admin-recording-readonly":
+        return main_admin_recording_readonly_smoke(target)
     if mode == "admin-role-matrix":
         return main_admin_role_matrix(target)
     if mode == "admin-modules":

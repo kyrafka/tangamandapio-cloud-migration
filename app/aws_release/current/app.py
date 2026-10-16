@@ -100,6 +100,20 @@ def default_voice_recordings_bucket(database_secret_arn):
     return "tangamandapio-voice-{}-{}".format(account_id, region)
 
 
+def normalize_utc_datetime(value):
+    """Normalize PostgreSQL datetime and SQLite ISO text values to UTC."""
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        timestamp = str(value).strip()
+        if timestamp.endswith("Z"):
+            timestamp = timestamp[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(timestamp)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def configure_logging():
     """El logger de la app no hereda nada: sin handler los INFO se pierden."""
     logger = logging.getLogger("tangamandapio.api")
@@ -2387,7 +2401,7 @@ def create_app(test_config=None):
                     "peer": {"id": peer_id, "username": peer_username},
                     "created_at": row["created_at"],
                     "uploaded_at": row["uploaded_at"],
-                    "expires_at": row["expires_at"],
+                    "expires_at": normalize_utc_datetime(row["expires_at"]).isoformat(),
                     "size_bytes": row["size_bytes"],
                     "mime_type": row["mime_type"],
                     "file_url": "/api/voice/recordings/{}/file".format(row["storage_name"].rsplit(".", 1)[0]),
@@ -2419,7 +2433,7 @@ def create_app(test_config=None):
             ).fetchone()
         if row is None:
             return jsonify(error="voice_recording_not_found"), 404
-        if row["expires_at"] <= datetime.now(timezone.utc).isoformat():
+        if normalize_utc_datetime(row["expires_at"]) <= datetime.now(timezone.utc):
             return jsonify(error="voice_recording_expired"), 410
         bucket = app.config["VOICE_RECORDINGS_BUCKET"]
         if bucket:

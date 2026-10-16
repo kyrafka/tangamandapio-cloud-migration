@@ -214,6 +214,40 @@ class LiveModeOptInTests(unittest.TestCase):
             self.assertEqual(live_e2e.main(), 0)
         smoke.assert_called_once_with("https")
 
+    def test_recording_readonly_mode_rejects_generic_e2e_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "https",
+                    "LIVE_E2E_MODE": "admin-recording-readonly",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(live_e2e, "main_admin_recording_readonly_smoke") as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 2)
+        smoke.assert_not_called()
+
+    def test_recording_readonly_mode_uses_the_non_mutating_opt_in(self) -> None:
+        with (
+            patch.dict(
+                live_e2e.os.environ,
+                {
+                    "LIVE_E2E_TARGET": "https",
+                    "LIVE_E2E_MODE": "admin-recording-readonly",
+                    "RUN_LIVE_DEPLOYED_E2E": live_e2e.READ_ONLY_OPT_IN,
+                },
+                clear=True,
+            ),
+            patch.object(
+                live_e2e, "main_admin_recording_readonly_smoke", return_value=0
+            ) as smoke,
+        ):
+            self.assertEqual(live_e2e.main(), 0)
+        smoke.assert_called_once_with("https")
+
     def test_role_matrix_mode_rejects_generic_e2e_opt_in(self) -> None:
         with (
             patch.dict(
@@ -252,6 +286,7 @@ class AdminReadonlySmokeTests(unittest.TestCase):
         client = MagicMock()
         client.target = "alb-origin-https"
         client.json.return_value = {"roles": ["erp_admin"]}
+        client.request.return_value = (200, {"recordings": []})
         role_matrix = {
             "comercial": {"/api/erp/sales/orders": 200},
             "operaciones": {"/api/wms/inventory": 200},
@@ -275,7 +310,41 @@ class AdminReadonlySmokeTests(unittest.TestCase):
         payload = live_e2e.json.loads(output.call_args.args[0])
         self.assertEqual(payload["role_authorization"], role_matrix)
         self.assertEqual(payload["read_only_load"]["requests"], 24)
+        self.assertEqual(payload["recording_playback"]["playback"], "no_saved_recordings")
         client.logout.assert_called_once_with()
+
+
+class SavedVoiceRecordingPlaybackTests(unittest.TestCase):
+    def test_private_playback_route_validates_audio_and_reports_only_metadata(self) -> None:
+        client = live_e2e.PortalClient("alb-origin-https")
+        client.request = MagicMock(return_value=(200, {
+            "recordings": [{
+                "file_url": "/api/voice/recordings/rec-test/file",
+                "size_bytes": 4,
+            }]
+        }))
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.headers.get.return_value = "audio/webm; codecs=opus"
+        response.read.return_value = b"test"
+
+        with patch.object(client.opener, "open", return_value=response):
+            result = live_e2e.verify_saved_voice_recording_playback(client)
+
+        self.assertEqual(result, {
+            "saved_recordings": 1,
+            "playback": "passed",
+            "bytes": 4,
+            "content_type": "audio/webm",
+        })
+
+    def test_empty_catalog_does_not_attempt_file_access(self) -> None:
+        client = live_e2e.PortalClient("alb-origin-https")
+        client.request = MagicMock(return_value=(200, {"recordings": []}))
+        with patch.object(client.opener, "open", side_effect=AssertionError("must not fetch")):
+            result = live_e2e.verify_saved_voice_recording_playback(client)
+        self.assertEqual(result, {"saved_recordings": 0, "playback": "no_saved_recordings"})
 
 
 class ReadOnlyLoadTransportTests(unittest.TestCase):

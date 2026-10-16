@@ -23,17 +23,17 @@ Parameters:
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-b2b-20261016-webrtc-ice-config-v19-python312-e5ab7874feafd8f22ad2c0d631acbd3448188479616d42fbc1f7bb649c1e12d8.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261016-voice-recording-playback-v20-python312-c3c1f3e4ec928865802695887fc118a1f78767739880da72233f13d03236df45.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261016-webrtc-ice-config-v19-python312
+    Default: 20261016-voice-recording-playback-v20-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: e5ab7874feafd8f22ad2c0d631acbd3448188479616d42fbc1f7bb649c1e12d8
+    Default: c3c1f3e4ec928865802695887fc118a1f78767739880da72233f13d03236df45
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
