@@ -1,6 +1,6 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 01:05 UTC. Los resultados históricos conservan
+**Corte vigente:** 16/10/2026, 01:10 UTC. Los resultados históricos conservan
 su fecha y no reemplazan una comprobación fallida posterior.
 
 ## Estado actual
@@ -11,7 +11,10 @@ su fecha y no reemplazan una comprobación fallida posterior.
   `DescribeStacks` fue rechazado por el `explicit deny` `voc-cancel-cred`. No se
   confirmaron targets, drift, ASG ni RDS actuales; no se cambió infraestructura.
 - Azure Function `tangama-wms-261008`: `Running`, `httpsOnly=true`; `/api/health`
-  devolvió `200`.
+  devolvió `200`. Application Insights: 22 solicitudes/24 h, dos recepciones
+  `202`, dos workers `resultCode=0`, un `400` guard esperado y cero `5xx`. Las
+  alertas métricas `Http5xx > 0` y latencia media `> 5s` están habilitadas y
+  enlazadas al Action Group; no se disparó una nueva alerta sintética.
 - El E2E sintético local→Azure pasó guardas (401 sin clave, 400 productor no
   autorizado), venta `demo_fulfillment_completed`, recepción
   `demo_restock_completed`, stock demo restaurado exactamente y poison count 0
@@ -37,7 +40,7 @@ su fecha y no reemplazan una comprobación fallida posterior.
 | PT-NET-01 | Conectividad privada AWS–Azure | Túnel/rutas privadas y tráfico verificado entre redes | Pendiente; preflight de VPN denegado por AWS Academy. HTTPS público no satisface este criterio. |
 | PT-PERF-01 | Carga y autoescalado | Perfil de carga aprobado, errores/p95 definidos, escalado observado | Gate histórico corto (24 lecturas, concurrencia 6); no acredita 3,000 usuarios ni autoescalado. |
 | PT-SEC-01 | Roles, admin y navegador | Roles aislados, CSRF/sesión, vistas autenticadas y CSV correctos | API pasó en v17; visual y regresión v18 pendientes. WAF desactivado. |
-| PT-AZ-MON-01 | Azure y alertas | Invocaciones correlacionadas, métricas, alarma/recuperación y evidencia | Function health 200 y E2E reciente; usuario confirmó alerta/recuperación previa. Guardar captura/telemetría actual. |
+| PT-AZ-MON-01 | Azure y alertas | Invocaciones correlacionadas, métricas, alarma/recuperación y evidencia | Aprobado parcialmente: health 200, telemetría agregada reciente y alertas habilitadas; falta captura visual y correlación de una alerta actual con una invocación concreta. |
 | PT-IAC-01 | CloudFormation/Terraform | fmt/validate/plan; drift y cambios revisados, sin reemplazos sorpresa | Gate local aprobado; CloudFormation v18 `UPDATE_COMPLETE`; drift AWS no consultable por IAM. No aplicar a ciegas. |
 | PT-APP-01 | CSV, correo y finanzas | Importar catálogo, comprobar ledger, finanzas y entrega de correo conforme alcance | Finanzas/correo interno `portal_only` pasaron en v17; CSV visual y SMTP saliente no verificados/desplegados. |
 | PT-RTC-01 | Telefonía WebRTC | Audio/video bidireccional, mute/cámara y grabación con consentimiento | No probado recientemente entre dos navegadores. Pendiente de producto, separado del 503. |
@@ -60,4 +63,4 @@ su fecha y no reemplazan una comprobación fallida posterior.
    se mantengan dentro del alcance acordado; guardar evidencia fechada.
 
 El detalle del corte está en
-[`CLOUD-REVALIDATION-2026-10-16-0105UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md).
+[`CLOUD-REVALIDATION-2026-10-16-0110UTC.md`](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).

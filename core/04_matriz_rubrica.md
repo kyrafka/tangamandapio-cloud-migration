@@ -1,6 +1,6 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 01:05 UTC
+# Matriz de evidencia por criterio — actualización 16/10/2026, 01:10 UTC
 
-## Corte vigente — 16/10/2026, 01:05 UTC (release v18)
+## Corte vigente — 16/10/2026, 01:10 UTC (release v18)
 
 El cambio de paginación del historial WMS se empaquetó y desplegó como v18;
 CloudFormation terminó `UPDATE_COMPLETE` a las 00:42:53 UTC. El gate local
@@ -17,9 +17,14 @@ Azure Function está `Running`, `httpsOnly=true` y health 200. El E2E sintético
 local→Azure pasó: guardas 401/400, venta y recepción compensatoria procesadas,
 saldo demo restaurado a su base y poison count 0 antes/después. La prueba no se
 originó desde AWS. La puerta local de 209 pruebas, build y validaciones IaC pasó.
-Detalle en [la revalidación 01:05 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md).
+Application Insights consultado a las 01:09 UTC registró 22 solicitudes en 24 h,
+con 2 eventos `202`, 2 ejecuciones del worker con `resultCode=0`, 1 rechazo `400`
+esperado y 0 respuestas `5xx`. Las alertas Azure de 5xx y latencia están
+habilitadas y enlazadas al Action Group. No se provocó una nueva alarma; el
+usuario había confirmado la entrega de alerta/recuperación en una prueba previa.
+Detalle en [la revalidación 01:10 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
 
-### Estado cualitativo por criterio — 16/10/2026, 01:05 UTC
+### Estado cualitativo por criterio — 16/10/2026, 01:10 UTC
 
 | # | Criterio | Estado vigente y pendiente principal |
 |---:|---|---|
@@ -29,7 +34,7 @@ Detalle en [la revalidación 01:05 UTC](../evidence/current/CLOUD-REVALIDATION-2
 | 4 | Cómputo, almacenamiento y BD · 1.5 | v18 llegó a `UPDATE_COMPLETE`; Azure está sano. El portal AWS devuelve 503 y el inventario cloud actual está bloqueado. RDS sigue documentado Single-AZ/backup 1 día. |
 | 5 | Seguridad cloud · 2.5 | TLS/redirect comprobados; roles en API pasaron en v17. Falta repetir seguridad/roles en v18 y revisar configuración actual. WAF está desactivado. |
 | 6 | Alta disponibilidad y escalabilidad · 1.5 | ASG 2/2/5 y pruebas pequeñas constan históricamente; estado actual de targets no verificable. Falta carga y autoscaling representativos; 3,000 usuarios es objetivo, no capacidad probada. |
-| 7 | Monitoreo y observabilidad · 1.0 | El usuario confirmó haber recibido alerta y recuperación en prueba previa; Azure health y poison count se comprobaron. Falta evidencia visual/reciente de métricas e invocaciones y correlación con alarma. |
+| 7 | Monitoreo y observabilidad · 1.0 | App Insights: 22 solicitudes/24 h, 0 respuestas 5xx, 2 eventos 202 y 2 workers `resultCode=0`; alertas 5xx/latencia habilitadas y Action Group enlazado. Falta captura visual y correlación de una alerta actual con una invocación concreta. |
 | 8 | Infrastructure as Code · 1.5 | CloudFormation v18 aplicado y validaciones locales de Terraform pasan; drift actual de AWS no se pudo consultar. Falta reconciliar antes de aplicar más infraestructura. |
 | 9 | Backup, RTO/RPO y recuperación · 1.5 | Restore aislado previo dejó RTO/RPO observados; no prueba una garantía ni failover. RDS Single-AZ y retención de un día siguen siendo límites. |
 | 10 | Arquitectura AWS–OCI / multicloud · 1.5 | Se documentó el acuerdo oral para AWS–Azure. E2E Azure sintético pasó desde local y v17 tuvo E2E desde EC2; falta repetir desde AWS en v18 y no hay ruta privada. No presentar Azure como OCI. |
@@ -119,8 +124,8 @@ inicio de este archivo; es cualitativa y lista brechas, no puntos.
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-La evidencia vigente es la revalidación del 16/10 a las 01:05 UTC
-[post-v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0105UTC.md); el
+La evidencia vigente es la revalidación del 16/10 a las 01:10 UTC
+[post-v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md); el
 corte de infraestructura con inventario completo de AWS sigue siendo el de
 23:21–23:24 UTC del 15/10 porque la lectura actual está denegada.
 Los bloques fechados anteriores, incluidos los que reportan `ExpiredToken` o

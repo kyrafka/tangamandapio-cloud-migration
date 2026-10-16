@@ -2,11 +2,12 @@
 
 > Último release preparado: v18, `20261015-outbox-pagination-v18-python312`,
 > SHA-256 `c629ab0e7b07c007cfa74c3eca1b9879c601829f44ad3471615cb85e3e09197f`.
-> CloudFormation terminó `UPDATE_COMPLETE` el 16/10 a las 00:42:53 UTC. La
-> última comprobación del origen ALB devolvió 503 y AWS Academy denegó consultas
-> por `voc-cancel-cred`; por eso la disponibilidad y el smoke autenticado de
-> v18 no quedaron confirmados. Azure `/api/health` respondió 200. Véase
-> [la revalidación 00:45 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0045UTC.md).
+> CloudFormation terminó `UPDATE_COMPLETE` el 16/10 a las 00:42:53 UTC. A las
+> 01:02 UTC las rutas HTTPS devolvieron 503 y AWS Academy denegó `DescribeStacks`
+> por `voc-cancel-cred`; la disponibilidad y el smoke autenticado v18 no están
+> confirmados. Azure Function está `Running`, health 200 y el E2E sintético
+> local→Azure pasó. Véase
+> [la revalidación 01:10 UTC](../../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md).
 
 ## Release v18 desplegado — paginación íntegra del outbox
 
