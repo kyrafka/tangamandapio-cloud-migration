@@ -1,6 +1,36 @@
-# Matriz de evidencia por criterio — actualización 16/10/2026, 16:04 UTC
+# Matriz de evidencia por criterio — actualización 27/10/2026, 20:14 UTC
 
-## Suplemento vigente — v19 desplegado; cierre de infraestructura confirmado
+## Corte operativo vigente — 27/10/2026, 20:08–20:14 UTC
+
+Esta actualización sustituye las descripciones de estado operativo anteriores;
+las autoevaluaciones numéricas que aparecen en el historial no se recalculan
+con este corte ni representan una calificación docente.
+
+- AWS STS autenticó en la cuenta Academy correcta. CloudFormation terminó una
+  detección nueva `IN_SYNC`/0. Stack `tangamandapio-live-20261026` en
+  `UPDATE_COMPLETE`; ASG 2/2 sanas (min/deseado 2, max 5). RDS está disponible,
+  Multi-AZ, cifrada/privada y con siete días de retención. WAF está asociado.
+- El dominio público por Cloudflare y Azure Function devolvieron HTTPS 200.
+  El canario XSS inocuo devolvió 403 desde el ALB.
+- PT-PERF-01 de solo lectura: 500/500 HTTP 200, concurrencia 20, p95 547.78 ms,
+  cero errores. ASG siguió en 2; la carga no alcanzó CPU objetivo del 60% y no
+  acredita escalado automático 2→3 ni 3,000 usuarios. En CloudWatch posterior,
+  RDS llegó a 4 conexiones/7.66% CPU y el ASG a 4.05% CPU. No equivale a una
+  prueba transaccional ni resuelve por sí sola la saturación histórica.
+- Suite del release 24/24 y cinco pruebas adicionales de autenticación del
+  secreto RDS aprobadas. La puerta integral no inició: este worktree no contiene
+  `app/.venv`. La evidencia completa está en el [registro del 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
+- Siguen pendientes: escalado bajo carga representativa; red privada entre
+  nubes (AWS Academy denegó `CreateCustomerGateway`; el grupo/VNet Azure no
+  existe en la suscripción activa); SQS + Lambda + DLQ con rol mínimo (IAM
+  deniega `CreateRole`/`PassRole`); SSO/MFA de Entra; copia y restauración
+  cruzada; y prueba sostenida de hasta 3,000 usuarios. Azure Function permanece
+  pública en plan Y1. No se atribuye inventario físico a su ledger sintético.
+
+## Registro histórico — v19 (16/10/2026)
+
+El siguiente corte describe el estado observado el 16/10; quedó superado por
+la revalidación operativa anterior.
 
 AWS Academy autenticó en la cuenta correcta. El portal v19 está desplegado en
 `tangamandapio-live-20261013`; CloudFormation terminó `UPDATE_COMPLETE` y el
@@ -526,13 +556,14 @@ conversión inventada; la segunda no tenía una suma criterio por criterio. El
 estado apagado del laboratorio no se descuenta en un supuesto de despliegue, pero
 desplegar los recursos tampoco cierra por sí solo los criterios que requieren
 funciones y pruebas demostrables. Hace falta que el docente aclare el total y la
-conversión antes de estimar una nota. La tabla vigente por criterio está al
-inicio de este archivo; es cualitativa y lista brechas, no puntos.
+conversión antes de estimar una nota. El corte operativo del 27/10 está al
+inicio de este archivo; la tabla cualitativa que sigue es histórica y enumera
+brechas sin asignar puntos.
 
 La fuente analizada es la rúbrica final `rúbrica proyecto_qod3szrctm (3).xlsx`
 (14 criterios); el resumen histórico de cálculos retirados está en
 [la evaluación previa](10_evaluacion_rubrica_entregable_final_2026-10-08.md).
-La evidencia vigente es la revalidación del 16/10 a las 01:25 UTC
+La evidencia citada en este bloque corresponde a la revalidación histórica del 16/10 a las 01:25 UTC
 [post-v18](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0110UTC.md); el
 corte de infraestructura con inventario completo de AWS sigue siendo el de
 23:21–23:24 UTC del 15/10 porque la lectura actual está denegada.
@@ -657,7 +688,7 @@ HTTPS/headers 19:13](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1913UTC.m
 [corte de 18:56](../evidence/current/CLOUD-REVALIDATION-2026-10-15-1856UTC.md)
 y [prueba ALB 16:43](../evidence/current/aws/AWS-ALB-ORIGIN-PERF-2026-10-15-1643.md).
 
-## Estado cualitativo por criterio
+## Estado cualitativo histórico por criterio — corte 15/10/2026, 23:24 UTC
 
 | # | Criterio | Evidencia disponible (corte indicado) | Brecha para el descriptor más alto |
 |---:|---|---|---|

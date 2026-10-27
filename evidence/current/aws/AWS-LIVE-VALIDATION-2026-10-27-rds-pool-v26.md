@@ -1,6 +1,45 @@
 # Validación cloud AWS–Azure — 27/10/2026
 
-**Corte:** 2026-10-27 20:03 UTC. Región AWS `us-east-1`. No se incluyen credenciales ni valores secretos.
+**Corte base:** 2026-10-27 20:03 UTC. **Revalidación adicional:** 20:08–20:14 UTC. Región AWS `us-east-1`. No se incluyen credenciales ni valores secretos.
+
+## Revalidación adicional — 27/10/2026, 20:08–20:14 UTC
+
+- El token temporal del laboratorio autenticó por STS en la cuenta AWS Academy
+  correcta. CloudFormation terminó una detección nueva: `IN_SYNC`, cero
+  recursos desviados, 20:11:45 UTC. No se aplicó ni modificó infraestructura.
+- Stack `tangamandapio-live-20261026`: `UPDATE_COMPLETE`; ASG mínimo/deseado 2,
+  máximo 5; dos EC2 `InService` y dos destinos ALB `healthy`. RDS disponible,
+  Multi-AZ, cifrada, privada y con siete días de retención. AWS WAF asociado al
+  ALB con reglas administradas Common, Bad Inputs, SQL Injection y Rate Limit.
+- El dominio público `https://tangamandapio.kendellnm.me/health` devolvió 200 a
+  través de Cloudflare. Un canario XSS inocuo contra la portada devolvió 403
+  desde el origen ALB con TLS/SNI del dominio.
+- Azure Function `https://tangama-wms-261008.azurewebsites.net/api/health`
+  devolvió 200. Sigue en plan Y1/Dynamic Consumption, red pública habilitada,
+  sin integración VNet. El grupo de recursos esperado para la red privada no
+  existe en la suscripción activa.
+- PT-PERF-01, lectura de `/health` directa al ALB con TLS válido: 500/500 HTTP
+  200, concurrencia 20, duración 11.163 s, p95 547.78 ms, máximo 859.61 ms,
+  cero errores. Es un smoke de salud de solo lectura, no tráfico transaccional.
+  El ASG quedó en 2; no se cruzó el objetivo de CPU del 60%, por lo que **no
+  demuestra el escalado automático 2→3 ni capacidad para 3,000 usuarios**.
+- En muestras CloudWatch de 20:05–20:12 UTC, RDS llegó a un máximo de cuatro
+  conexiones y 7.66% de CPU; la CPU máxima reportada del ASG fue 4.05%, por
+  debajo del objetivo de 60%. Esto no reproduce la saturación transaccional
+  histórica de RDS ni permite atribuirle una resolución completa.
+- La simulación IAM volvió a indicar `implicitDeny` para `iam:CreateRole` y
+  `iam:PassRole`, aunque `lambda:CreateFunction` y creación/configuración de
+  SQS figuran permitidas. No existen colas ni funciones del proyecto. No se usó
+  `LabRole` para evitar una ejecución con permisos amplios.
+- Suite del release: 24/24 aprobadas; además, las cinco pruebas de
+  autenticación del secreto RDS pasaron. Las cuatro pruebas del pool forman
+  parte de las 24. Se ajustó solo el fixture ERP para desactivar la rotación
+  inicial en esos escenarios de permisos/correo; producción conserva el cambio
+  obligatorio de clave inicial.
+- La puerta integral `tests/run_local_quality.ps1 -ValidateTerraform` no pudo
+  iniciar porque este worktree no contiene `app/.venv`; no es un fallo de una
+  prueba. No se modificó producción ni se desplegaron cambios por esta
+  revalidación.
 
 ## AWS
 

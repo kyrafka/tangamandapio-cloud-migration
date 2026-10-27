@@ -1,7 +1,28 @@
 # Plan maestro de pruebas AWS–Azure
 
-**Corte vigente:** 16/10/2026, 10:06–10:15 UTC. Los antecedentes conservan su fecha;
-una prueba histórica no sustituye una revalidación cuando hubo cambios.
+## Revalidación vigente — 27/10/2026, 20:08–20:14 UTC
+
+- STS aceptó las credenciales temporales del laboratorio; CloudFormation
+  `UPDATE_COMPLETE`, detección nueva de drift `IN_SYNC`/0, ASG 2/2 sanas.
+- Dominio HTTPS por Cloudflare 200; Azure Function health 200; canario XSS
+  inocuo al ALB 403; WAF asociado con reglas administradas.
+- RDS disponible, Multi-AZ, cifrada/privada, retención 7 días. PT-PERF-01
+  realizó 500 GET de `/health` directos al ALB con TLS, concurrencia 20: 500
+  respuestas 200, p95 547.78 ms, cero errores, 11.163 s. En CloudWatch, RDS
+  llegó a 4 conexiones/7.66% CPU y ASG a 4.05% CPU; permaneció en 2. No se
+  demostró escala automática 2→3 ni capacidad para 3,000 usuarios.
+- IAM sigue denegando `CreateRole` y `PassRole`; no hay SQS/Lambda del proyecto.
+  Function Azure sigue en Y1 con red pública; no existe el grupo/VNet para la
+  red privada. VPN y privacidad WMS siguen pendientes.
+- La suite del release pasó 24/24 y las cinco pruebas de autenticación del
+  secreto RDS también pasaron. La puerta integral no inició por falta de
+  `app/.venv` en este worktree. No se modificó infraestructura. Evidencia:
+  [corte AWS–Azure 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
+
+## Registro histórico — corte 16/10/2026, 10:06–10:15 UTC
+
+Los estados y contadores de las secciones siguientes corresponden a cortes
+históricos; no sustituyen la revalidación vigente de arriba.
 
 - Replay duplicado en nube pasó: el outbox AWS reintentó un evento de reposición
   ya completado; Azure registró `duplicate=True` y `wms_demo_already_processed`,
@@ -20,7 +41,7 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   CSV por rol, WebRTC bidireccional, carga transaccional 3,000 usuarios, WAF,
   failover Multi-AZ y VPN (SCP bloquea Customer Gateway).
 
-## Estado actual
+## Estado histórico (16/10/2026)
 
 - CloudFormation terminó drift fresco `IN_SYNC`/0; portal y Azure health
   HTTPS/TLS 200; ASG y ALB 2/2 sanos. RDS sigue cifrada y privada,
@@ -291,7 +312,7 @@ una prueba histórica no sustituye una revalidación cuando hubo cambios.
   no aplicó cambios cloud. GitHub Actions para `b1d36a9` también pasó sus tres
   trabajos (run `38851449937`).
 
-## Matriz de pruebas
+## Matriz histórica de pruebas (16/10/2026)
 
 | ID | Prueba | Estado verificado | Qué falta |
 |---|---|---|---|

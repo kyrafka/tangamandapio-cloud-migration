@@ -68,6 +68,8 @@ class ErpReleaseTests(unittest.TestCase):
             "APP_SESSION_SECRET": "release-test-session-secret-not-for-production",
             "BOOTSTRAP_ADMIN_USERNAME": "admin@release.test",
             "BOOTSTRAP_ADMIN_PASSWORD": "Release-Test-Admin-Password-2026!",
+            # These tests cover ERP permissions/workflows, not first-login onboarding.
+            "FORCE_INITIAL_PASSWORD_CHANGE": False,
             "INTERNAL_ERP_ENABLED": True,
             "AZURE_FULFILLMENT_URL": "",
         })

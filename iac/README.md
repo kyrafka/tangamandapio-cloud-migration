@@ -1,6 +1,8 @@
-# Infraestructura como código — revalidación 16/10/2026
+# Infraestructura como código — estado verificado 27/10/2026
 
-Última revalidación: 16/10/2026, 09:34–09:56 UTC. Drift AWS `IN_SYNC`/0, stack `UPDATE_COMPLETE`, ASG/targets 2/2, portal/Azure HTTPS 200. Function procesó dos eventos AWS→Azure y el ledger demo terminó 10→10. Admin read-only concilió 63/63 outbox; matriz ERP 48/48 y módulos demo aprobados. PT-PERF-01 directo al ALB pasó 500/500 HTTPS con p95 467 ms. Terraform Azure normal y `refresh-only`: `No changes`, sin `apply`. La puerta local aprobó 228 pruebas Python, 14 Node, build y validación IaC sin `apply`. RDS sigue privada/cifrada, Single-AZ/retención 1 día; WAF apagado y VPN bloqueada por SCP (no hay VNet Azure). Sin despliegue de código de aplicación. [Evidencia 09:56 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md).
+Revalidación 27/10, 20:08–20:14 UTC: token temporal aceptado por STS; CloudFormation `UPDATE_COMPLETE`, drift nuevo `IN_SYNC`/0, ASG y targets 2/2, dominio HTTPS por Cloudflare y Azure Function health 200. RDS disponible, privada/cifrada, Multi-AZ y retención de 7 días; WAF asociado al ALB y canario XSS bloqueado (403). PT-PERF-01 de solo lectura pasó 500/500 GET al `/health`, concurrencia 20, p95 547.78 ms, sin errores; CloudWatch reportó ASG a 4.05% CPU y RDS a 7.66%/4 conexiones. ASG siguió en 2 y no se demostró escala 2→3 ni capacidad para 3,000 usuarios. IAM deniega `CreateRole`/`PassRole`; VPN/red privada, SQS/Lambda/DLQ, SSO/MFA y backup cruzado siguen sin desplegar. Azure Function continúa en Y1 pública y no existe la VNet/grupo privado. [Evidencia 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
+
+La tabla inferior conserva el inventario de 16/10 como antecedente histórico. Para el estado actual, prevalece la revalidación anterior y su evidencia enlazada.
 
 El intento v11 del 14/10 quedó registrado con el resultado observado en ese momento; sus notas de “estado desconocido” son históricas y quedaron superadas por la actualización completada el 15/10. Véase la [evidencia del intento v11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md).
 
