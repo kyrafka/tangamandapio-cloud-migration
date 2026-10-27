@@ -1,17 +1,28 @@
-# Matriz de evidencia por criterio — actualización 27/10/2026, 20:14 UTC
+# Matriz de evidencia por criterio — actualización 27/10/2026, 20:23 UTC
 
-## Corte operativo vigente — 27/10/2026, 20:08–20:14 UTC
+## Corte operativo vigente — 27/10/2026, 20:19–20:23 UTC
 
 Esta actualización sustituye las descripciones de estado operativo anteriores;
 las autoevaluaciones numéricas que aparecen en el historial no se recalculan
 con este corte ni representan una calificación docente.
 
-- AWS STS autenticó en la cuenta Academy correcta. CloudFormation terminó una
-  detección nueva `IN_SYNC`/0. Stack `tangamandapio-live-20261026` en
+- AWS STS autenticó en la cuenta Academy correcta. La última detección
+  CloudFormation informada a las 20:11 fue `IN_SYNC`/0. Stack
+  `tangamandapio-live-20261026` en
   `UPDATE_COMPLETE`; ASG 2/2 sanas (min/deseado 2, max 5). RDS está disponible,
   Multi-AZ, cifrada/privada y con siete días de retención. WAF está asociado.
-- El dominio público por Cloudflare y Azure Function devolvieron HTTPS 200.
-  El canario XSS inocuo devolvió 403 desde el ALB.
+- El perfil local `default` fue actualizado con el token temporal del usuario;
+  STS lo aceptó en `654654388734`. El dominio público por Cloudflare y Azure
+  Function devolvieron HTTPS 200. El ALB está activo con sus dos destinos
+  saludables y WAF asociado.
+- Azure tiene una VNet `vnet-tangama-private` en `rg-tangama-private-network`,
+  con `GatewaySubnet` y subredes de workloads, private endpoints y Functions
+  Flex. No se encontraron Virtual Network Gateway, conexiones VPN ni private
+  endpoints desplegados. La Function sigue en Y1/Dynamic Consumption, sin
+  integración VNet; su health HTTPS responde 200.
+- No hay colas SQS ni funciones Lambda del proyecto. IAM denegó explícitamente
+  la lectura del rol candidato `RoleForLambdaModLabRole`; el corte anterior ya
+  registró `implicitDeny` para crear/pasar un rol. No se utilizó `LabRole`.
 - PT-PERF-01 de solo lectura: 500/500 HTTP 200, concurrencia 20, p95 547.78 ms,
   cero errores. ASG siguió en 2; la carga no alcanzó CPU objetivo del 60% y no
   acredita escalado automático 2→3 ni 3,000 usuarios. En CloudWatch posterior,
@@ -21,11 +32,11 @@ con este corte ni representan una calificación docente.
   secreto RDS aprobadas. La puerta integral no inició: este worktree no contiene
   `app/.venv`. La evidencia completa está en el [registro del 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
 - Siguen pendientes: escalado bajo carga representativa; red privada entre
-  nubes (AWS Academy denegó `CreateCustomerGateway`; el grupo/VNet Azure no
-  existe en la suscripción activa); SQS + Lambda + DLQ con rol mínimo (IAM
-  deniega `CreateRole`/`PassRole`); SSO/MFA de Entra; copia y restauración
-  cruzada; y prueba sostenida de hasta 3,000 usuarios. Azure Function permanece
-  pública en plan Y1. No se atribuye inventario físico a su ledger sintético.
+  nubes (AWS Academy denegó `CreateCustomerGateway`; Azure ya tiene VNet pero
+  carece de gateway, túnel e integración privada de Functions); SQS + Lambda +
+  DLQ con rol mínimo (IAM deniega el rol de ejecución requerido); SSO/MFA de
+  Entra; copia y restauración cruzada; y prueba sostenida de hasta 3,000
+  usuarios. No se atribuye inventario físico a su ledger sintético.
 
 ## Registro histórico — v19 (16/10/2026)
 

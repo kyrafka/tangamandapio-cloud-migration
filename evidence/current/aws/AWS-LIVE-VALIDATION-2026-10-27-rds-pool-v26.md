@@ -1,5 +1,38 @@
 # Validación cloud AWS–Azure — 27/10/2026
 
+## Revalidación posterior — 27/10/2026, 20:19–20:23 UTC
+
+- Se sustituyó el perfil AWS local `default` por el token temporal entregado
+  por el usuario; `aws sts get-caller-identity` respondió correctamente en la
+  cuenta Academy `654654388734`. El token no se guardó en el repositorio ni en
+  esta evidencia.
+- CloudFormation `tangamandapio-live-20261026` permanece `UPDATE_COMPLETE`
+  (última actualización informada: 19:39 UTC). El ALB está activo; sus dos
+  destinos están `healthy`. ASG: mínimo 2, deseado 2 y máximo 5. RDS está
+  `available`, cifrada, Multi-AZ y con siete días de retención. La plantilla
+  mantiene WAF asociado al ALB. El dominio
+  `https://tangamandapio.kendellnm.me/health` respondió HTTP 200.
+- El portal de AWS Academy mostró el laboratorio listo y consumo de `$4.70` de
+  `$50` en la observación. No se aplicaron cambios de infraestructura durante
+  esta comprobación.
+- La suscripción `Azure for Students` está `Enabled`. La Function
+  `tangama-wms-261008` permanece `Running`/HTTPS-only en plan Y1; su endpoint
+  `/api/health` respondió HTTP 200. No tiene integración con VNet.
+- Azure sí contiene `vnet-tangama-private` en `rg-tangama-private-network`, con
+  espacio `10.20.0.0/16`, `GatewaySubnet` y subredes para workloads, endpoints
+  privados y Functions Flex. La consulta de suscripción no encontró recursos
+  `virtualNetworkGateways`, conexiones VPN, private endpoints ni integración
+  VNet de la Function. Por tanto, la VNet existe, pero todavía no es una ruta
+  privada AWS–Azure.
+- AWS no devuelve colas SQS ni funciones Lambda con el prefijo del proyecto.
+  `iam:GetRole` y `iam:ListAttachedRolePolicies` sobre
+  `RoleForLambdaModLabRole` devuelven `AccessDenied` explícito; el corte
+  anterior registró `implicitDeny` para crear/pasar un rol de ejecución. No se
+  usó `LabRole`.
+- La política de escalado del ASG apunta a CPU promedio del grupo de 60%. El
+  estado sigue 2/2 y esta revalidación no ejecutó carga: el smoke de `/health`
+  previo no demuestra escalado 2→3 ni capacidad para 3,000 usuarios.
+
 **Corte base:** 2026-10-27 20:03 UTC. **Revalidación adicional:** 20:08–20:14 UTC. Región AWS `us-east-1`. No se incluyen credenciales ni valores secretos.
 
 ## Revalidación adicional — 27/10/2026, 20:08–20:14 UTC
