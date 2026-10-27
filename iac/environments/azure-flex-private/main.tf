@@ -37,9 +37,7 @@ locals {
   flex_deployment_container_endpoint = "${data.azurerm_storage_account.operations.primary_blob_endpoint}${var.deployment_container_name}"
 
   function_app_settings = {
-    FUNCTIONS_WORKER_RUNTIME                  = "python"
     FUNCTIONS_EXTENSION_VERSION               = "~4"
-    AzureWebJobsStorage                       = ""
     AzureWebJobsStorage__accountName          = data.azurerm_storage_account.operations.name
     AzureWebJobsStorage__credential           = "managedidentity"
     APPLICATIONINSIGHTS_AUTHENTICATION_STRING = "Authorization=AAD"
@@ -50,8 +48,6 @@ locals {
     AZURE_QUEUE_ACCOUNT_URL                   = "https://${data.azurerm_storage_account.operations.name}.queue.core.windows.net"
     EVENT_SCHEMA_VERSION                      = "1.0"
     ALLOWED_EVENT_SOURCES                     = join(",", sort(tolist(var.allowed_event_sources)))
-    SCM_DO_BUILD_DURING_DEPLOYMENT            = "false"
-    ENABLE_ORYX_BUILD                         = "false"
   }
 
   storage_container_scope = "${data.azurerm_storage_account.operations.id}/blobServices/default/containers"

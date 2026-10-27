@@ -1,5 +1,30 @@
 # Infraestructura como código — estado verificado 27/10/2026
 
+## Corte más reciente — 27/10/2026, 17:05 America/Chicago
+
+Este corte reemplaza los estados contradictorios de las notas históricas que
+siguen debajo. AWS STS funciona; CloudFormation está `UPDATE_COMPLETE`, el
+dominio HTTPS responde 200, el ALB tiene 2/2 destinos sanos, WAF está asociado
+y RDS está disponible, cifrada, Multi-AZ y con 7 días de retención. El ASG está
+en 2 instancias (mínimo 2, máximo 5), por lo que todavía no hay evidencia de
+escalado automático 2→3.
+
+En Azure ya está desplegada la Function Flex `tangama-wms-flex-261013` con
+acceso público deshabilitado y Private Endpoint `10.20.1.4`; su zona DNS privada
+está enlazada a la VNet. La Function reportó siete funciones y procesó eventos
+sintéticos con idempotencia antes de cerrar el acceso público. La Function Y1
+anterior continúa respondiendo health 200. AWS todavía no tiene ruta privada a
+la nueva Function, así que no hay cutover ni prueba AWS→Flex. No se encontró
+una cola SQS del proyecto ni una Lambda de Tangamandapio.
+
+Pendiente de despliegue/verificación: conexión privada AWS–Azure (la SCP de
+AWS Academy deniega `ec2:CreateCustomerGateway`), SQS+Lambda+DLQ con un rol de
+mínimo privilegio autorizado, SSO/MFA con Entra ID, copia y restauración entre
+nubes, medición reproducible del escalado 2→3 después de corregir el cuello de
+botella RDS, y prueba extremo a extremo desde AWS hacia el WMS privado. No se
+ha demostrado capacidad para 3,000 usuarios concurrentes. Véase la
+[evidencia del corte 27/10](../evidence/current/CLOUD-STATUS-2026-10-27.md).
+
 Revalidación adicional, 27/10/2026: dominio y WMS health HTTPS respondieron
 200; el token AWS Academy autenticó por STS. El P2S fallback ahora pasa
 `fmt`/`validate` y 2 pruebas mock, y un plan de solo lectura encontró la VNet y
@@ -49,15 +74,15 @@ administren los recursos desplegados.
 
 | Dominio | Fuente de verdad actual | Estado de despliegue |
 |---|---|---|
-| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | Operativo en el corte 09:50: stack `UPDATE_COMPLETE`, drift fresco `IN_SYNC`, ASG/targets 2/2, EBS cifrados y HTTPS/TLS 200. E2E AWS→Azure, matriz 48/48, Admin read-only, carga 500/20 y restore RDS pasaron. [Evidencia 09:50 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md). |
+| AWS portal | CloudFormation: `cloudformation/aws-lab.yaml` y `cloudformation/rebuild.sh` | Revalidado 27/10: stack `UPDATE_COMPLETE`, HTTPS del dominio 200, ALB targets 2/2 sanos, WAF asociado; RDS disponible, cifrada, Multi-AZ, retención 7 días. ASG 2/2 (min 2, max 5); el escalado 2→3 no se ha demostrado. [Evidencia del corte](../evidence/current/CLOUD-STATUS-2026-10-27.md). |
 
 | AWS grabaciones | CloudFormation: `cloudformation/voice-recordings.yaml`, creado por `cloudformation/rebuild.sh` | Último registro 09/10: `CREATE_COMPLETE`, drift `IN_SYNC`; sin objetos grabados. Estado actual no revalidado. |
 | Red AWS de ejemplo | Terraform: `environments/demo` → `modules/aws_network` | Formato y validación correctos; no tiene state y no administra el stack vivo. Un `apply` crearía una VPC adicional. |
 | WMS Azure anterior | Terraform histórico: `environments/azure-demo` → `modules/azure_operations` | Su state sigue apuntando al grupo anterior; no usarlo. El Resource Group anterior fue eliminado. |
 | Reconstrucción Azure | Terraform: `environments/azure-rebuild` → `modules/azure_operations` | 16/10 09:56: Function `Running`/HTTPS-only, health HTTPS/TLS 200 y dos eventos procesados con éxito según App Insights. Plan normal y `refresh-only` `No changes`, sin `apply`. No hay VNet Azure del proyecto. [Revalidación 09:56](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0950UTC.md). |
-| Interconexión privada AWS–Azure | Azure VPN Gateway/BGP: `environments/aws-azure-vpn`; lado AWS separado en `cloudformation/aws-azure-vpn.yaml` | IaC valida; no desplegado. Preflight vivo sin cambios: `CreateVpnGateway --dry-run` permitido, pero AWS Organizations SCP niega explícitamente `ec2:CreateCustomerGateway`; Azure sigue sin VNet del proyecto. No sortear la política ni reportar túnel activo. [Diseño y límites](environments/aws-azure-vpn/README.md) y [evidencia 08:46](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0846UTC.md). |
+| Interconexión privada AWS–Azure | Azure VPN Gateway/BGP: `environments/aws-azure-vpn`; lado AWS separado en `cloudformation/aws-azure-vpn.yaml` | No hay túnel/rutas entre nubes. La VNet `10.20.0.0/16`, la Function privada y su Private Endpoint existen; AWS Academy denegó `ec2:CreateCustomerGateway`. No sortear la política ni reportar conectividad privada. [Diseño y límites](environments/aws-azure-vpn/README.md) y [evidencia del corte](../evidence/current/CLOUD-STATUS-2026-10-27.md). |
 | Alternativa overlay AWS–Azure | Propuesta Tailscale: `environments/aws-azure-tailscale/README.md`; preflight de solo lectura `scripts/check_tailscale_prerequisites.py` | AWS STS y VPC `10.10.0.0/16` verificados; no hay VNet Azure. Cliente Tailscale local offline (`NoState`) y no se detectó clave efímera. No hay routers, rutas ni túnel desplegados. Este diseño no se cuenta como AWS Site-to-Site VPN ni como evidencia multinube hasta probar tráfico extremo a extremo. |
-| Function Flex privada | Terraform: `environments/azure-flex-private` | Root blue-green validado con AzureRM 4.79.0 y pruebas mock 3/3; costo y bootstrap público con doble compuerta, identidad administrada, package blob endpoint, Private Endpoint y DNS Azure. No aplicado: falta la VNet/subnets, el grupo `rg-tangama-private-network` no existe en Azure, y AWS no permite leer la VPC/stack. |
+| Function Flex privada | Terraform: `environments/azure-flex-private` | Desplegada en `rg-tangamandapio-rebuild-wus`, estado Terraform remoto, plan final `No changes`, pruebas mock 3/3. Identidad administrada, colas/Blob, Private Endpoint `10.20.1.4` y DNS privado en VNet; `publicNetworkAccess=Disabled` (health público 403 esperado). No es accesible desde AWS hasta desplegar y probar rutas privadas. El WMS Y1 anterior sigue activo para continuidad. |
 | DNS privado AWS→Azure | CloudFormation opcional: `cloudformation/aws-azure-vpn.yaml`; orquestación en `scripts/deploy_aws_vpn.ps1` | Hosted zone privada Route 53 + registro A solo se habilitan pasando juntos el FQDN exacto de la Function y su IP PE validada en `10.20.2.4–30`. Desactivado por defecto; no desplegado. No configura dominio público ni HTTPS para usuarios. El gate local cubre 13 escenarios mock. |
 | Recuperación RDS | Script `tests/aws/pt-dr-01-rds-restore.sh` + sonda SQL temporal vía SSM | PT-DR-01 pasó 16/10: marcador y conteos verificados, RTO 258 s y RPO superior observado 8 s; copia y snapshot temporales eliminados y verificados. RDS principal sigue disponible, privada, cifrada, Single-AZ y backup 1 día. No demuestra failover Multi-AZ ni garantía de RPO. [Evidencia 09:26 UTC](../evidence/current/CLOUD-REVALIDATION-2026-10-16-0926UTC.md). |
 

@@ -1453,3 +1453,23 @@ misma revisión y SHA; la compuerta integral local pasó. `s3api head-bucket`
 devolvió 403, así que el artefacto no se subió ni desplegó. HTTPS permanece en
 503; TURN y prueba A/V entre dos navegadores siguen pendientes. Detalle:
 [release preparado 10:48 UTC](../evidence/current/RELEASE-PREPARED-2026-10-16-1048UTC.md).
+
+## Corte de infraestructura vigente — 27/10/2026
+
+Este corte actualiza el estado vivo de la nube; no asigna una nota ni reemplaza
+la evaluación del docente. La revisión confirmó AWS con HTTPS 200, dos destinos
+ALB sanos, WAF asociado y RDS cifrada Multi-AZ con 7 días de backups. En Azure,
+la nueva Function Flex está privada tras Private Endpoint `10.20.1.4`, y el
+worker completó un flujo de inventario sintético con idempotencia antes de
+deshabilitar el acceso público. La Function Y1 anterior sigue en health 200.
+
+| Área | Estado actual | Falta para cerrar el criterio |
+|---|---|---|
+| Red multinube | AWS VPC y Azure VNet existen; Azure WMS Flex tiene Private Endpoint/DNS privado. | Conectar y demostrar tráfico privado entre nubes. AWS Academy denegó `CreateCustomerGateway`; no hay VPN activa ni ruta. |
+| Cómputo y datos | AWS ASG 2/5, ALB 2/2 sano, RDS Multi-AZ cifrada y backup 7 días. Azure WMS Flex desplegado privado. | Demostrar escalado automático 2→3; la última carga conocida saturó RDS y elevó p95 a 8.6 s. No hay evidencia de 3,000 usuarios estables. |
+| Serverless y mensajería | Azure Queue/Functions completó el worker del ledger demo. | No hay SQS, Lambda ni DLQ del proyecto; falta un rol Lambda acotado permitido por IAM. |
+| Seguridad e identidad | WAF asociado al ALB, HTTPS operativo, Function Flex no acepta ingreso público. | Integrar Entra ID/SSO y MFA; verificar la Function privada desde AWS al recuperar una ruta privada. |
+| Continuidad | Multi-AZ y retención de 7 días activos en RDS. | Automatizar copia entre nubes y medir una restauración cruzada. |
+| Pruebas | Health del portal AWS 200; Azure Flex procesó compra sintética y duplicado idempotente antes del bloqueo público. | E2E AWS→Azure privado, escalado bajo carga controlada y recuperación cross-cloud. |
+
+Detalle verificable: [corte cloud 27/10/2026](../evidence/current/CLOUD-STATUS-2026-10-27.md).

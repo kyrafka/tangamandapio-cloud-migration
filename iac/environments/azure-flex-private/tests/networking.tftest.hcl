@@ -104,6 +104,24 @@ run "plans_private_by_default_with_required_networking" {
     condition     = startswith(azurerm_function_app_flex_consumption.wms.storage_container_endpoint, "https://sttangama261008r.blob.core.windows.net/")
     error_message = "Flex requiere el endpoint HTTPS del contenedor de paquetes, no un ID ARM."
   }
+
+  assert {
+    condition     = !contains(keys(local.function_app_settings), "FUNCTIONS_WORKER_RUNTIME")
+    error_message = "Flex Consumption define el runtime en runtime_name y no acepta FUNCTIONS_WORKER_RUNTIME en app_settings."
+  }
+
+  assert {
+    condition     = !contains(keys(local.function_app_settings), "AzureWebJobsStorage")
+    error_message = "La autenticación de host por identidad administrada no debe enviar una connection string vacía."
+  }
+
+  assert {
+    condition = alltrue([
+      for setting in ["SCM_DO_BUILD_DURING_DEPLOYMENT", "ENABLE_ORYX_BUILD"] :
+      !contains(keys(local.function_app_settings), setting)
+    ])
+    error_message = "Flex Consumption rechaza los ajustes de build de SCM y Oryx; el paquete debe incluir dependencias precompiladas."
+  }
 }
 
 run "requires_acknowledgement_for_public_bootstrap" {

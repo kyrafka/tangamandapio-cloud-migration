@@ -48,6 +48,6 @@ and command history. No certificate is included here.
    gateway and public IP are gone. Preserve only redacted evidence and the
    reproducible configuration.
 
-The current root has no backend configured and has **not** been applied. Do not
-run `terraform apply` until state storage, valid certificate handling, private
-DNS, and the temporary cost window are all reviewed.
+The root uses the project's private Azure Storage backend with its own state
+key and has **not** been applied. Do not run `terraform apply` until valid
+certificate handling, private DNS, and the temporary cost window are reviewed.
