@@ -1,6 +1,6 @@
 # Validación cloud AWS–Azure — 27/10/2026
 
-**Corte:** 2026-10-27 20:00 UTC. Región AWS `us-east-1`. No se incluyen credenciales ni valores secretos.
+**Corte:** 2026-10-27 20:03 UTC. Región AWS `us-east-1`. No se incluyen credenciales ni valores secretos.
 
 ## AWS
 
@@ -18,6 +18,11 @@
 
 - Function App `tangama-wms-261008`: `Running`, `httpsOnly=true`; `https://tangama-wms-261008.azurewebsites.net/api/health` respondió 200.
 - La Function conserva acceso de red público y no tiene integración privada con la VNet. La consulta de gateways de `rg-tangama-private-network` no devolvió gateways.
+
+## Prerrequisitos para los siguientes cambios
+
+- Simulación IAM de solo lectura para el rol del laboratorio: `iam:CreateRole` y `iam:PassRole` dan `implicitDeny`; las acciones de crear/actualizar Lambda y crear/configurar SQS figuran como permitidas. No hay funciones ni colas Tangamandapio en la cuenta. No se usó `LabRole` porque no sería un permiso de ejecución acotado; falta que el laboratorio permita crear y pasar un rol mínimo.
+- La Function está en el plan Y1/Dynamic Consumption, con red pública habilitada, sin integración VNet y sin gateway de red. Microsoft documenta que el plan Consumption no admite Private Endpoint ni integración de salida a VNet; para entrada privada se requiere Flex Consumption, Elastic Premium o Dedicated, además de Private Endpoint y conectividad privada desde AWS ([documentación oficial de red de Azure Functions](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options)).
 
 ## Pendientes y límites
 
