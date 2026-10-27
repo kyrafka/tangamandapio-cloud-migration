@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+import types
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -38,9 +39,40 @@ class FakeSecretsManager:
         return {"SecretString": json.dumps(self.values.pop(0))}
 
 
+class FakePostgreSQLPool:
+    def __init__(self, postgres_client, _min_connections, _max_connections, *args, **kwargs):
+        self.postgres_client = postgres_client
+        self.connect_args = args
+        self.connect_kwargs = kwargs
+        self.available = []
+        self.connections = []
+
+    def getconn(self):
+        if self.available:
+            return self.available.pop()
+        connection = self.postgres_client.connect(
+            *self.connect_args, **self.connect_kwargs
+        )
+        self.connections.append(connection)
+        return connection
+
+    def putconn(self, connection, close=False):
+        if close:
+            connection.close()
+        else:
+            self.available.append(connection)
+
+    def closeall(self):
+        for connection in self.connections:
+            connection.close()
+
+
 class RdsSecretAuthenticationTests(unittest.TestCase):
     def setUp(self):
         portal._RDS_SECRET_CACHE.clear()
+        for entry in portal._POSTGRES_POOLS.values():
+            entry.pool.closeall()
+        portal._POSTGRES_POOLS.clear()
         self.secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:db-AbCd"
         self.target = portal.configured_database_target({
             "DATABASE_URL": "",
@@ -51,6 +83,9 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
 
     def tearDown(self):
         portal._RDS_SECRET_CACHE.clear()
+        for entry in portal._POSTGRES_POOLS.values():
+            entry.pool.closeall()
+        portal._POSTGRES_POOLS.clear()
 
     @staticmethod
     def secret(password):
@@ -63,7 +98,18 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
 
     def install_clients(self, secrets_client, postgres_client):
         boto3 = SimpleNamespace(client=Mock(return_value=secrets_client))
-        with patch.dict(sys.modules, {"boto3": boto3, "psycopg2": postgres_client}):
+        psycopg2 = types.ModuleType("psycopg2")
+        psycopg2.__path__ = []
+        psycopg2.connect = postgres_client.connect
+        psycopg2.OperationalError = postgres_client.OperationalError
+        pool = types.ModuleType("psycopg2.pool")
+        pool.ThreadedConnectionPool = lambda *args, **kwargs: FakePostgreSQLPool(
+            postgres_client, *args, **kwargs
+        )
+        with patch.dict(
+            sys.modules,
+            {"boto3": boto3, "psycopg2": psycopg2, "psycopg2.pool": pool},
+        ):
             return portal.connect(self.target)
 
     def test_secret_reference_selects_postgres_without_embedding_password(self):
@@ -74,7 +120,7 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
 
     def test_reads_runtime_secret_and_reuses_short_cache(self):
         secrets_client = FakeSecretsManager([self.secret("first-secret-value")])
-        raw_connection = SimpleNamespace(close=Mock())
+        raw_connection = SimpleNamespace(close=Mock(), rollback=Mock(), closed=0)
         postgres = SimpleNamespace(connect=Mock(return_value=raw_connection), OperationalError=RuntimeError)
 
         with self.install_clients(secrets_client, postgres) as connection:
@@ -83,10 +129,14 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
             self.assertEqual(postgres.connect.call_args.kwargs["dbname"], "tangamandapio")
             self.assertEqual(postgres.connect.call_args.kwargs["password"], "first-secret-value")
             self.assertEqual(postgres.connect.call_args.kwargs["sslmode"], "require")
-        raw_connection.close.assert_called_once()
+        raw_connection.rollback.assert_called_once()
+        raw_connection.close.assert_not_called()
 
-        self.install_clients(secrets_client, postgres)
+        with self.install_clients(secrets_client, postgres):
+            pass
         self.assertEqual(secrets_client.calls, [self.secret_arn])
+        self.assertEqual(postgres.connect.call_count, 1)
+        self.assertEqual(raw_connection.rollback.call_count, 2)
 
     def test_authentication_failure_refreshes_secret_once(self):
         secrets_client = FakeSecretsManager([
@@ -99,7 +149,7 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
                 super().__init__(message)
                 self.pgcode = pgcode
 
-        raw_connection = SimpleNamespace(close=Mock())
+        raw_connection = SimpleNamespace(close=Mock(), rollback=Mock(), closed=0)
         postgres = SimpleNamespace(
             OperationalError=PgOperationalError,
             connect=Mock(side_effect=[
@@ -115,13 +165,14 @@ class RdsSecretAuthenticationTests(unittest.TestCase):
             [call.kwargs["password"] for call in postgres.connect.call_args_list],
             ["rotated-out-value", "current-value"],
         )
-        raw_connection.close.assert_called_once()
+        raw_connection.rollback.assert_called_once()
+        raw_connection.close.assert_not_called()
 
     def test_restored_database_host_overrides_host_in_retained_secret(self):
         retained_secret = self.secret("current-value")
         retained_secret["host"] = "old-database.example"
         secrets_client = FakeSecretsManager([retained_secret])
-        raw_connection = SimpleNamespace(close=Mock())
+        raw_connection = SimpleNamespace(close=Mock(), rollback=Mock(), closed=0)
         postgres = SimpleNamespace(connect=Mock(return_value=raw_connection), OperationalError=RuntimeError)
 
         with patch.dict(os.environ, {"DB_HOST": "restored-database.internal"}):

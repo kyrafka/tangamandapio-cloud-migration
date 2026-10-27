@@ -23,17 +23,17 @@ Parameters:
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-b2b-20261016-voice-recording-playback-v20-python312-c3c1f3e4ec928865802695887fc118a1f78767739880da72233f13d03236df45.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261027-rds-connection-pool-v26-python312-61b36692a2754e5e47515a1af2a5742a15ff8c6c278225d1294e6288e841e53b.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261016-voice-recording-playback-v20-python312
+    Default: 20261027-rds-connection-pool-v26-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: c3c1f3e4ec928865802695887fc118a1f78767739880da72233f13d03236df45
+    Default: 61b36692a2754e5e47515a1af2a5742a15ff8c6c278225d1294e6288e841e53b
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
@@ -84,7 +84,7 @@ Parameters:
     Description: Mantiene alta disponibilidad Multi-AZ para RDS. Eleva el costo; desactivar solo mediante un cambio revisado.
   DatabaseBackupRetentionDays:
     Type: Number
-    Default: 1
+    Default: 7
     MinValue: 1
     MaxValue: 35
     Description: D??as de retenci??n de backups autom??ticos de RDS.
@@ -634,6 +634,7 @@ Resources:
             export PORTAL_SESSION_JSON="$(aws secretsmanager get-secret-value --secret-id '${PortalSessionSecret}' --region ${AWS::Region} --query SecretString --output text)"
             export AZURE_FUNCTION_KEY="$(aws secretsmanager get-secret-value --secret-id '${AzureFunctionKeySecret}' --region ${AWS::Region} --query SecretString --output text 2>/dev/null || true)"
             export AZURE_FULFILLMENT_URL='${AzureFulfillmentUrl}'
+            export VOICE_RECORDINGS_BUCKET='tangamandapio-voice-${AWS::AccountId}-${AWS::Region}'
             export ALARM_NOTIFICATION_TOPIC_ARN='arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-alarms'
             export INTERNAL_ERP_ENABLED='${InternalErpEnabled}'
             export DEMO_VOICE_PASSWORD='${DemoVoicePassword}'
@@ -662,7 +663,9 @@ Resources:
                 "BOOTSTRAP_ADMIN_PASSWORD": admin["password"],
                 "RESET_BOOTSTRAP_ADMIN_PASSWORD": os.environ.get("RESET_BOOTSTRAP_ADMIN_PASSWORD", "false"),
                 "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION": os.environ.get("PORTAL_ADMIN_SECRET_VERSION", ""),
+                "FORCE_INITIAL_PASSWORD_CHANGE": "true",
                 "DEMO_VOICE_PASSWORD": os.environ.get("DEMO_VOICE_PASSWORD", ""),
+                "VOICE_RECORDINGS_BUCKET": os.environ.get("VOICE_RECORDINGS_BUCKET", "").strip(),
                 "APP_SESSION_SECRET": session["session_secret"],
                 "SESSION_COOKIE_SECURE": os.environ.get("SECURE_COOKIE", "false"),
                 "AUTO_DISPATCH_EVENTS": "true",
@@ -695,6 +698,7 @@ Resources:
             [Service]
             Type=simple
             Environment=AWS_REGION_NAME=${AWS::Region}
+            Environment=AWS_DEFAULT_REGION=${AWS::Region}
             Environment=DB_SECRET_ARN=$DB_SECRET_REF
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env
@@ -1145,8 +1149,19 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: ManagedBadInputs
-        - Name: RateLimitPorIp
+        - Name: ManagedSqlInjection
           Priority: 3
+          OverrideAction: {None: {}}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesSQLiRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: ManagedSqlInjection
+        - Name: RateLimitPorIp
+          Priority: 4
           Action: {Block: {}}
           Statement:
             RateBasedStatement:

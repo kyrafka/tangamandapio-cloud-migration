@@ -402,7 +402,17 @@ def _money_rows(rows, fields):
     return result
 
 
-def register_erp_routes(app, database_path, *, connect, insert_and_return_id, write_audit, require_roles, dispatch_outbox_event):
+def register_erp_routes(
+    app,
+    database_path,
+    *,
+    connect,
+    insert_and_return_id,
+    insert_audit,
+    write_audit,
+    require_roles,
+    dispatch_outbox_event,
+):
     bp = Blueprint("erp", __name__)
     staff = require_roles(*INTERNAL_PORTAL_ROLES)
 
@@ -461,7 +471,11 @@ def register_erp_routes(app, database_path, *, connect, insert_and_return_id, wr
     def set_erp_roles(user_id):
         payload = request.get_json(silent=True) or {}
         roles = payload.get("roles")
-        if not isinstance(roles, list) or len(set(roles)) != len(roles) or any(role not in ERP_ROLES for role in roles):
+        if (
+            not isinstance(roles, list)
+            or any(not isinstance(role, str) or role not in ERP_ROLES for role in roles)
+            or len(set(roles)) != len(roles)
+        ):
             return jsonify(error="invalid_erp_roles"), 400
         with connect(database_path) as connection:
             target = connection.execute("SELECT id,role FROM portal_users WHERE id=? AND active=TRUE", (user_id,)).fetchone()
@@ -469,15 +483,34 @@ def register_erp_routes(app, database_path, *, connect, insert_and_return_id, wr
                 return jsonify(error="internal_user_not_found"), 404
             if target["role"] == "admin" and "erp_admin" not in roles:
                 return jsonify(error="portal_admin_requires_erp_admin"), 400
-            connection.execute("DELETE FROM erp_user_roles WHERE user_id=?", (user_id,))
-            for role in roles:
+            current_roles = {
+                row["role_code"]
+                for row in connection.execute(
+                    "SELECT role_code FROM erp_user_roles WHERE user_id=?", (user_id,)
+                ).fetchall()
+            }
+            changed = current_roles != set(roles)
+            if changed:
+                connection.execute("DELETE FROM erp_user_roles WHERE user_id=?", (user_id,))
+                for role in roles:
+                    connection.execute(
+                        "INSERT INTO erp_user_roles(user_id,role_code,created_at,granted_by) VALUES (?,?,?,?)",
+                        (user_id, role, now_text(), g.portal_user["id"]),
+                    )
                 connection.execute(
-                    "INSERT INTO erp_user_roles(user_id,role_code,created_at,granted_by) VALUES (?,?,?,?)",
-                    (user_id, role, now_text(), g.portal_user["id"]),
+                    "UPDATE portal_users SET auth_version=auth_version+1 WHERE id=?",
+                    (user_id,),
                 )
+            insert_audit(
+                connection,
+                g.portal_user["id"],
+                "erp.roles.update",
+                "portal_user",
+                user_id,
+                {"roles": roles, "changed": changed, "sessions_revoked": changed},
+            )
             connection.commit()
-        write_audit(database_path, g.portal_user["id"], "erp.roles.update", "portal_user", user_id, {"roles": roles})
-        return jsonify(user_id=user_id, roles=roles)
+        return jsonify(user_id=user_id, roles=roles, sessions_revoked=changed)
 
     @bp.get("/overview")
     @internal_user

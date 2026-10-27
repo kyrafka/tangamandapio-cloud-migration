@@ -49,6 +49,11 @@ LOGGER = logging.getLogger("tangamandapio.api")
 RDS_SECRET_CACHE_TTL_SECONDS = 300
 _RDS_SECRET_CACHE = {}
 _RDS_SECRET_CACHE_LOCK = threading.RLock()
+_POSTGRES_POOLS = {}
+_POSTGRES_POOLS_LOCK = threading.RLock()
+POSTGRES_POOL_DEFAULT_MAX_CONNECTIONS = 4
+POSTGRES_POOL_MAX_CONNECTIONS_LIMIT = 8
+POSTGRES_POOL_DEFAULT_ACQUIRE_TIMEOUT_SECONDS = 5.0
 WMS_DEMO_CATALOG = {
     "SKU-ARROZ-001": {"name": "Arroz premium · saco 50 kg", "unit_price": 42.50},
     "SKU-AZUCAR-001": {"name": "Azúcar rubia · saco 50 kg", "unit_price": 37.50},
@@ -335,6 +340,11 @@ def create_app(test_config=None):
         ERP_SMTP_RECIPIENT_DOMAIN=os.getenv("ERP_SMTP_RECIPIENT_DOMAIN", "").strip().lower(),
         AUTO_DISPATCH_EVENTS=os.getenv("AUTO_DISPATCH_EVENTS", "true").lower()
         in {"1", "true", "yes"},
+        # Las cuentas provisionadas desde el panel deben rotar la clave
+        # temporal en su primer acceso; solo se desactiva explícitamente.
+        FORCE_INITIAL_PASSWORD_CHANGE=os.getenv(
+            "FORCE_INITIAL_PASSWORD_CHANGE", "true"
+        ).strip().lower() in {"1", "true", "yes"},
         # 0 (por defecto) mantiene el reintento apagado: solo se enciende cuando
         # el entorno lo declara, para no dejar hilos en imports y en tests.
         OUTBOX_RETRY_INTERVAL=env_int("OUTBOX_RETRY_INTERVAL", 0),
@@ -415,6 +425,10 @@ def create_app(test_config=None):
 
     if test_config:
         app.config.update(test_config)
+
+    @app.errorhandler(DatabasePoolAcquireTimeout)
+    def handle_database_pool_timeout(_error):
+        return jsonify(error="database_busy"), 503, {"Retry-After": "1"}
 
     if is_postgresql(configured_database_target(app.config)) and not app.config["VOICE_RECORDINGS_BUCKET"]:
         if app.config["VOICE_RECORDINGS_ENABLED"]:
@@ -1273,11 +1287,24 @@ def create_app(test_config=None):
                 order_query += " WHERE company_id = ?"
                 params = (user["company_id"],)
             order_count = connection.execute(order_query, params).fetchone()["count"]
+            outbox_filter = ""
+            outbox_params = ()
+            if user["role"] == "customer":
+                outbox_filter = " JOIN orders AS tenant_orders ON tenant_orders.id = outbox_events.order_id WHERE tenant_orders.company_id = ?"
+                outbox_params = (user["company_id"],)
             pending = connection.execute(
-                "SELECT COUNT(*) AS count FROM outbox_events WHERE status != 'delivered'"
+                "SELECT COUNT(*) AS count FROM outbox_events"
+                + outbox_filter
+                + (" AND " if outbox_filter else " WHERE ")
+                + "outbox_events.status != 'delivered'",
+                outbox_params,
             ).fetchone()["count"]
             delivered = connection.execute(
-                "SELECT COUNT(*) AS count FROM outbox_events WHERE status = 'delivered'"
+                "SELECT COUNT(*) AS count FROM outbox_events"
+                + outbox_filter
+                + (" AND " if outbox_filter else " WHERE ")
+                + "outbox_events.status = 'delivered'",
+                outbox_params,
             ).fetchone()["count"]
         return jsonify(
             orders=order_count,
@@ -1422,8 +1449,11 @@ def create_app(test_config=None):
                 user_id = insert_and_return_id(
                     connection,
                     """
-                    INSERT INTO portal_users(username, password_hash, role, company_id, active, created_at)
-                    VALUES (?, ?, ?, ?, TRUE, ?)
+                    INSERT INTO portal_users(
+                        username, password_hash, role, company_id, active,
+                        created_at, must_change_password
+                    )
+                    VALUES (?, ?, ?, ?, TRUE, ?, ?)
                     """,
                     (
                         username,
@@ -1431,6 +1461,7 @@ def create_app(test_config=None):
                         role,
                         company_id,
                         datetime.now(timezone.utc).isoformat(),
+                        bool(app.config["FORCE_INITIAL_PASSWORD_CHANGE"]),
                     ),
                 )
                 if app.config["INTERNAL_ERP_ENABLED"]:
@@ -1506,13 +1537,33 @@ def create_app(test_config=None):
                 """,
                 (role, company_id, active, user_id),
             )
+            erp_role_defaults_refreshed = (
+                role != current["role"] and app.config["INTERNAL_ERP_ENABLED"]
+            )
+            if erp_role_defaults_refreshed:
+                # Portal role changes are a security boundary. Drop the old ERP
+                # grants before applying only the new role's defaults; otherwise
+                # a customer or warehouse account could retain ERP privileges
+                # from its former portal role until an operator noticed.
+                connection.execute(
+                    "DELETE FROM erp_user_roles WHERE user_id = ?", (user_id,)
+                )
+                grant_default_erp_roles(
+                    connection, user_id, role, g.portal_user["id"]
+                )
             insert_audit(
                 connection,
                 g.portal_user["id"],
                 "user.update",
                 "portal_user",
                 user_id,
-                {"role": role, "company_id": company_id, "active": active, "sessions_revoked": True},
+                {
+                    "role": role,
+                    "company_id": company_id,
+                    "active": active,
+                    "sessions_revoked": True,
+                    "erp_roles_reset_to_defaults": bool(erp_role_defaults_refreshed),
+                },
             )
             connection.commit()
 
@@ -2496,6 +2547,7 @@ def create_app(test_config=None):
             database_path,
             connect=connect,
             insert_and_return_id=insert_and_return_id,
+            insert_audit=insert_audit,
             write_audit=write_audit,
             require_roles=require_roles,
             dispatch_outbox_event=dispatch_outbox_event,
@@ -2530,8 +2582,10 @@ class PostgreSQLConnection:
     logic without copying route implementations.
     """
 
-    def __init__(self, raw_connection):
+    def __init__(self, raw_connection, pool_state=None):
         self.raw_connection = raw_connection
+        self.pool_state = pool_state
+        self._closed = False
 
     def execute(self, statement, params=()):
         from psycopg2.extras import RealDictCursor
@@ -2544,7 +2598,31 @@ class PostgreSQLConnection:
         self.raw_connection.commit()
 
     def close(self):
-        self.raw_connection.close()
+        if self._closed:
+            return
+        self._closed = True
+        if self.pool_state is None:
+            self.raw_connection.close()
+            return
+
+        discard_connection = bool(getattr(self.raw_connection, "closed", 0))
+        try:
+            self.raw_connection.rollback()
+        except Exception:
+            discard_connection = True
+        try:
+            self.pool_state.pool.putconn(
+                self.raw_connection,
+                close=discard_connection or self.pool_state.stale,
+            )
+        except Exception:
+            discard_connection = True
+            try:
+                self.raw_connection.close()
+            except Exception:
+                pass
+        finally:
+            _release_postgres_pool_lease(self.pool_state)
 
 
 def connect(database_target):
@@ -2555,7 +2633,15 @@ def connect(database_target):
             raise RuntimeError("PostgreSQL requires psycopg2-binary in the application image") from error
         if str(database_target).startswith("rds-secret://"):
             return connect_rds_secret(database_target, psycopg2)
-        return closing(PostgreSQLConnection(psycopg2.connect(database_target, connect_timeout=5)))
+        scope = hashlib.sha256(str(database_target).encode("utf-8")).hexdigest()
+        fingerprint = scope
+        return _acquire_postgres_connection(
+            scope,
+            fingerprint,
+            psycopg2,
+            (database_target,),
+            {"connect_timeout": 5},
+        )
     connection = sqlite3.connect(database_target)
     connection.row_factory = sqlite3.Row
     return closing(connection)
@@ -2615,23 +2701,147 @@ def connect_rds_secret(database_target, psycopg2):
 
     for attempt in range(2):
         secret = load_rds_secret(secret_arn, force_refresh=attempt > 0)
-        try:
-            raw_connection = psycopg2.connect(
-                host=secret["host"],
-                port=int(secret.get("port", 5432)),
-                dbname=database_name,
-                user=secret["username"],
-                password=secret["password"],
-                connect_timeout=5,
-                sslmode="require",
+        connection_kwargs = {
+            "host": secret["host"],
+            "port": int(secret.get("port", 5432)),
+            "dbname": database_name,
+            "user": secret["username"],
+            "password": secret["password"],
+            "connect_timeout": 5,
+            "sslmode": "require",
+        }
+        scope = hashlib.sha256(
+            f"{secret_arn}\0{database_name}".encode("utf-8")
+        ).hexdigest()
+        fingerprint = hashlib.sha256(
+            json.dumps(connection_kwargs, sort_keys=True, separators=(",", ":")).encode(
+                "utf-8"
             )
-            return closing(PostgreSQLConnection(raw_connection))
+        ).hexdigest()
+        try:
+            return _acquire_postgres_connection(
+                scope,
+                fingerprint,
+                psycopg2,
+                (),
+                connection_kwargs,
+            )
         except psycopg2.OperationalError as error:
             if attempt == 0 and getattr(error, "pgcode", None) == "28P01":
                 invalidate_rds_secret(secret_arn)
                 continue
             raise
     raise RuntimeError("Unable to connect to PostgreSQL with the current RDS secret")
+
+
+class DatabasePoolAcquireTimeout(TimeoutError):
+    """Raised when the process-local PostgreSQL pool is fully occupied."""
+
+
+class PostgreSQLPoolState:
+    def __init__(self, registry_key, pool, max_connections):
+        self.registry_key = registry_key
+        self.pool = pool
+        self.max_connections = max_connections
+        self.semaphore = threading.BoundedSemaphore(max_connections)
+        self.leases = 0
+        self.stale = False
+
+
+def _postgres_pool_limits():
+    try:
+        max_connections = int(os.getenv(
+            "DB_POOL_MAX_CONNECTIONS",
+            str(POSTGRES_POOL_DEFAULT_MAX_CONNECTIONS),
+        ))
+    except (TypeError, ValueError):
+        max_connections = POSTGRES_POOL_DEFAULT_MAX_CONNECTIONS
+    max_connections = min(max(1, max_connections), POSTGRES_POOL_MAX_CONNECTIONS_LIMIT)
+
+    try:
+        acquire_timeout = float(os.getenv(
+            "DB_POOL_ACQUIRE_TIMEOUT_SECONDS",
+            str(POSTGRES_POOL_DEFAULT_ACQUIRE_TIMEOUT_SECONDS),
+        ))
+    except (TypeError, ValueError):
+        acquire_timeout = POSTGRES_POOL_DEFAULT_ACQUIRE_TIMEOUT_SECONDS
+    acquire_timeout = min(max(0.01, acquire_timeout), 30.0)
+    return max_connections, acquire_timeout
+
+
+def _postgres_pool(scope, fingerprint, psycopg2, connect_args, connect_kwargs):
+    process_id = os.getpid()
+    registry_key = (process_id, scope, fingerprint)
+    with _POSTGRES_POOLS_LOCK:
+        existing = _POSTGRES_POOLS.get(registry_key)
+        if existing is not None and not existing.stale:
+            return existing
+
+        # Credentials from Secrets Manager can rotate while a worker stays up.
+        # Retire pools for old credentials as soon as they no longer serve a request.
+        for old_key, old_state in list(_POSTGRES_POOLS.items()):
+            if old_key[:2] != registry_key[:2] or old_state.stale:
+                continue
+            old_state.stale = True
+            if old_state.leases == 0:
+                try:
+                    old_state.pool.closeall()
+                finally:
+                    _POSTGRES_POOLS.pop(old_key, None)
+
+        try:
+            from psycopg2.pool import ThreadedConnectionPool
+        except ImportError as error:
+            raise RuntimeError("PostgreSQL connection pooling requires psycopg2.pool") from error
+
+        max_connections, _ = _postgres_pool_limits()
+        pool = ThreadedConnectionPool(
+            0,
+            max_connections,
+            *connect_args,
+            **connect_kwargs,
+        )
+        state = PostgreSQLPoolState(registry_key, pool, max_connections)
+        _POSTGRES_POOLS[registry_key] = state
+        return state
+
+
+def _acquire_postgres_connection(scope, fingerprint, psycopg2, connect_args, connect_kwargs):
+    _, acquire_timeout = _postgres_pool_limits()
+    deadline = time.monotonic() + acquire_timeout
+    while True:
+        state = _postgres_pool(
+            scope, fingerprint, psycopg2, connect_args, connect_kwargs
+        )
+        remaining = max(0.0, deadline - time.monotonic())
+        if not state.semaphore.acquire(timeout=remaining):
+            raise DatabasePoolAcquireTimeout("database connection capacity is busy")
+
+        with _POSTGRES_POOLS_LOCK:
+            if state.stale:
+                state.semaphore.release()
+                continue
+            state.leases += 1
+
+        try:
+            raw_connection = state.pool.getconn()
+        except Exception:
+            _release_postgres_pool_lease(state)
+            raise
+        return closing(PostgreSQLConnection(raw_connection, state))
+
+
+def _release_postgres_pool_lease(state):
+    try:
+        with _POSTGRES_POOLS_LOCK:
+            state.leases = max(0, state.leases - 1)
+            if state.stale and state.leases == 0:
+                try:
+                    state.pool.closeall()
+                finally:
+                    _POSTGRES_POOLS.pop(state.registry_key, None)
+    finally:
+        state.semaphore.release()
 
 
 def insert_and_return_id(connection, statement, params):
@@ -2844,8 +3054,20 @@ def portal_user(database_path, user_id):
 
 
 def current_portal_user(database_path):
+    cache_key = (
+        str(database_path),
+        session.get("portal_user_id"),
+        session.get("portal_user_version"),
+    )
+    if has_request_context():
+        cached = getattr(g, "portal_user_lookup", None)
+        if cached is not None and cached[0] == cache_key:
+            return dict(cached[1]) if cached[1] is not None else None
+
     result = portal_user_row(database_path, session.get("portal_user_id"))
     if result is None:
+        if has_request_context():
+            g.portal_user_lookup = (cache_key, None)
         return None
     session_version = session.get("portal_user_version")
     try:
@@ -2855,9 +3077,13 @@ def current_portal_user(database_path):
         return None
     if session_version != int(result["auth_version"]):
         session.clear()
+        if has_request_context():
+            g.portal_user_lookup = ((str(database_path), None, None), None)
         return None
     result.pop("auth_version", None)
-    return result
+    if has_request_context():
+        g.portal_user_lookup = (cache_key, dict(result))
+    return dict(result)
 
 
 def require_roles(*roles):
@@ -3049,9 +3275,20 @@ def apply_migrations(database_path):
 
     Cada versión se graba en `schema_migrations` dentro de su propia
     transacción: si una migración falla, la anterior ya quedó registrada y el
-    siguiente arranque retoma justo donde se cortó.
+    siguiente arranque retoma justo donde se cortó. PostgreSQL usa un bloqueo
+    de sesión para que varios workers/nodos no ejecuten la misma migración a
+    la vez durante un arranque desde cero.
     """
     with connect(database_path) as connection:
+        is_postgres = isinstance(connection, PostgreSQLConnection)
+        migration_lock = "tangamandapio:schema-migrations"
+        if is_postgres:
+            connection.execute(
+                "SELECT pg_advisory_lock(hashtextextended(?, 0))",
+                (migration_lock,),
+            )
+            connection.commit()
+
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -3061,7 +3298,7 @@ def apply_migrations(database_path):
             """
         )
         connection.commit()
-        dialect = "postgres" if isinstance(connection, PostgreSQLConnection) else "sqlite"
+        dialect = "postgres" if is_postgres else "sqlite"
         directory = migrations_directory() / dialect
         applied = {
             row["version"]
@@ -3089,6 +3326,12 @@ def apply_migrations(database_path):
                     {"event": "db_migration_applied", "version": path.stem, "dialect": dialect}
                 )
             )
+        if is_postgres:
+            connection.execute(
+                "SELECT pg_advisory_unlock(hashtextextended(?, 0))",
+                (migration_lock,),
+            )
+            connection.commit()
         return executed
 
 
