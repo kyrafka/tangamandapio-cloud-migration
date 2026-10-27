@@ -1,5 +1,26 @@
 # Matriz de evidencia por criterio — actualización 27/10/2026, 20:23 UTC
 
+## Suplemento operativo — 27/10/2026, 20:45 UTC
+
+- Dominio Tangamandapio `/health` y Azure Function `/api/health` respondieron
+  HTTPS 200. AWS STS autenticó en la cuenta `654654388734`; CloudFormation
+  sigue `UPDATE_COMPLETE`, ASG 2/2 (máximo 5). Las dos EC2 están SSM Online y
+  con egreso HTTPS; no se encontró OpenVPN instalado.
+- Se validó una alternativa Azure P2S en un root Terraform separado: formato,
+  `validate` y 2 pruebas mock aprobados; un plan de solo lectura encontró la
+  VNet y `GatewaySubnet` y propuso 3 recursos. No se aplicó. El plan usó un
+  certificado placeholder, por lo que no es aplicable; P2S no es equivalente a
+  Site-to-Site.
+- En la cuenta AWS actual, `ec2:CreateCustomerGateway` sigue con
+  `explicitDeny`; `iam:CreateRole`/`iam:PassRole` son `implicitDeny`. Aunque
+  SQS/Lambda create simulan `allowed`, no existe cola ni Lambda del proyecto y
+  falta un rol de ejecución autorizado.
+- Azure WMS sigue en Y1, sin integración VNet ni Private Endpoint. No hay
+  gateway VPN ni private endpoint en la VNet. SSO/MFA, copia de recuperación
+  cross-cloud, datos multisede, correlación de eventos y escala automática 2→3
+  siguen pendientes. La evidencia detallada está en
+  [preflight P2S](../evidence/current/azure/AZURE-P2S-PREFLIGHT-2026-10-27.md).
+
 ## Corte operativo vigente — 27/10/2026, 20:19–20:23 UTC
 
 Esta actualización sustituye las descripciones de estado operativo anteriores;

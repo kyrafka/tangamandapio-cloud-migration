@@ -1,6 +1,14 @@
 # Infraestructura como código — estado verificado 27/10/2026
 
-Revalidación 27/10, 20:08–20:14 UTC: token temporal aceptado por STS; CloudFormation `UPDATE_COMPLETE`, drift nuevo `IN_SYNC`/0, ASG y targets 2/2, dominio HTTPS por Cloudflare y Azure Function health 200. RDS disponible, privada/cifrada, Multi-AZ y retención de 7 días; WAF asociado al ALB y canario XSS bloqueado (403). PT-PERF-01 de solo lectura pasó 500/500 GET al `/health`, concurrencia 20, p95 547.78 ms, sin errores; CloudWatch reportó ASG a 4.05% CPU y RDS a 7.66%/4 conexiones. ASG siguió en 2 y no se demostró escala 2→3 ni capacidad para 3,000 usuarios. IAM deniega `CreateRole`/`PassRole`; VPN/red privada, SQS/Lambda/DLQ, SSO/MFA y backup cruzado siguen sin desplegar. Azure Function continúa en Y1 pública y no existe la VNet/grupo privado. [Evidencia 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
+Revalidación adicional, 27/10/2026: dominio y WMS health HTTPS respondieron
+200; el token AWS Academy autenticó por STS. El P2S fallback ahora pasa
+`fmt`/`validate` y 2 pruebas mock, y un plan de solo lectura encontró la VNet y
+`GatewaySubnet` (3 recursos propuestos; no aplicados). Ambas EC2 están online
+por SSM y tienen egreso HTTPS; no se encontró OpenVPN instalado. P2S sigue sin
+desplegarse y no equivale a Site-to-Site; los requisitos de DNS privado y
+certificados siguen pendientes. Véase la [evidencia del preflight P2S](../evidence/current/azure/AZURE-P2S-PREFLIGHT-2026-10-27.md).
+
+Revalidación 27/10, 20:08–20:14 UTC: token temporal aceptado por STS; CloudFormation `UPDATE_COMPLETE`, drift nuevo `IN_SYNC`/0, ASG y targets 2/2, dominio HTTPS por Cloudflare y Azure Function health 200. RDS disponible, privada/cifrada, Multi-AZ y retención de 7 días; WAF asociado al ALB y canario XSS bloqueado (403). PT-PERF-01 de solo lectura pasó 500/500 GET al `/health`, concurrencia 20, p95 547.78 ms, sin errores; CloudWatch reportó ASG a 4.05% CPU y RDS a 7.66%/4 conexiones. ASG siguió en 2 y no se demostró escala 2→3 ni capacidad para 3,000 usuarios. IAM deniega `CreateRole`/`PassRole`; VPN/red privada, SQS/Lambda/DLQ, SSO/MFA y backup cruzado siguen sin desplegar. La VNet privada existe, pero no tiene gateway, private endpoint ni integración con la Function, que continúa en Y1 pública. [Evidencia 27/10](../evidence/current/aws/AWS-LIVE-VALIDATION-2026-10-27-rds-pool-v26.md).
 
 La tabla inferior conserva el inventario de 16/10 como antecedente histórico. Para el estado actual, prevalece la revalidación anterior y su evidencia enlazada.
 
