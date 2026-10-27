@@ -45,4 +45,19 @@ choose a private DNS method for P2S clients, deploy the private Function, then
 configure/test OpenVPN via SSM. The temporary gateway must be destroyed after
 the approved test window.
 
+Microsoft's current P2S troubleshooting guidance confirms clients cannot use
+Azure platform DNS `168.63.129.16` directly to resolve Private DNS zones; a
+Private Resolver inbound endpoint or another supported DNS forwarder is needed
+([official guidance](https://learn.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-troubleshoot-vpn-point-to-site-connection-problems)).
+That DNS service is not deployed and adds cost. Do not claim private WMS access
+until a client can resolve the Function hostname to its Private Endpoint IP and
+complete an HTTPS request across the tunnel.
+
+The current account has no verified least-privilege Lambda execution role:
+`iam:GetRole`/policy inspection for `RoleForLambdaModLabRole` is explicitly
+denied. The precreated `LambdaSLRRole` trusts Lambda but its inline policy
+grants IAM role creation, EventBridge changes, and Lambda permission changes,
+and does not grant SQS receive/delete. It is therefore not an acceptable
+scoped execution role. `LabRole` is also intentionally not used for Lambda.
+
 No Azure or AWS resource was modified during this preflight.

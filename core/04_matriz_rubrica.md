@@ -20,6 +20,12 @@
   cross-cloud, datos multisede, correlación de eventos y escala automática 2→3
   siguen pendientes. La evidencia detallada está en
   [preflight P2S](../evidence/current/azure/AZURE-P2S-PREFLIGHT-2026-10-27.md).
+- El cliente P2S tampoco puede usar directamente `168.63.129.16` para resolver
+  Azure Private DNS; falta un DNS Private Resolver/forwarder o una alternativa
+  validada. El rol candidato `RoleForLambdaModLabRole` no se puede inspeccionar
+  por `explicitDeny`; el rol precreado `LambdaSLRRole` tiene permisos de IAM y
+  EventBridge y carece de acceso SQS, por lo que no sirve como rol acotado de
+  ejecución.
 
 ## Corte operativo vigente — 27/10/2026, 20:19–20:23 UTC
 
