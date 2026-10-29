@@ -13,7 +13,7 @@ Plantillas auxiliares:
 
 ## Estado operativo conocido
 
-El último inventario documentado (27/10/2026) registra ALB/HTTPS, WAF asociado, dos instancias deseadas en un ASG de máximo cinco y RDS Multi-AZ cifrado con siete días de retención. El 29/10 STS autenticó, pero una política explícita bloqueó las consultas de inventario AWS. La última consulta pública del dominio devolvió HTTP 503. Por tanto, no se afirma que el stack siga saludable ni se aplicó infraestructura durante esta actualización.
+El último inventario documentado (27/10/2026) registra ALB/HTTPS, WAF asociado, dos instancias deseadas en un ASG de máximo cinco y RDS Multi-AZ cifrado con siete días de retención. El 29/10 STS autenticó, pero una política explícita bloqueó las consultas de inventario AWS. En la comprobación pública posterior, `/` y `/health` devolvieron HTTP 200; esto confirma recuperación del endpoint, no el estado de RDS, ALB targets, ASG ni WAF. No se aplicó infraestructura durante esta actualización.
 
 ## Preparar un cambio
 
@@ -47,7 +47,7 @@ No destruyas una cuenta si el snapshot, artefacto, DNS, secretos y procedimiento
 
 ## Dominio y HTTPS
 
-El dominio `tangamandapio.kendellnm.me` está configurado en el proyecto, pero la última consulta pública respondió 503. El TLS del dominio no basta para afirmar que el portal funciona. Antes de cambiar DNS, ACM o Cloudflare, confirma el ALB y el certificado desde AWS; el DNS proxied no debe apuntar a una IP fija del borde. Los CNAME de validación ACM permanecen DNS-only.
+El dominio `tangamandapio.kendellnm.me` respondió HTTPS 200 en `/` y `/health` el 29/10/2026. El certificado y la respuesta pública funcionaron; por la denegación de inventario AWS no se pudo comprobar desde AWS el listener, los destinos ni el certificado ACM. No cambies Cloudflare mientras no haya permiso de solo lectura. El DNS proxied no debe apuntar a una IP fija del borde. Los CNAME de validación ACM permanecen DNS-only.
 
 Para otro hostname, solicita en ACM `us-east-1` un certificado para el nombre exacto, publica el CNAME de validación DNS-only, espera `ISSUED`, genera y revisa un change set que conecte el listener HTTPS y solo entonces configura el CNAME del subdominio hacia el DNS del ALB. Conserva intactos nombres que ya use otro proyecto.
 

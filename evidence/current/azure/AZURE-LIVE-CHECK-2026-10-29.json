@@ -1,0 +1,88 @@
+{
+  "observed_at_utc": "2026-10-29T21:14:14Z",
+  "scope": "live read-only checks and one synthetic Azure queue event",
+  "portal": {
+    "https_root_status": 200,
+    "https_health_status": 200,
+    "auth_session_status": 200,
+    "session_authenticated": false,
+    "protected_dashboard_status": 401,
+    "interpretation": "The public service and auth guard respond; login, database readiness, and authenticated ERP flows were not verified."
+  },
+  "aws": {
+    "sts_authenticated": true,
+    "read_only_inventory": "denied_by_explicit_lab_policy",
+    "denied_services": ["CloudFormation", "EC2", "Auto Scaling", "ELBv2", "RDS"],
+    "mutations_performed": false,
+    "load_test_performed": false
+  },
+  "azure": {
+    "function_y1": {
+      "state": "Running",
+      "health_status": 200,
+      "inventory_mode": "demo-inventory-ledger",
+      "inventory_items": 14,
+      "is_real_erp": false,
+      "poison_queue": "fulfillment-events-poison",
+      "poison_approximate_count": 0,
+      "poison_payloads_exposed": false
+    },
+    "function_flex": {
+      "state": "Running",
+      "public_health_status": 403,
+      "private_endpoint_state": "Succeeded",
+      "private_link_approval": "Approved",
+      "interpretation": "Public access is blocked as designed; private reachability from AWS was not verified."
+    },
+    "synthetic_event": {
+      "event_id": "qa-recv-20261029211311-97957bdb",
+      "event_type": "purchase.received",
+      "quantity": 1,
+      "accepted_status": "queued",
+      "worker_status": "demo_restock_completed",
+      "replay_status": "queued_duplicate",
+      "stock_before": 25,
+      "stock_after": 26,
+      "duplicate_changed_stock": false,
+      "application_insights_trace_count_for_event": 5,
+      "correlation_scope": "Azure acceptance, queue worker result, and duplicate replay only; not linked to a live AWS order/outbox."
+    },
+    "storage": {
+      "https_only": true,
+      "minimum_tls": "TLS1_2",
+      "blob_encryption_enabled": true,
+      "blob_versioning_enabled": false,
+      "blob_delete_retention_days": 7,
+      "public_network_access": "Enabled",
+      "postgres_export_present": false,
+      "postgres_restore_test_performed": false
+    },
+    "private_network": {
+      "gateway_state": "Succeeded",
+      "gateway_type": "Azure P2S OpenVPN, certificate authentication",
+      "p2s_connection_metric_max": 1,
+      "p2s_metric_window_with_connection": "2026-10-29T17:50:00Z to 2026-10-29T18:10:00Z",
+      "later_metric_points": false,
+      "route_table_routes": 0,
+      "route_table_associations": 0,
+      "aws_to_flex_private_path_verified": false,
+      "aws_site_to_site_verified": false
+    },
+    "application_insights": {
+      "component_state": "Succeeded",
+      "event_correlation_traces": 5,
+      "new_alert_fired": false
+    }
+  },
+  "not_performed": [
+    "PostgreSQL export to Azure Blob and isolated restore: AWS inventory/DB access denied.",
+    "RDS bottleneck measurement and ASG scale-out 2-to-3: AWS metrics and inventory unavailable; no load was run.",
+    "Entra ID OIDC/MFA: no app registration or tenant configuration change was made.",
+    "One-command multi-cloud rebuild/destroy: not executed or tested as requested."
+  ],
+  "safety": {
+    "aws_resources_changed": false,
+    "azure_infrastructure_changed": false,
+    "only_persistent_change": "One synthetic purchase receipt added one unit to the fictitious Azure ledger; replay was idempotent."
+  }
+}

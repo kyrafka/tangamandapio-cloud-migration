@@ -1,6 +1,24 @@
 # Matriz de evidencia por criterio — actualización 29/10/2026
 
+## Corte cloud vivo — 29/10/2026, 21:11–21:14 UTC
+
+Este corte sustituye el estado público anterior de 503 y agrega la prueba viva Azure. No recalcula puntaje ni afirma aprobación docente.
+
+| Criterio | Evidencia verificada ahora | Pendiente / límite |
+|---|---|---|
+| Portal HTTPS y API | `/` y `/health` devolvieron 200; `/api/auth/session` 200 sin sesión; `/api/dashboard` 401 esperado. | No se hizo login; `/health` no confirma por sí solo RDS ni todos los módulos. |
+| Serverless, cola y WMS demo | Azure Y1 aceptó `qa-recv-20261029211311-97957bdb`; Queue worker terminó `demo_restock_completed`; replay `queued_duplicate`; App Insights guardó cinco trazas con el mismo ID; poison queue 0. | Evento solo en Azure Y1, inventario ficticio (SKU demo +1). No es E2E desde AWS ni operación física. Azure Functions es válida para serverless Azure; no reemplaza Lambda si la rúbrica la nombra. |
+| Observabilidad y correlación | Trazas de aceptación, resultado y duplicado correlacionadas por event ID en App Insights. | Falta asociar el ID a pedido/outbox AWS y mostrarlo en CloudWatch; no se disparó alarma nueva. |
+| Azure privado | Flex Function y Private Endpoint `Succeeded/Approved`; HTTP 403 público esperado. Gateway P2S `Succeeded`; métrica máxima de una conexión en 17:50–18:10 UTC. | Sin puntos P2S recientes; route table vacío/no asociado; no se comprobó tráfico desde AWS. No es Site-to-Site administrada/BGP. |
+| Backup y recuperación | Storage de operaciones HTTPS/TLS 1.2, cifrado Blob, soft delete 7 días. | Sin exportación ni restauración de PostgreSQL desde Blob; sin versionado; acceso de red pública habilitado. |
+| AWS, RDS y escalado | STS autentica; dominio recuperado a HTTP 200. | AWS bloquea `List`/`Describe` con política explícita. No se verificó RDS, WAF, ASG, SQS/Lambda/DLQ, ni se repitió carga; no se afirma 2→3. |
+| Identidad | API protege `/api/dashboard` sin sesión (401). | Login, roles en nube, Entra OIDC/MFA y cuenta break-glass aún no probados en este corte. |
+
+Registro detallado: [evidencia viva 29/10](../evidence/current/azure/AZURE-LIVE-CHECK-2026-10-29.json). El estado de cada proveedor está separado; las pruebas locales/históricas no se cuentan como verificaciones actuales.
+
 ## Adenda de conectividad y QA local — 29/10/2026
+
+Esta sección es el corte anterior de la misma fecha y quedó superada por la tabla viva inmediatamente anterior.
 
 Esta adenda complementa la evidencia del 27/10 y no recalcula una nota ni
 reemplaza la evaluación del docente.

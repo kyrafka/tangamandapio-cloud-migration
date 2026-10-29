@@ -2,6 +2,10 @@
 
 Esta carpeta conserva capturas y resultados con fecha. Cada archivo acredita solo lo que describe y el entorno donde se tomó; una captura antigua no demuestra el estado actual de una nube.
 
+## Último corte vivo — 29/10/2026
+
+[`current/azure/AZURE-LIVE-CHECK-2026-10-29.json`](current/azure/AZURE-LIVE-CHECK-2026-10-29.json) reúne el estado HTTPS del portal, la denegación de inventario AWS, una recepción Azure Queue/Function con replay idempotente y la lectura de gateway/Storage. No contiene claves ni payload completo. El evento cambia el ledger sintético una unidad. No es evidencia de PostgreSQL cross-cloud, de login/roles, de túnel AWS→Flex ni de autoescalado.
+
 ## Capturas versionadas
 
 Las capturas históricas disponibles están en:

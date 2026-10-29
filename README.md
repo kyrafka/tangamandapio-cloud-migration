@@ -2,15 +2,15 @@
 
 Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
 
-## Estado conocido — 29/10/2026
+## Estado conocido — 29/10/2026, 21:14 UTC
 
-- **Portal público:** `https://tangamandapio.kendellnm.me/` respondió HTTP 503 en la última consulta. El TLS del dominio negocia, pero la aplicación no está saludable en esa comprobación.
-- **AWS:** STS autenticó la sesión del laboratorio, pero las consultas de inventario de servicios fueron denegadas por una política explícita. El último corte documentado del 27/10 registra ALB, WAF, ASG, EC2 y RDS Multi-AZ; ese inventario no se pudo revalidar hoy.
-- **Azure:** se inventariaron Functions, Storage, Key Vault, Application Insights, Log Analytics, alertas, VNet, DNS privado, Private Endpoint y VPN Gateway P2S. La Function antigua respondió 200 desde su endpoint público. La Function Flex privada devolvió 403 al consultarla desde Internet, acorde con el acceso público deshabilitado; esto no verifica la ruta privada.
-- **Conectividad privada:** el registro del 29/10 describe una ruta probada desde AWS mediante un router EC2 que se conecta al P2S de Azure. Es una alternativa de un solo router/gateway, no una VPN Site-to-Site administrada por AWS ni BGP. No se pudo revalidar desde AWS en esta revisión.
-- **Recuperación:** se copió y restauró un fixture JSON sintético entre S3 y Azure Blob con hashes iguales. No fue una copia ni restauración de RDS.
+- **Portal público:** `/` y `/health` respondieron HTTPS 200; la API protegida respondió 401 sin sesión. No se confirmó login ni salud de RDS.
+- **AWS:** STS autenticó, pero CloudFormation, EC2, Auto Scaling, ALB y RDS denegaron consultas de solo lectura por política explícita del laboratorio. El último inventario del 27/10 es histórico; no se aplicó ni modificó AWS.
+- **Azure:** Function Y1 `/api/health` 200; Flex privada `403` desde Internet y Private Endpoint `Approved`. Un evento sintético recorrió Queue/Function, dejó `demo_restock_completed`, el replay fue idempotente y App Insights registró el mismo ID. El ledger ficticio recibió +1 unidad; no es stock físico ni E2E iniciado por AWS.
+- **Conectividad privada:** gateway Azure P2S está `Succeeded`; la métrica mostró un máximo de una conexión hace unas horas y luego no registró puntos. La tabla de rutas consultada está vacía. No se revalidó el camino AWS→Flex; P2S + router EC2 no es AWS Site-to-Site/BGP.
+- **Recuperación:** Storage Azure exige HTTPS/TLS 1.2, cifra blobs y conserva borrados 7 días; no tiene versionado. No se exportó ni restauró PostgreSQL desde Blob.
 
-Las verificaciones fechadas no sustituyen un inventario vivo. No se aplicó ni eliminó infraestructura en esta actualización documental.
+No se cambió infraestructura AWS/Azure. El detalle de verificaciones y límites está en la [evidencia viva del 29/10](evidence/current/azure/AZURE-LIVE-CHECK-2026-10-29.json) y en la [matriz de criterios](core/04_matriz_rubrica.md).
 
 ## Qué hace el sistema
 

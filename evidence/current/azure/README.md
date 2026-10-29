@@ -1,5 +1,7 @@
 # Evidencias Azure
 
+**Corte vivo — 29/10/2026, 21:11–21:14 UTC:** Function Y1 health 200; Flex privada y Private Endpoint `Approved`, con 403 desde Internet; poison queue 0. Se envió un solo evento QA de recepción sintética, se comprobó `demo_restock_completed`, replay `queued_duplicate` y cinco trazas de App Insights con el event ID. El saldo de una SKU demo subió 25→26 una vez. El gateway P2S aparece `Succeeded`; la métrica registra una conexión en un intervalo anterior, pero no puntos posteriores; no se verificó el trayecto desde AWS. Storage usa TLS 1.2/cifrado y soft delete de 7 días, sin versionado. El registro sanitizado es [`AZURE-LIVE-CHECK-2026-10-29.json`](AZURE-LIVE-CHECK-2026-10-29.json).
+
 **Revalidación viva — 16/10/2026, 05:44–06:10 UTC:** suscripción `Azure for
 Students` `Enabled`; grupo de reconstrucción `Succeeded`; Function
 `tangama-wms-261008` `Running`/HTTPS-only y siete funciones indexadas. Health

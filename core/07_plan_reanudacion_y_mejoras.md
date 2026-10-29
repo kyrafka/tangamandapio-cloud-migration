@@ -1,37 +1,29 @@
-# Plan de reanudación cloud — actualización 29/10/2026
+# Plan de cierre cloud — corte vivo 29/10/2026
 
-Este orden busca reanudar el proyecto sin desplegar recursos a ciegas ni duplicar servicios. El inventario más reciente de AWS está bloqueado por permisos y el dominio devolvió 503; Azure tiene recursos inventariados, pero la conectividad privada no se revalidó desde AWS en la última consulta.
+El portal público ya responde 200 y Azure procesó una recepción sintética con cola, worker, idempotencia y trazas. No se puede cerrar el trabajo cloud: AWS STS autentica, pero el laboratorio deniega `List`/`Describe`; no hay reconciliación segura de recursos, RDS, Auto Scaling ni VPN desde AWS. Se conserva este orden para la siguiente sesión.
 
-## Fase 1 — diagnóstico sin cambios
+## Cerrado en este corte
 
-1. Iniciar AWS Academy, comprobar cuenta/región y consultar CloudFormation, ALB/targets, ASG, EC2, RDS, WAF, S3, Secrets Manager, alarmas y SNS.
-2. Si IAM/SCP niega el inventario, detener mutaciones y obtener el estado desde una consola/identidad autorizada.
-3. Comprobar Azure subscription, Function Flex, Private Endpoint, gateway P2S, rutas, DNS y logs de Function.
-4. Diagnosticar el 503 del dominio desde ALB, target group, instancias y logs; no cambiar Cloudflare mientras el origen no esté claro.
+1. `/` y `/health` públicos: HTTPS 200. `/api/auth/session`: 200 no autenticado; `/api/dashboard`: 401 esperado. No se probó login ni base de datos.
+2. Azure Functions Y1/Flex aparecen desplegadas. Y1 `/api/health` 200; Flex privado 403 desde Internet; Private Endpoint `Approved`.
+3. Evento QA `qa-recv-20261029211311-97957bdb` aceptado por Azure Queue, procesado como `demo_restock_completed`, repetido como `queued_duplicate` y registrado en App Insights; el ledger ficticio cambió una unidad, no dos. Poison queue: 0.
+4. Storage Azure: TLS 1.2/HTTPS, cifrado Blob, soft delete 7 días; sin versionado y con acceso de red pública. No equivale a backup PostgreSQL.
 
-## Fase 2 — reconciliar IaC y recuperación
+## Pendiente y bloqueos
 
-1. Comparar el inventario AWS con `iac/cloudformation/aws-lab.yaml` y el estado remoto Terraform Azure con sus roots.
-2. Validar artefactos, secretos y snapshots requeridos sin imprimirlos ni incorporarlos a Git.
-3. Preparar change sets/plans y revisar reemplazos, retención y costos antes de cualquier apply.
-4. Probar restauración PostgreSQL desde una copia protegida en un entorno aislado. La evidencia S3→Blob actual solo cubre un fixture sintético.
+1. **AWS read-only e inventario:** pedir al laboratorio que quite la denegación o una vista autorizada. Hasta entonces no desplegar, cambiar DNS, probar RDS/ASG ni afirmar el estado del stack.
+2. **Restauración PostgreSQL entre nubes:** obtener conexión/credenciales de DB y permiso para leer el backup; generar exportación cifrada hacia Blob, retenerla, verificar checksum y restaurarla aislada. Nunca guardar dump ni secretos en GitHub.
+3. **Escalado y cuello RDS:** leer conexiones, CPU, latencia, pool y CloudWatch; si las métricas prueban agotamiento de conexiones, evaluar RDS Proxy. Solo entonces ejecutar carga progresiva y capturar el paso ASG 2→3 con p95/errores.
+4. **Red privada:** gateway Azure P2S `Succeeded`; una conexión P2S apareció en métricas históricas, no hay puntos actuales; route table consultado vacío. Confirmar rutas/túnel desde el router y AWS→Flex. P2S + router es una alternativa autogestionada, no AWS Site-to-Site/BGP.
+5. **Eventos:** Azure Functions ya cumple un flujo serverless Azure con Queue/Blob. No crear Lambda duplicada salvo criterio explícito; si el curso pide Lambda, primero obtener rol mínimo autorizado. AWS no se puede comprobar ahora.
+6. **Entra ID/MFA:** sigue sin comprobarse ni desplegarse; requiere registrar/configurar OIDC en el tenant y preservar un acceso break-glass. No reemplazar el login actual sin validar el tenant y permisos.
+7. **GitHub y ciclo de vida:** CloudFormation y Terraform describen recursos, pero no se probó reconstrucción integral. El script `destroy.sh` es solo AWS, protegido y destructivo; no hay un comando único validado para levantar/borrar ambas nubes. No ejecutar ni probar esa acción hasta tener inventario, backups y restore confirmados.
 
-## Fase 3 — levantar y probar servicios
+## Verificación siguiente
 
-1. Recuperar el portal primero; validar `/health`, `/ready`, login, sesiones, roles y rutas API.
-2. Revalidar desde AWS el camino privado al endpoint de WMS Flex y después crear una venta/recepción QA con el mismo ID de evento.
-3. Correlacionar pedido, outbox, mensaje, ejecución Function y resultado; probar reintento idempotente y tratamiento seguro de errores.
-4. Revisar métricas de RDS y pool. Solo después de resolver el cuello de botella, ejecutar carga gradual y demostrar ASG 2→3.
-5. Añadir SQS/Lambda/DLQ únicamente con permiso para un rol de ejecución mínimo y si aporta al criterio; no usar el rol amplio `LabRole`.
-6. Integrar Entra ID y MFA administrativo después de que los roles actuales estén validados y documentados.
+- Resolver la política de solo lectura de AWS antes de cualquier `change set`, `apply`, carga o restore de RDS.
+- Consultar Azure P2S `P2SConnectionCount` y métricas de Function en el mismo corte de la prueba privada.
+- Completar restore cruzado, registro de trazas y escalado únicamente con datos medidos; actualizar la matriz sin atribuir pruebas locales a nube.
+- Mantener capturas/consolas sin claves, cookies, correos personales ni payloads sensibles.
 
-## Fase 4 — evidencia y cierre
-
-- Guardar capturas reales de las consolas AWS/Azure y las vistas del portal, retirando tokens, correos personales y datos sensibles.
-- Actualizar la matriz de criterios con estado, fecha, fuente y límites; no presentar pruebas locales como pruebas cloud.
-- Reconciliar README, CloudFormation, Terraform y release antes de publicar.
-- Dejar dominio/HTTPS y A/V WebRTC como verificaciones separadas si siguen fuera del alcance inmediato.
-
-## Criterio de parada
-
-No aplicar ni borrar recursos mientras el inventario, los backups o los secretos requeridos no estén disponibles y protegidos. Una sesión STS válida no garantiza permisos de administración. Para el estado operativo y las salvaguardas consulta el [runbook AWS](01_aws_ejecucion.md), el [runbook Azure](02_azure_ejecucion.md) y [IaC](../iac/README.md).
+Consulta la [matriz por criterio](04_matriz_rubrica.md), el [runbook AWS](01_aws_ejecucion.md), el [runbook Azure](02_azure_ejecucion.md) y el [inventario IaC](../iac/README.md).

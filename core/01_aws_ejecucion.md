@@ -1,10 +1,12 @@
 # AWS — ejecución y recuperación
 
-## Estado comprobable al 29/10/2026
+## Estado comprobable al 29/10/2026, 21:11 UTC
 
-La última comprobación pública del portal HTTPS devolvió HTTP 503. AWS STS autenticó la sesión del laboratorio, pero las consultas `List`/`Describe` necesarias para inventariar recursos fueron denegadas por una política explícita. Por tanto, el inventario del 27/10 —ALB, WAF, ASG con dos instancias deseadas/máximo cinco y RDS Multi-AZ cifrado con siete días de retención— es histórico, no una afirmación del estado actual.
+El portal público respondió HTTPS 200 en `/` y `/health`; el endpoint de sesión respondió 200 como no autenticado y `/api/dashboard` devolvió 401, como corresponde sin sesión. Esto confirma que el frontal/API están accesibles, no que RDS esté saludable ni que un usuario haya completado el login.
 
-No se aplicó ni destruyó infraestructura durante la actualización documental. Revisa el [estado integral de IaC](../iac/README.md) antes de ejecutar comandos.
+AWS STS aceptó las credenciales temporales del laboratorio. Las consultas de solo lectura de CloudFormation, EC2, Auto Scaling, ALB y RDS recibieron una denegación explícita del laboratorio (`voc-cancel-cred`). No se modificó AWS. El inventario del 27/10 —ALB, WAF, ASG con dos instancias deseadas/máximo cinco y RDS Multi-AZ cifrado con siete días de retención— sigue siendo histórico, no una afirmación del estado actual.
+
+No se aplicó ni destruyó infraestructura durante esta revisión. No se ejecutó carga: sin métricas frescas de RDS no sería seguro repetirla. Revisa el [estado integral de IaC](../iac/README.md) antes de ejecutar comandos.
 
 ## Fuente de despliegue
 
@@ -32,4 +34,4 @@ El ASG tiene política para escalar por carga del ALB, pero el ajuste en plantil
 
 No hay evidencia de SQS + Lambda + DLQ del proyecto. La cuenta académica había denegado crear y pasar un rol de ejecución mínimo; no se debe sustituir por `LabRole` amplio ni eludir la política. Azure Functions cubre el procesamiento serverless Azure, pero no una rúbrica que exija Lambda explícitamente.
 
-La VPN administrada AWS Site-to-Site no está verificada. La alternativa Azure P2S + router EC2 tiene su propio runbook y no debe presentarse como S2S/BGP.
+No se pudo revalidar la ruta Azure P2S + router EC2 desde AWS. No hay confirmación actual de Customer Gateway, túnel administrado, estado de targets, RDS, WAF, SQS, Lambda ni DLQ. No presentes la alternativa P2S con router EC2 como AWS Site-to-Site/BGP.
