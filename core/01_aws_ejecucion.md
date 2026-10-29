@@ -6,6 +6,8 @@ El portal público respondió HTTPS 200 en `/` y `/health`; el endpoint de sesi�
 
 AWS STS aceptó las credenciales temporales del laboratorio. Las consultas de solo lectura de CloudFormation, EC2, Auto Scaling, ALB y RDS recibieron una denegación explícita del laboratorio (`voc-cancel-cred`). No se modificó AWS. El inventario del 27/10 —ALB, WAF, ASG con dos instancias deseadas/máximo cinco y RDS Multi-AZ cifrado con siete días de retención— sigue siendo histórico, no una afirmación del estado actual.
 
+En la comprobación posterior del 29/10, STS apuntó a una cuenta distinta de la asociada al inventario histórico. Las mismas consultas `List`/`Describe` siguieron bloqueadas por `voc-cancel-cred`; por eso no se pudo iniciar un evento desde cómputo AWS ni observar RDS/ASG en esta cuenta. Evidencia: [bloqueo de acceso AWS 21:24 UTC](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
+
 No se aplicó ni destruyó infraestructura durante esta revisión. No se ejecutó carga: sin métricas frescas de RDS no sería seguro repetirla. Revisa el [estado integral de IaC](../iac/README.md) antes de ejecutar comandos.
 
 ## Fuente de despliegue

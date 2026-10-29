@@ -6,6 +6,8 @@ Esta carpeta conserva capturas y resultados con fecha. Cada archivo acredita sol
 
 [`current/azure/AZURE-LIVE-CHECK-2026-10-29.json`](current/azure/AZURE-LIVE-CHECK-2026-10-29.json) reúne el estado HTTPS del portal, la denegación de inventario AWS, una recepción Azure Queue/Function con replay idempotente y la lectura de gateway/Storage. No contiene claves ni payload completo. El evento cambia el ledger sintético una unidad. No es evidencia de PostgreSQL cross-cloud, de login/roles, de túnel AWS→Flex ni de autoescalado.
 
+El reintento posterior de AWS a las 21:24 UTC está en [`current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json`](current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json). STS autenticó en una cuenta distinta del inventario histórico, pero cinco consultas de solo lectura recibieron denegación explícita; no se cambió la nube ni se inició una prueba desde EC2.
+
 ## Capturas versionadas
 
 Las capturas históricas disponibles están en:

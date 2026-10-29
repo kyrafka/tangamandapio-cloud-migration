@@ -1,0 +1,26 @@
+{
+  "observed_at_utc": "2026-10-29T21:24:33Z",
+  "aws": {
+    "sts_authenticated": true,
+    "session_account_matches_historical_inventory": false,
+    "region": "us-east-1",
+    "read_only_checks": {
+      "cloudformation_list_stacks": "explicitly_denied_by_voc-cancel-cred",
+      "ec2_describe_instances": "explicitly_denied_by_voc-cancel-cred",
+      "autoscaling_describe_groups": "explicitly_denied_by_voc-cancel-cred",
+      "elbv2_describe_load_balancers": "explicitly_denied_by_voc-cancel-cred",
+      "rds_describe_instances": "explicitly_denied_by_voc-cancel-cred"
+    },
+    "aws_originated_event_test": "not_possible_without_read_access_to_confirm_live_compute_and_route",
+    "autoscaling_2_to_3_test": "not_run",
+    "infrastructure_changed": false
+  },
+  "public_portal": {
+    "https_health_status": 200,
+    "meaning": "Public endpoint is reachable; this does not identify the active AWS account or prove RDS, ALB targets, ASG, or WAF health."
+  },
+  "lifecycle_automation": {
+    "single_command_rebuild_and_destroy": false,
+    "reason": "AWS and Azure use separate lifecycle roots and the current AWS policy blocks inventory reconciliation; no destructive cross-cloud wrapper was run."
+  }
+}

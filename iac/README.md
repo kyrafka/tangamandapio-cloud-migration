@@ -11,7 +11,7 @@ Este es el estado que se pudo observar; no equivale a una aprobación para despl
 | Interconexión | Azure OpenVPN Point-to-Site más router EC2 como alternativa de acceso al WMS Private Endpoint. | La métrica registró máximo 1 cliente P2S entre 17:50–18:10 UTC, no ahora; route table vacío y AWS no revalidable por permisos. No es AWS Site-to-Site administrada ni BGP; no hay recorrido extremo a extremo vigente demostrado. |
 | Recuperación | Storage de operaciones Azure con cifrado Blob y soft delete de 7 días; existe evidencia histórica de fixture S3 → Blob. | No se exportó PostgreSQL a Blob ni se restauró desde esa copia. El storage no tiene versionado de blobs y permite acceso de red pública; hace falta backup de DB, cifrado, retención aprobada y restore aislado. |
 
-El portal público respondió 200 en esta revisión. AWS sigue sin inventario de control plane por la denegación explícita; no se deben presentar los estados históricos de AWS como vigentes.
+El portal público respondió 200 en esta revisión. En el reintento del 29/10 a las 21:24 UTC, STS apuntó a una cuenta distinta del inventario histórico y AWS volvió a denegar CloudFormation, EC2, Auto Scaling, ALB y RDS por `voc-cancel-cred`; no se deben presentar los estados históricos de AWS como vigentes. Evidencia: [`AWS-LIVE-ACCESS-CHECK`](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
 
 ## Mapa de IaC
 

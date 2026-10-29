@@ -14,6 +14,10 @@ Este corte sustituye el estado público anterior de 503 y agrega la prueba viva 
 | AWS, RDS y escalado | STS autentica; dominio recuperado a HTTP 200. | AWS bloquea `List`/`Describe` con política explícita. No se verificó RDS, WAF, ASG, SQS/Lambda/DLQ, ni se repitió carga; no se afirma 2→3. |
 | Identidad | API protege `/api/dashboard` sin sesión (401). | Login, roles en nube, Entra OIDC/MFA y cuenta break-glass aún no probados en este corte. |
 
+### Reintento de acceso AWS — 29/10/2026, 21:24 UTC
+
+STS aceptó la sesión, pero confirmó una cuenta distinta de la del inventario histórico. Las consultas de solo lectura a CloudFormation, EC2, Auto Scaling, ALB y RDS recibieron denegación explícita `voc-cancel-cred`. No se modificó infraestructura ni se pudo originar el evento desde EC2. El endpoint HTTPS del portal siguió en 200, lo que no demuestra estado interno del stack. Véase [el registro AWS](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
+
 Registro detallado: [evidencia viva 29/10](../evidence/current/azure/AZURE-LIVE-CHECK-2026-10-29.json). El estado de cada proveedor está separado; las pruebas locales/históricas no se cuentan como verificaciones actuales.
 
 ## Adenda de conectividad y QA local — 29/10/2026
