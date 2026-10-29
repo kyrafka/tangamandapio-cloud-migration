@@ -26,7 +26,7 @@ test('the downloadable synthetic catalog template matches the import schema', ()
 test('the AWS ERP package serves the exact parser covered by these tests', () => {
   const source = readFileSync(new URL('../src/catalogCsv.js', import.meta.url), 'utf8')
   const release = readFileSync(new URL('../../aws_release/current/static/assets/catalogCsv.js', import.meta.url), 'utf8')
-  assert.equal(release, source)
+  assert.equal(release.replace(/\r\n/g, '\n'), source.replace(/\r\n/g, '\n'))
 })
 
 test('rejects duplicate SKUs and misspelled headers before submission', () => {

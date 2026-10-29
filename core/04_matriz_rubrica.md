@@ -1,4 +1,36 @@
-# Matriz de evidencia por criterio — actualización 27/10/2026, 20:23 UTC
+# Matriz de evidencia por criterio — actualización 29/10/2026
+
+## Adenda de conectividad y QA local — 29/10/2026
+
+Esta adenda complementa la evidencia del 27/10 y no recalcula una nota ni
+reemplaza la evaluación del docente.
+
+- **Red multinube:** el registro del 29/10 describe Azure P2S OpenVPN con un
+  router EC2 y HTTPS 200 al endpoint privado del WMS desde dos EC2. Es una ruta
+  privada acotada, no AWS Site-to-Site administrada ni BGP; tiene un único
+  router/gateway. La configuración se describe en
+  [IaC P2S](../iac/environments/azure-p2s-vpn/README.md). El 29/10 no se pudo
+  volver a consultar el inventario de AWS.
+- **Recuperación cruzada:** un artefacto sintético de S3 se copió a Azure Blob,
+  se restauró y los hashes coincidieron. No fue backup/restore de RDS ni
+  acredita RPO/RTO de base de datos.
+- **Identidad y ERP:** Admin y Comercial iniciaron sesión en una instancia local
+  aislada. Comercial solo vio ventas, maestros y correo interno; Compras,
+  Finanzas y Accesos no aparecieron. El backend local cubre restricciones de
+  permisos en pruebas automatizadas. No es evidencia de roles en producción.
+  La primera entrada de ventas mostró un error de red transitorio y la recarga
+  posterior cargó catálogo y endpoints; no se registró una venta porque no
+  había un cliente QA.
+- **Estado del portal público:** la última consulta del 29/10 mostró HTTP 503.
+  No se inspeccionó ni modificó infraestructura en esa consulta.
+- **Serverless AWS:** el último inventario registrado sigue sin SQS/Lambda/DLQ
+  del proyecto. Azure Functions demuestra serverless Azure, pero no satisface un
+  criterio que nombre AWS Lambda. No hubo una revalidación cloud de esos
+  recursos en esta pasada.
+
+La evidencia gráfica histórica y sus límites están indexados en
+[`evidence/README.md`](../evidence/README.md). Los reportes cronológicos se
+conservan localmente como bitácora; no son evidencia de estado actual.
 
 ## Suplemento operativo — 27/10/2026, 20:45 UTC
 

@@ -4,9 +4,9 @@ run "blocks_billable_gateway_without_approval" {
   command = plan
 
   variables {
-    subscription_id             = "00000000-0000-0000-0000-000000000000"
+    subscription_id              = "00000000-0000-0000-0000-000000000000"
     root_certificate_public_data = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    deployment_approved         = false
+    deployment_approved          = false
   }
 
   expect_failures = [
@@ -44,9 +44,9 @@ run "plans_client_openvpn_into_existing_gateway_subnet" {
   }
 
   variables {
-    subscription_id             = "00000000-0000-0000-0000-000000000000"
+    subscription_id              = "00000000-0000-0000-0000-000000000000"
     root_certificate_public_data = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    deployment_approved         = true
+    deployment_approved          = true
   }
 
   assert {

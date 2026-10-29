@@ -33,6 +33,26 @@ app/aws_release/current/static/audio/sweet-dove-ambient.mp3
 app/aws_release/current/static/images/walpurgis-*.png
 evidence/current/azure/screenshots/AZ-PORTAL-01_inventario_2026-10-01.png
 
+# Bitácora y cortes previos conservados solo en el equipo local
+core/00_registro_maestro.md
+core/06_aws_mapa_pre_despliegue_2026-09-30.md
+app/WEB_STATUS_AND_GAPS_2026-10-08.md
+
+# Alternativas de VPN no validadas; conservar localmente sin publicarlas
+iac/cloudformation/aws-ipsec-router.yaml
+iac/cloudformation/aws-wireguard-router.yaml
+iac/environments/azure-ipsec-site-to-site/
+iac/environments/azure-wireguard/
+
+# Bitácora/evidencia operativa de la sesión actual; revisar y sanear antes de publicar
+evidence/current/CROSS-CLOUD-VPN-AND-RECOVERY-PILOT-2026-10-29.md
+evidence/current/LOCAL-IDENTITY-ERP-UI-2026-10-29.md
+evidence/current/PORTAL-PRODUCTION-FRONT-SMOKE-2026-10-29.md
+evidence/current/aws/k6-*-20261029.json
+evidence/current/cross-cloud-recovery/
+evidence/current/portal/
+evidence/current/screenshots/
+
 # Herramientas locales ligadas a identificadores de cuenta/instancias
 app/aws_release/roll-azure-key-ec2.ps1
 app/aws_release/sync-azure-function-key.ps1
@@ -68,3 +88,4 @@ tmp_*.py
 # Estado local de Terraform que no debe publicarse
 iac/environments/azure-demo/.provider-schema.json
 iac/environments/azure-demo/tfplan*
+iac/environments/azure-p2s-vpn/$plan

@@ -1,53 +1,42 @@
-# Azure Point-to-Site fallback for AWS application hosts
+# Azure Point-to-Site para acceso privado al WMS
 
-This isolated Terraform root is an **experimental fallback**, not the AWS–Azure
-Site-to-Site design. It provisions an Azure RouteBased `VpnGw1AZ` gateway and
-accepts OpenVPN certificate clients from the AWS application instances. It
-does not attach a VPN gateway to the AWS VPC or provide VPC-wide routing, so it
-must not be presented as an equivalent replacement for the course's S2S/BGP
-criterion. The managed S2S root remains `../aws-azure-vpn`; AWS Academy
-currently returns an explicit deny for `ec2:CreateCustomerGateway`.
+## Propósito y límites
 
-The configuration references the existing `vnet-tangama-private` and its
-`GatewaySubnet`. The client pool `172.31.250.0/24` is separate from AWS
-`10.10.0.0/16` and Azure `10.20.0.0/16`. The gateway is billable while
-provisioned, so the default `deployment_approved=false` cost gate must remain
-closed until the temporary test window is ready.
+Este root configura un VPN Gateway Azure Route-Based con OpenVPN y clientes de certificado. Para el piloto, una EC2 privada se conecta como cliente y enruta únicamente el tráfico HTTPS dirigido al Private Endpoint del WMS. Esto es una ruta privada limitada, no una VPN AWS Site-to-Site administrada, no configura BGP y no conecta toda la VPC.
 
-## Validation
+El piloto del 29/10 reportó HTTPS `/api/health` 200 desde el router y las dos EC2 de aplicación, con validación TLS. Esta comprobación fue al endpoint de salud; no demuestra una venta/recepción creada por el ERP. El inventario de AWS no se pudo revalidar después de ese corte. Azure muestra el gateway provisionado, pero eso no prueba una sesión activa por sí mismo.
 
-```powershell
-terraform init
-terraform fmt -check
-terraform validate
-terraform test
+## Topología
+
+```text
+EC2 privadas de aplicación
+  └─ ruta /32 al router EC2
+       └─ OpenVPN P2S (cliente de certificado)
+            └─ Azure VPN Gateway
+                 └─ VNet → Private Endpoint → Azure Function Flex
 ```
 
-The mock tests cover the cost gate and the OpenVPN/certificate profile. A live
-plan must use a valid public root certificate generated for the test; the
-private root key and client PFX must stay out of Git, Terraform outputs, logs,
-and command history. No certificate is included here.
+El router aplica NAT para el camino de retorno y la resolución del hostname del WMS debe apuntar al Private Endpoint dentro de la VPC. Mantén el alcance limitado al endpoint requerido; no enrutes RDS ni toda la VNet por este piloto.
 
-## End-to-end requirements before apply
+## Riesgos operativos
 
-1. Generate and securely retain a root signing certificate; issue a client
-   certificate for each EC2 instance. Store client PFX/password in an approved
-   secret store and retrieve them only through the existing EC2 role.
-2. Confirm the private Flex Function, its Private Endpoint, and private DNS
-   record are deployed before claiming the WMS is private.
-3. P2S clients need a route to the Azure VNet and private-endpoint DNS
-   resolution. Azure's platform DNS address `168.63.129.16` cannot be queried
-   directly by P2S clients for Private DNS zones; use a supported DNS forwarder
-   or a documented, reconciled host mapping. See Microsoft's
-   [P2S DNS troubleshooting guidance](https://learn.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-troubleshoot-vpn-point-to-site-connection-problems)
-   and [Function private-endpoint DNS guidance](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options).
-4. Install/configure OpenVPN on the EC2 hosts through SSM, verify the VPN
-   session and HTTPS request to the Function's private endpoint from each
-   instance, then test reconnect/instance replacement.
-5. After evidence capture, destroy this Terraform root and verify that the
-   gateway and public IP are gone. Preserve only redacted evidence and the
-   reproducible configuration.
+- El router y el gateway son puntos únicos de falla; reemplazo y reconexión deben probarse antes de depender de ellos.
+- El VPN Gateway genera costo horario mientras exista. Apágalo/destrúyelo cuando el laboratorio no lo necesite.
+- Los certificados del piloto tienen fecha de expiración y deben rotarse antes de usarlos de nuevo. Las claves raíz, PFX, perfiles OpenVPN y archivos con credenciales permanecen fuera del repositorio.
+- La ruta privada requiere revisar DNS, rutas y reglas de red en ambos lados; el estado `Succeeded` del gateway no acredita el trayecto extremo a extremo.
 
-The root uses the project's private Azure Storage backend with its own state
-key and has **not** been applied. Do not run `terraform apply` until valid
-certificate handling, private DNS, and the temporary cost window are reviewed.
+## Reconstrucción segura
+
+Este root usa el estado remoto Terraform del proyecto y referencia una VNet existente. Antes de plan/apply:
+
+1. Confirma suscripción, grupo de recursos, VNet, `GatewaySubnet` y estado Terraform remoto.
+2. Genera certificados de laboratorio nuevos y guarda la clave raíz fuera del repo, en almacenamiento protegido.
+3. Revisa el plan y el costo estimado del gateway. La variable `deployment_approved` debe permanecer desactivada salvo que exista una ventana de prueba aprobada.
+4. Provisiona/descarga el perfil OpenVPN, instala los certificados por un canal seguro en la EC2 y valida DNS, rutas y HTTPS desde cada instancia.
+5. Al terminar, verifica la desconexión y elimina los recursos temporales si ya no hacen falta.
+
+Los comandos de `terraform fmt`, `init`, `validate` y `test` son verificaciones locales; no despliegan ni demuestran un túnel vivo. No publiques state, plan, certificados ni credenciales.
+
+## Alternativa Site-to-Site
+
+La arquitectura administrada de AWS–Azure se mantiene en `../aws-azure-vpn`. AWS Academy denegó `ec2:CreateCustomerGateway`; por ello esa opción no está desplegada. No presentes P2S + router EC2 como sustituto equivalente si la rúbrica exige AWS Site-to-Site/BGP.

@@ -11,6 +11,10 @@ export const internalRoles = new Set(['sales', 'warehouse', 'operations', 'admin
 export const opsRoles = new Set(['operations', 'admin', 'auditor', 'warehouse'])
 export const writeRoles = new Set(['customer', 'sales', 'admin'])
 
+export function hasErpAccess(permissions) {
+  return Array.isArray(permissions) && permissions.length > 0
+}
+
 export function createPortalNavigation(role) {
   const isOperations = opsRoles.has(role)
   const isAdmin = role === 'admin'

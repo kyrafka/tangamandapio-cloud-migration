@@ -13,6 +13,12 @@ Parameters:
     Type: String
     Default: t3.micro
     AllowedValues: [t3.micro, t3.small]
+  RequestsPerTargetPerMinute:
+    Type: Number
+    Default: 2500
+    MinValue: 100
+    MaxValue: 100000
+    Description: Umbral ALB por destino y minuto para escalar el ASG segun solicitudes HTTP.
   AmazonLinuxAmiId:
     Type: AWS::EC2::Image::Id
     Default: ami-097855b862d5b1eb2
@@ -860,6 +866,18 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 60
+        DisableScaleIn: false
+
+  RequestScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Sub '${AppLoadBalancer.LoadBalancerFullName}/${TargetGroup.TargetGroupFullName}'
+        TargetValue: !Ref RequestsPerTargetPerMinute
         DisableScaleIn: false
 
   AlarmNotificationTopic:

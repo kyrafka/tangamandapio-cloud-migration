@@ -1,34 +1,23 @@
-# Fase Azure — operación WMS
+# Azure — WMS de demostración y servicios de operación
 
-## Objetivo
+## Estado conocido al 29/10/2026
 
-Azure recibe de forma asíncrona el evento de pedido ya confirmado en AWS. No aloja un segundo portal comercial.
+Azure CLI pudo listar los recursos del proyecto en West US: Functions Y1 y Flex, Storage, Key Vault, Application Insights, Log Analytics, alertas, VNet, DNS privado, Private Endpoint y VPN Gateway P2S. La Function Y1 respondió HTTP 200 en `/api/health`. La Function Flex tiene acceso público deshabilitado; desde Internet respondió `403 Ip Forbidden`, lo cual no prueba el trayecto privado.
 
-## Estado de ejecución — 30/09/2026
+El gateway P2S aparece provisionado como `Succeeded`. El reporte del 29/10 describe HTTPS 200 al endpoint privado del WMS desde el router EC2 y dos instancias AWS. Ese recorrido no pudo revalidarse en la consulta AWS posterior. Consulta [estado de IaC y límites](../iac/README.md) y [runbook P2S](../iac/environments/azure-p2s-vpn/README.md).
 
-- El grupo inicial `rg-tangamandapio-ops-demo` en East US permanece con cero recursos. Azure for Students rechazó el App Service Plan allí por política de regiones.
-- La política permitió West US, por lo que Terraform creó el grupo temporal `rg-tangamandapio-ops-wus` y completó 12 recursos: Resource Group, Storage, Blob privado, Queue, Key Vault, Service Plan Consumption, Function App, Log Analytics, Application Insights y tres asignaciones RBAC de identidad administrada.
-- Diagnóstico actualizado: el primer paquete Python no se indexó (HTTP 404). Se corrigió el paquete para usar funciones explícitas `function.json`, se incorporaron las dependencias en `.python_packages` y se configuró `AzureWebJobsStorage`, requerido por el host. Azure ya registra `HttpHealth` y `HttpFulfillment`; sin embargo, las invocaciones con clave válida siguen devolviendo HTTP 500 incluso para el health handler aislado. No existe evidencia válida de Blob/Queue ni se debe declarar la prueba de aceptación como aprobada. La excepción interna sigue pendiente de obtenerse desde el runtime.
-- El cierre pendiente debe destruir el grupo temporal de West US y verificar el inventario en cero. No afirmar que el cierre ocurrió hasta que Azure confirme la eliminación.
+## Alcance funcional
 
-## Vertical mínimo
+Azure Functions procesa eventos del WMS de laboratorio y Blob/Queue mantienen un ledger de inventario sintético, con idempotencia. Este flujo sirve para ventas, recepciones y transferencias de demostración; no representa stock físico ni integración con un WMS comercial externo.
 
-1. Storage Account Standard LRS, TLS 1.2, Blob no público y soft delete.
-2. Contenedor privado de eventos y Storage Queue WMS.
-3. Function App Consumption con endpoint autenticado.
-4. Managed Identity + roles Blob/Queue/Key Vault de mínimo privilegio.
-5. Key Vault para secreto de integración.
-6. Log Analytics + Application Insights.
-7. Restricción de acceso de Function a la salida identificada de AWS o control equivalente.
+Application Insights, Log Analytics, Key Vault y alertas forman parte del soporte operativo. La presencia de recursos no confirma entrega actual de alertas ni correlación completa de un evento. Falta cerrar la trazabilidad con un identificador único desde el pedido hasta el resultado de Function.
 
-`iac/environments/azure-demo/` y `iac/modules/azure_operations/` pasan `fmt` y `validate` localmente. En Azure se aplicó el despliegue temporal mediante Terraform en una región permitida. El archivo habilita el indexado Python y compilación Oryx para la Function.
+## Terraform
 
-## Pruebas de aceptación
+Los roots Azure son independientes. Usa `azure-rebuild` para la reconstrucción del backend, `azure-flex-private` para la red privada del servicio y `azure-p2s-vpn` para el piloto de acceso privado. `azure-tfstate` administra el almacenamiento remoto de estado. `azure-demo` es un entorno separado.
 
-- `order.created` con `event_id` llega a Function y obtiene respuesta aceptada.
-- Existe un Blob privado y un mensaje en Queue con el mismo identificador.
-- Reenvío del evento devuelve duplicado y no agrega un segundo mensaje.
-- Error temporal deja trazabilidad/reintento sin afectar el pedido AWS.
-- Logs y telemetría visibles; costo e inventario final capturados tras destrucción autorizada.
+Antes de `plan` o `apply`, confirma suscripción, grupo de recursos, estado remoto, variables no secretas, certificado nuevo y costo del gateway. Revisa el plan completo; no guardes `.tfstate`, planes, PFX, claves ni tokens en GitHub. No vuelvas a crear recursos solo porque una consulta externa a la Function privada devuelva 403.
 
-No se alterará el tenant académico para Entra ID/AD DS, ni se desplegarán AVD, Power BI, VPN o Private Endpoints en el piloto de bajo costo.
+## Cierre de una sesión
+
+Al finalizar una ventana de prueba, desconecta la VPN si no se requiere, identifica gateways/planes/instancias que generan costo, destruye únicamente recursos temporales que estén mapeados en IaC y verifica el inventario en el portal Azure. No borres el estado remoto ni datos antes de comprobar la restauración que se quiere conservar.

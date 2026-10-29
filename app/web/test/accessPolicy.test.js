@@ -2,6 +2,14 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createPortalNavigation, internalRoles, opsRoles, roleLabels, writeRoles } from '../src/accessPolicy.js'
 
+test('ERP access is enabled only when the authenticated session has an effective permission', async () => {
+  const policy = await import('../src/accessPolicy.js')
+  assert.equal(typeof policy.hasErpAccess, 'function')
+  assert.equal(policy.hasErpAccess(['sales:read']), true)
+  assert.equal(policy.hasErpAccess([]), false)
+  assert.equal(policy.hasErpAccess(undefined), false)
+})
+
 const expectedNavigation = {
   customer: ['dashboard', 'orders', 'account'],
   sales: ['dashboard', 'orders', 'erp', 'account'],

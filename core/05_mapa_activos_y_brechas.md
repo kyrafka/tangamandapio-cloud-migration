@@ -1,76 +1,33 @@
-# Mapa de activos y brechas — corte 21:26 UTC (histórico)
+# Mapa de activos y brechas — 29/10/2026
 
-**Corte:** 08/10/2026. **Alcance acordado:** AWS para portal/transacciones y
-Azure para el WMS de demostración. OCI queda fuera del trabajo operativo; los
-documentos escritos del curso aún la mencionan, por lo que la excepción debe
-respaldarse por escrito antes de entregar (ver [evaluación de rúbrica](10_evaluacion_rubrica_entregable_final_2026-10-08.md)).
+Este mapa resume qué artefactos y servicios forman la solución, separando la existencia de código de un despliegue vivo. La última consulta del portal público respondió 503; por ese motivo, el estado histórico no se presenta como disponibilidad actual.
 
-Este inventario corresponde a las 21:26 UTC del 08/10 y se conserva como
-bitácora histórica. Para el intento AWS más reciente, usa
-[AWS-DESPLIEGUE-V11](../evidence/current/aws/AWS-DESPLIEGUE-V11-2026-10-14.md)
-y la [matriz de rúbrica actualizada](04_matriz_rubrica.md); la
-[revalidación del 14/10](../evidence/current/CLOUD-REVALIDATION-2026-10-14.md)
-precede a v11. No presentes las tablas de esta bitácora como estado actual.
+## Activos del proyecto
 
-## Verificación operativa registrada — 08/10/2026, 21:26 UTC
-
-- CloudFormation local reconciliado contra el template vivo; validación de plantilla aprobada y stack `IN_SYNC` (0 drift) después del cambio controlado.
-- Despacho automático habilitado (`AUTO_DISPATCH_EVENTS=true`) y reintento cada 60 s, confirmado en las dos instancias nuevas; ASG y ALB terminan 2/2 saludables.
-- RDS original disponible y sin cambios. Restauración PITR temporal probada con lectura desde EC2 privada (10 tablas públicas presentes) y copia temporal eliminada.
-- Azure Function health 200. El poison message observado quedó preservado: el hash de Queue no coincide con el SHA-256 válido del Blob; existe resultado de fulfillment y el outbox AWS indica `delivered` en 1 intento.
-- Calidad local: 59/59 pruebas y build de frontend aprobados. La cobertura de roles es de pruebas automatizadas; el login live confirmó cookie `Secure` y la validación autenticada en navegador queda pendiente de HTTPS confiable.
-- Audio/video, dominio y HTTPS confiable siguen diferidos a propósito. El WMS de Azure sigue siendo una simulación de inventario.
-
-## 1. Activos disponibles
-
-| Activo | Estado comprobado | Uso / límite |
+| Dominio | Activos | Alcance y estado |
 |---|---|---|
-| `iac/cloudformation/aws-lab.yaml` | Reconciliada con la plantilla viva; `cloudformation validate-template` aprobado | Conserva el estado real de RDS/seguridad/backups y activa el despacho automático; drift del stack: 0. |
-| `iac/modules/aws_network/` | Módulo Terraform con formato validado | Diseño/red AWS; no reemplaza la plantilla CloudFormation del stack. |
-| `iac/environments/demo/` | `terraform validate` aprobado; `enable_azure=false` por defecto | Entorno compuesto AWS/Azure, sin `apply` en esta revisión. |
-| `iac/modules/azure_operations/` y `iac/environments/azure-demo/` | `fmt` y `validate` aprobados | El paquete de Function ya se publicó manualmente; revisar plan y drift antes de usar IaC o `apply`. |
-| `app/` | Portal/API, Function Azure, release AWS y tres suites locales | 59/59 pruebas; build frontend aprobado; `/platform` está publicado detrás del login; el ledger SKU/cantidad sigue siendo demo. |
-| `tests/aws/` | Pruebas preparadas para S3, alarmas, denegación y restore | Revisar región, costo, alcance y limpieza; no equivalen a pruebas ya ejecutadas. |
-| `iac/modules/oci_network/` | Material heredado | Archivo fuera del alcance; no desplegar. |
-| `evidence/current/` | Registros y capturas de ciclos distintos | Respetar fecha/origen; no presentar una tarjeta como captura cruda ni evidencia histórica como estado vivo. |
+| Portal/ERP | React/Vite, Flask, PostgreSQL en AWS y SQLite para QA local; módulos B2B, ventas, compras, finanzas operativas, maestros, permisos y correo interno. | La aplicación publicada respondió 503. ERP/roles se probaron localmente; no equivale a QA de todos los roles en producción. El buzón no es SMTP corporativo. |
+| Integración WMS | Azure Functions Y1/Flex, Blob y Queue; procesamiento idempotente de eventos. | Funciona con datos sintéticos. La Function Flex es privada; la respuesta 403 desde Internet es esperada y no valida la VPN. |
+| Capa AWS | CloudFormation del portal; ALB, WAF, ASG/EC2, RDS, S3, Secrets Manager, CloudWatch/SNS según último inventario documentado. | Último corte del 27/10; AWS STS autenticó el 29/10, pero una política explícita denegó consultas de inventario. Estado vivo desconocido. |
+| Capa Azure | Functions, Storage, Key Vault, App Insights, Log Analytics, alertas, VNet, Private Endpoint, DNS privado y P2S Gateway. | CLI Azure inventarió estos recursos. El gateway provisionado no basta para afirmar que la sesión está conectada. |
+| Interconexión | P2S Azure OpenVPN mediante un router EC2 y rutas limitadas al WMS privado. | Recorrido de salud HTTPS 200 reportado el 29/10; no es AWS Site-to-Site/BGP y no se revalidó hoy desde AWS. |
+| Recuperación | Script para copiar/restaurar un fixture sintético S3→Blob, hash coincidente. | No respalda ni restaura RDS. Falta una copia de PostgreSQL entre nubes y una restauración SQL aislada. |
+| IaC | CloudFormation AWS y múltiples roots Terraform Azure; estado Terraform remoto. | Hay código para reconstruir infraestructura, pero no se ha probado una reconstrucción de punta a punta desde una cuenta vacía. |
 
-## 2. Estado cloud observado en esta revisión
+## Brechas priorizadas
 
-| Proveedor | Comprobación | Resultado y límite |
-|---|---|---|
-| AWS | STS, CloudFormation, ALB, destinos y RDS — 14/10/2026, 10:37 | Cuenta correcta; stack `UPDATE_COMPLETE`, deriva reportada `IN_SYNC`, `/health=200`, destinos 2/2 sanos. RDS `available`, cifrada/privada, Single-AZ y backup 1 día. |
-| Azure | Function `tangama-wms-261008`, health e IaC — 14/10/2026, 10:37 | Function `Running`, `/api/health=200`; `terraform plan` terminó `No changes`. El ledger es sintético por alcance; tres ventas y una recepción QA llegaron desde el portal AWS. |
-| Cambios | AWS y Azure | No se aplicó infraestructura durante esta revalidación. La venta/recepción QA y los SecureString de cuentas demo sí son datos/secretos de aplicación; el inventario sintético no implica stock comercial. |
+1. **P0 — recuperar el servicio y el inventario.** Investigar el 503 y conseguir permisos de solo lectura AWS; comparar CloudFormation con los recursos reales antes de modificar.
+2. **P1 — backup real multinube.** Exportación PostgreSQL cifrada a Azure Blob, retención definida y restauración en un entorno aislado con integridad SQL y RPO/RTO medidos.
+3. **P1 — interconexión durable.** La ruta P2S + router EC2 es un piloto con puntos únicos de falla. Si la rúbrica pide S2S administrada, habilitarla en una cuenta autorizada o acordar formalmente la alternativa.
+4. **P1 — eventos AWS.** SQS + DLQ + Lambda con permisos mínimos solo si la política lo permite o el criterio la exige; Azure Functions cubre el lado Azure.
+5. **P1 — capacidad.** Diagnosticar RDS, luego probar carga gradual y guardar evidencia de escalado automático 2→3. No afirmar capacidad de 3,000 concurrentes con pruebas menores.
+6. **P2 — identidad y auditoría.** Entra ID/OIDC con MFA administrativo, mapeo de grupos a roles y trazabilidad consistente.
+7. **P2 — experiencia del portal.** Corregir disponibilidad pública y después repetir una pasada autenticada por cada rol; A/V WebRTC sigue siendo una prueba separada de dos sesiones.
 
-## 3. Matriz de brechas priorizadas
+## Fuentes vigentes
 
-| Prioridad | Brecha | Criterio de cierre |
-|---|---|---|
-| P0 | Alcance escrito AWS–OCI vs. instrucción comunicada AWS–Azure | Adjuntar aceptación del docente y reflejar la decisión en el informe final. |
-| P0 | IaC AWS no reconciliada | **Cerrado en este corte:** template local reconciliado; stack post-cambio en `IN_SYNC`, 0 drift. |
-| P0 | Recuperación no probada | **Prueba PITR aprobada:** copia aislada disponible y legible desde EC2; se eliminó. Falta medir RTO/RPO formal. |
-| P0 | Alcance del WMS académico | **Aclarado:** la Function Azure y su ledger Blob son una simulación intencional alimentada con datos sintéticos; no se exige ni se afirma inventario comercial. El flujo AWS→Azure con SKU/cantidad, ventas, recepción e idempotencia ya está probado. Un WMS empresarial queda como evolución solo si el caso lo requiere. |
-| P1 | HA/escalabilidad no demostradas bajo fallo/carga | Probar pérdida controlada de destino, capacidad ASG y recuperación; registrar métricas. |
-| P1 | Observabilidad incompleta | Mostrar dashboards y una alarma que se active/recupere, además de tratar la poison queue. |
-| P1 | Seguridad e integración de roles | Pruebas automatizadas de autorización aprobadas; falta sesión manual en navegador. HTTPS confiable y cookie `Secure` se difieren con el dominio. |
-| P1 | Integración y recuperación de eventos AWS→Azure | E2E autenticado desde el portal AWS probado: 7/7 eventos outbox entregados; tres ventas `completed_demo`, recepción `received_demo`; balances sintéticos conservados. La conectividad usa HTTPS público. La poison queue se documentó históricamente; falta una revisión operacional actual y no se alteró su mensaje. |
-| P1 | Costos y documentación final | Estimación mensual con supuestos; informe final y capturas crudas actuales de consola/monitores. |
-| P2 | Telefonía A/V real | Probar audio/video bidireccional en dos navegadores/redes; no declarar “comprobado” solo por pruebas API. |
-| P2 | Dominio HTTPS | Dejarlo para el cierre acordado: DNS, ACM, redirección y verificación del certificado/cookie. |
-
-## 4. Siguiente secuencia segura
-
-1. Confirmar alcance AWS–Azure con el docente, sin crear recursos OCI.
-2. Mantener el template reconciliado como fuente; no recrear ni re-aplicar
-   infraestructura salvo que el próximo change set sea revisado.
-3. Preservar el dataset QA sintético y revisar la poison queue de forma aislada;
-   el recorrido autenticado de venta/recepción portal→Azure ya está probado.
-4. Validar visualmente `/platform` y la matriz de roles en navegador; las
-   pruebas automatizadas ya cubren los permisos principales.
-5. Ejecutar pruebas controladas de HA/escala y alarmas; documentar el flujo
-   demo como tal, calcular costos y confirmar limpieza.
-6. Consolidar informe final y capturas; dominio/HTTPS queda para el final.
-
-No reutilizar credenciales temporales ni poner claves/tokens en evidencias. La
-puerta local para repetir las suites es `tests/run_local_quality.ps1`; la
-validación opcional Terraform usa `-ValidateTerraform` y no aplica recursos.
+- [Estado general](../README.md)
+- [Mapa de CloudFormation y Terraform](../iac/README.md)
+- [Runbook AWS](01_aws_ejecucion.md)
+- [Runbook Azure](02_azure_ejecucion.md)
+- [Matriz de criterios](04_matriz_rubrica.md)
