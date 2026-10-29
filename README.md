@@ -5,7 +5,7 @@ Proyecto académico de una distribuidora ficticia. La arquitectura de referencia
 ## Estado conocido — 29/10/2026, 21:14 UTC
 
 - **Portal público:** `/` y `/health` respondieron HTTPS 200; la API protegida respondió 401 sin sesión. No se confirmó login ni salud de RDS.
-- **AWS:** STS autenticó, pero la sesión apunta a una cuenta distinta del inventario histórico y CloudFormation, EC2, Auto Scaling, ALB y RDS denegaron consultas de solo lectura por política explícita del laboratorio. No se pudo iniciar una prueba desde EC2 ni revalidar el escalado; no se modificó AWS.
+- **AWS:** se cambió intencionalmente la cuenta del lab. STS autentica en la cuenta nueva; el inventario de la cuenta anterior ya no aplica. CloudFormation, EC2, Auto Scaling, ALB y RDS deniegan consultas de solo lectura por política explícita del laboratorio. No se pudo iniciar una prueba desde EC2 ni revalidar el escalado; no se modificó AWS.
 - **Azure:** Function Y1 `/api/health` 200; Flex privada `403` desde Internet y Private Endpoint `Approved`. Un evento sintético recorrió Queue/Function, dejó `demo_restock_completed`, el replay fue idempotente y App Insights registró el mismo ID. El ledger ficticio recibió +1 unidad; no es stock físico ni E2E iniciado por AWS.
 - **Conectividad privada:** gateway Azure P2S está `Succeeded`; la métrica mostró un máximo de una conexión hace unas horas y luego no registró puntos. La tabla de rutas consultada está vacía. No se revalidó el camino AWS→Flex; P2S + router EC2 no es AWS Site-to-Site/BGP.
 - **Recuperación:** Storage Azure exige HTTPS/TLS 1.2, cifra blobs y conserva borrados 7 días; no tiene versionado. No se exportó ni restauró PostgreSQL desde Blob.

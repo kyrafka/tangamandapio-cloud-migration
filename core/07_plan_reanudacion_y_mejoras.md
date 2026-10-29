@@ -1,6 +1,6 @@
 # Plan de cierre cloud — corte vivo 29/10/2026
 
-El portal público ya responde 200 y Azure procesó una recepción sintética con cola, worker, idempotencia y trazas. En el reintento AWS del 29/10 a las 21:24 UTC, STS autenticó contra una cuenta distinta del inventario histórico y el laboratorio volvió a denegar `List`/`Describe`; no hay reconciliación segura de recursos, RDS, Auto Scaling ni VPN desde AWS. Se conserva este orden para la siguiente sesión.
+El portal público ya responde 200 y Azure procesó una recepción sintética con cola, worker, idempotencia y trazas. El usuario confirmó que la cuenta AWS Academy se cambió intencionalmente, así que el inventario histórico pertenece a la cuenta anterior. En el reintento del 29/10 a las 21:27 UTC, STS autenticó en la cuenta nueva, pero el laboratorio denegó `List`/`Describe`; no hay reconciliación segura de recursos, RDS, Auto Scaling ni VPN en ella. Se conserva este orden para la siguiente sesión.
 
 ## Cerrado en este corte
 

@@ -1,8 +1,8 @@
 {
-  "observed_at_utc": "2026-10-29T21:24:33Z",
+  "observed_at_utc": "2026-10-29T21:27:29Z",
   "aws": {
     "sts_authenticated": true,
-    "session_account_matches_historical_inventory": false,
+    "account_context": "User confirmed the account switch was intentional; historical inventory from the previous account does not describe this account.",
     "region": "us-east-1",
     "read_only_checks": {
       "cloudformation_list_stacks": "explicitly_denied_by_voc-cancel-cred",

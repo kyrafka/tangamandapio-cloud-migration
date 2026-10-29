@@ -16,7 +16,7 @@ Este corte sustituye el estado público anterior de 503 y agrega la prueba viva 
 
 ### Reintento de acceso AWS — 29/10/2026, 21:24 UTC
 
-STS aceptó la sesión, pero confirmó una cuenta distinta de la del inventario histórico. Las consultas de solo lectura a CloudFormation, EC2, Auto Scaling, ALB y RDS recibieron denegación explícita `voc-cancel-cred`. No se modificó infraestructura ni se pudo originar el evento desde EC2. El endpoint HTTPS del portal siguió en 200, lo que no demuestra estado interno del stack. Véase [el registro AWS](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
+El usuario confirmó que el cambio de cuenta del lab fue intencional; el inventario anterior queda obsoleto para la cuenta nueva. STS autentica, pero las consultas de solo lectura a CloudFormation, EC2, Auto Scaling, ALB y RDS reciben denegación explícita `voc-cancel-cred`. No se modificó infraestructura ni se pudo originar el evento desde EC2. El endpoint HTTPS del portal siguió en 200, lo que no demuestra estado interno del stack. Véase [el registro AWS](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
 
 Registro detallado: [evidencia viva 29/10](../evidence/current/azure/AZURE-LIVE-CHECK-2026-10-29.json). El estado de cada proveedor está separado; las pruebas locales/históricas no se cuentan como verificaciones actuales.
 

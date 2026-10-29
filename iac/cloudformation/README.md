@@ -13,7 +13,7 @@ Plantillas auxiliares:
 
 ## Estado operativo conocido
 
-El último inventario documentado (27/10/2026) registra ALB/HTTPS, WAF asociado, dos instancias deseadas en un ASG de máximo cinco y RDS Multi-AZ cifrado con siete días de retención. En el reintento del 29/10, STS autenticó en una cuenta distinta del inventario histórico, pero la política explícita `voc-cancel-cred` bloqueó el inventario. En la comprobación pública, `/` y `/health` devolvieron HTTP 200; esto confirma respuesta del endpoint, no el estado de RDS, ALB targets, ASG ni WAF. No se aplicó infraestructura.
+El último inventario documentado (27/10/2026) corresponde a la cuenta anterior y no describe la cuenta AWS Academy que el usuario cambió intencionalmente. En el reintento del 29/10, STS autenticó en la cuenta nueva, pero la política explícita `voc-cancel-cred` bloqueó el inventario. En la comprobación pública, `/` y `/health` devolvieron HTTP 200; esto confirma respuesta del endpoint, no el estado de RDS, ALB targets, ASG ni WAF. No se aplicó infraestructura.
 
 ## Preparar un cambio
 
