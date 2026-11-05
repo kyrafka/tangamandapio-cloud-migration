@@ -43,8 +43,21 @@ $items = @(
 )
 
 $total = ($items | Measure-Object -Property Amount -Sum).Sum
-'Scenario: compute/database={0} h/month; shared infrastructure={1} h/month; {2} average ALB LCU/hour; {3} GB processed through NAT' -f $ComputeHours, $SharedInfrastructureHours, $AverageAlbLcuPerHour, $NatProcessedGb
-$items | ForEach-Object { '{0,-47} ${1,8:N2}  ({2})' -f $_.Name,$_.Amount,$_.Formula }
-'{0,-47} ${1,8:N2}' -f 'Modeled AWS subtotal (not all-in)', $total
+$invariantCulture = [Globalization.CultureInfo]::InvariantCulture
+$formatNumber = {
+  param([decimal] $Value, [string] $Format = '0.##')
+  $Value.ToString($Format, $invariantCulture)
+}
+'Scenario: compute/database={0} h/month; shared infrastructure={1} h/month; {2} average ALB LCU/hour; {3} GB processed through NAT' -f `
+  (& $formatNumber $ComputeHours),
+  (& $formatNumber $SharedInfrastructureHours),
+  (& $formatNumber $AverageAlbLcuPerHour),
+  (& $formatNumber $NatProcessedGb)
+$items | ForEach-Object {
+  $amount = (& $formatNumber ([decimal] $_.Amount) 'N2')
+  '{0,-47} ${1,8}  ({2})' -f $_.Name, $amount, $_.Formula
+}
+$formattedTotal = (& $formatNumber ([decimal] $total) 'N2')
+'{0,-47} ${1,8}' -f 'Modeled AWS subtotal (not all-in)', $formattedTotal
 'Azure Functions compute/requests assumed within eligible Consumption grants; Azure storage/transactions remain variable and are not included.'
 'Excluded: taxes, credits/discounts, S3/Blob capacity and operations, CloudWatch/Log Analytics ingestion, snapshots beyond included backup, outbound and cross-zone traffic, IPv4 on other resources, and actual contractual pricing.'

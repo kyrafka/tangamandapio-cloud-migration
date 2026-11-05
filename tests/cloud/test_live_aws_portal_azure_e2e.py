@@ -1,15 +1,175 @@
 from __future__ import annotations
 
+import importlib.util
+import io
+import os
 import sys
+import tempfile
 import unittest
+from datetime import datetime, timezone
 from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import live_aws_portal_azure_e2e as live_e2e  # noqa: E402
+
+
+@unittest.skipUnless(importlib.util.find_spec("flask"), "Flask release dependencies are required")
+class TemporaryRoleMatrixIntegrationTests(unittest.TestCase):
+    """Exercise the real matrix against the portal without any cloud calls."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(prefix="tangama-role-matrix-")
+        self.addCleanup(self.temp.cleanup)
+        release = Path(__file__).resolve().parents[2] / "app" / "aws_release" / "current"
+        sys.path.insert(0, str(release))
+        self.addCleanup(sys.path.remove, str(release))
+        environment = {
+            "DATABASE_URL": "",
+            "DATABASE_PATH": str(Path(self.temp.name) / "import.sqlite"),
+            "APP_SESSION_SECRET": "integration-test-session-secret-only",
+            "BOOTSTRAP_ADMIN_USERNAME": live_e2e.ADMIN_USERNAME,
+            "BOOTSTRAP_ADMIN_PASSWORD": "Temporary-Admin-Test-Password!",
+            "OUTBOX_RETRY_INTERVAL": "0",
+        }
+        with patch.dict(os.environ, environment):
+            spec = importlib.util.spec_from_file_location("matrix_test_portal", release / "app.py")
+            portal = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(portal)
+        self.app = portal.create_app({
+            "TESTING": True,
+            "DATABASE_URL": "",
+            "DATABASE_PATH": str(Path(self.temp.name) / "matrix.sqlite"),
+            "APP_SESSION_SECRET": "integration-test-session-secret-only",
+            "BOOTSTRAP_ADMIN_USERNAME": live_e2e.ADMIN_USERNAME,
+            "BOOTSTRAP_ADMIN_PASSWORD": "Temporary-Admin-Test-Password!",
+            "FORCE_INITIAL_PASSWORD_CHANGE": True,
+            "INTERNAL_ERP_ENABLED": True,
+            "OUTBOX_RETRY_INTERVAL": 0,
+            "AZURE_FULFILLMENT_URL": "",
+        })
+
+        class FlaskOpener:
+            def __init__(self, client):
+                self.client = client
+
+            def open(self, request, timeout=None):
+                parsed = urlsplit(request.full_url)
+                path = parsed.path + ("?" + parsed.query if parsed.query else "")
+                response = self.client.open(
+                    path,
+                    method=request.get_method(),
+                    data=request.data,
+                    headers=dict(request.header_items()),
+                    base_url=f"{parsed.scheme}://{parsed.netloc}",
+                )
+                if response.status_code >= 400:
+                    raise HTTPError(request.full_url, response.status_code, "error", response.headers, io.BytesIO(response.data))
+
+                class Result:
+                    status = response.status_code
+                    headers = response.headers
+
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *args):
+                        response.close()
+
+                    def read(self):
+                        return response.get_data()
+
+                return Result()
+
+        opener = patch.object(live_e2e, "build_opener", side_effect=lambda *args: FlaskOpener(self.app.test_client()))
+        opener.start()
+        self.addCleanup(opener.stop)
+        # Access to the pre-existing demo account or its SSM parameter must not be needed.
+        parameter = patch.object(live_e2e, "get_secure_parameter", side_effect=AssertionError("unexpected QA parameter lookup"))
+        parameter.start()
+        self.addCleanup(parameter.stop)
+        self.admin = live_e2e.PortalClient("loopback")
+        self.admin.login(username=live_e2e.ADMIN_USERNAME, password="Temporary-Admin-Test-Password!")
+
+    def test_matrix_rotates_temporary_passwords_and_deactivates_all_without_demo_user(self) -> None:
+        result = live_e2e.exercise_erp_role_matrix(self.admin)
+        self.assertEqual(result["temporary_account_count"], 5)
+        self.assertEqual(result["probe_count"], 48)
+        self.assertEqual(set(result["roles"]), {"erp_admin", "erp_sales", "erp_finance", "erp_purchasing", "erp_master_data", "erp_auditor"})
+        _, users = self.admin.request("GET", "/api/admin/users")
+        qa_users = [user for user in users if user["username"].startswith("qa-erp_")]
+        self.assertEqual(len(qa_users), 5)
+        self.assertTrue(all(not user["active"] for user in qa_users))
+        self.assertTrue(all(not user["must_change_password"] for user in qa_users))
+        self.assertFalse(any(user["username"] == live_e2e.ROLE_ACCOUNTS[0][1] for user in users))
+
+    def test_password_rotation_failure_still_deactivates_created_account(self) -> None:
+        self.app.view_functions["change_own_password"] = lambda: ("unavailable", 500)
+        with self.assertRaises(live_e2e.SmokeFailure):
+            live_e2e.exercise_erp_role_matrix(self.admin)
+        _, users = self.admin.request("GET", "/api/admin/users")
+        qa_users = [user for user in users if user["username"].startswith("qa-erp_")]
+        self.assertEqual(len(qa_users), 1)
+        self.assertFalse(qa_users[0]["active"])
+
+    def test_matrix_rotates_new_users_even_if_a_demo_account_exists(self) -> None:
+        self.app.config["FORCE_INITIAL_PASSWORD_CHANGE"] = False
+        status, created = self.admin.request("POST", "/api/admin/users", {
+            "username": live_e2e.ROLE_ACCOUNTS[0][1],
+            "password": "Temporary-Demo-Test-Password!",
+            "role": "sales",
+        })
+        self.assertEqual(status, 201)
+        self.app.config["FORCE_INITIAL_PASSWORD_CHANGE"] = True
+        with patch.object(live_e2e, "get_secure_parameter", return_value="Temporary-Demo-Test-Password!"):
+            result = live_e2e.exercise_erp_role_matrix(self.admin)
+        self.assertEqual(result["temporary_account_count"], 5)
+        _, users = self.admin.request("GET", "/api/admin/users")
+        demo = next(user for user in users if user["id"] == created["user"]["id"])
+        self.assertTrue(demo["active"])
+        self.assertFalse(demo["must_change_password"])
+
+    def test_name_conflict_does_not_deactivate_an_existing_account(self) -> None:
+        username = "qa-erp_sales-20261103120000-collision@tangamandapio.local"
+        status, created = self.admin.request("POST", "/api/admin/users", {
+            "username": username,
+            "password": "Preexisting-Test-Password!",
+            "role": "sales",
+        })
+        self.assertEqual(status, 201)
+        with (
+            patch.object(live_e2e, "datetime") as clock,
+            patch.object(live_e2e.secrets, "token_hex", return_value="collision"),
+            self.assertRaises(live_e2e.SmokeFailure),
+        ):
+            clock.now.return_value = datetime(2026, 11, 3, 12, tzinfo=timezone.utc)
+            live_e2e.exercise_erp_role_matrix(self.admin)
+        _, users = self.admin.request("GET", "/api/admin/users")
+        existing = next(user for user in users if user["id"] == created["user"]["id"])
+        self.assertTrue(existing["active"])
+
+    def test_cleanup_continues_after_unexpected_failure_for_one_user(self) -> None:
+        original_request = self.admin.request
+        failed_once = False
+
+        def fail_first_deactivation(method, path, payload=None, accepted_statuses=()):
+            nonlocal failed_once
+            if method == "PATCH" and path.startswith("/api/admin/users/") and not failed_once:
+                failed_once = True
+                raise RuntimeError("synthetic cleanup failure")
+            return original_request(method, path, payload, accepted_statuses)
+
+        with patch.object(self.admin, "request", side_effect=fail_first_deactivation):
+            with self.assertRaisesRegex(live_e2e.SmokeFailure, "could not all be confirmed inactive"):
+                live_e2e.exercise_erp_role_matrix(self.admin)
+        _, users = original_request("GET", "/api/admin/users")
+        qa_users = [user for user in users if user["username"].startswith("qa-erp_")]
+        self.assertEqual(len(qa_users), 5)
+        self.assertEqual(sum(bool(user["active"]) for user in qa_users), 1)
 
 
 class PortalLoginRoleTests(unittest.TestCase):

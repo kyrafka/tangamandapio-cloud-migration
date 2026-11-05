@@ -758,15 +758,7 @@ def exercise_erp_role_matrix(admin: PortalClient) -> dict:
     run_id = f"{datetime.now(timezone.utc):%Y%m%d%H%M%S}-{secrets.token_hex(3)}"
     cleanup_failed = False
     try:
-        commercial = PortalClient(admin.target)
-        commercial.login(
-            username=ROLE_ACCOUNTS[0][1],
-            parameter=ROLE_ACCOUNTS[0][2],
-            expected_role=ROLE_ACCOUNTS[0][3],
-        )
-        role_clients["erp_sales"] = commercial
-
-        for role_code in ("erp_finance", "erp_purchasing", "erp_master_data", "erp_auditor"):
+        for role_code in ("erp_sales", "erp_finance", "erp_purchasing", "erp_master_data", "erp_auditor"):
             username = f"qa-{role_code}-{run_id}@tangamandapio.local"
             password = secrets.token_urlsafe(32)
             portal_role = "auditor" if role_code == "erp_auditor" else "sales"
@@ -782,6 +774,11 @@ def exercise_erp_role_matrix(admin: PortalClient) -> dict:
                 },
                 accepted_statuses=(400, 403, 409),
             )
+            if create_status in (400, 403, 409):
+                # A definitive rejection cannot have created this account. In
+                # particular, a 409 may refer to an unrelated existing user;
+                # never find and deactivate that user during cleanup.
+                temporary_users.pop()
             created_user = created.get("user") if isinstance(created, dict) else None
             user_id = created_user.get("id") if isinstance(created_user, dict) else None
             if create_status != 201 or type(user_id) is not int:
@@ -798,12 +795,29 @@ def exercise_erp_role_matrix(admin: PortalClient) -> dict:
                 raise SmokeFailure("Could not assign the temporary ERP role.")
 
             role_client = PortalClient(admin.target)
+            role_clients[role_code] = role_client
             role_client.login(
                 username=username,
                 expected_role=portal_role,
                 password=password,
             )
-            role_clients[role_code] = role_client
+            session = role_client.json("GET", "/api/auth/session")
+            if (session.get("user") or {}).get("must_change_password"):
+                rotated_password = secrets.token_urlsafe(32)
+                rotation = role_client.json(
+                    "POST", "/api/auth/password",
+                    {"current_password": password, "new_password": rotated_password},
+                )
+                if rotation.get("password_changed") is not True or rotation.get("reauthenticate") is not True:
+                    raise SmokeFailure("The temporary account password change was not confirmed.")
+                role_client.login(
+                    username=username,
+                    expected_role=portal_role,
+                    password=rotated_password,
+                )
+                refreshed = role_client.json("GET", "/api/auth/session")
+                if (refreshed.get("user") or {}).get("must_change_password") is not False:
+                    raise SmokeFailure("The temporary account still requires a password change.")
 
         results: dict[str, dict[str, int]] = {}
         for role_code, role_client in role_clients.items():
@@ -862,7 +876,9 @@ def exercise_erp_role_matrix(admin: PortalClient) -> dict:
                 )
                 if status != 200:
                     cleanup_failed = True
-            except SmokeFailure:
+            except Exception:
+                # Continue deactivating the other temporary accounts even if
+                # one cleanup request fails unexpectedly.
                 cleanup_failed = True
         if temporary_users:
             try:
@@ -872,11 +888,11 @@ def exercise_erp_role_matrix(admin: PortalClient) -> dict:
                 by_id = {user.get("id"): user for user in final_users if isinstance(user, dict)}
                 if any(
                     type(user.get("id")) is int
-                    and by_id.get(user["id"], {}).get("active") is not False
+                    and by_id.get(user["id"], {}).get("active") not in (False, 0)
                     for user in temporary_users
                 ):
                     cleanup_failed = True
-            except SmokeFailure:
+            except Exception:
                 cleanup_failed = True
         if cleanup_failed:
             raise SmokeFailure("Temporary ERP role-check accounts could not all be confirmed inactive.")

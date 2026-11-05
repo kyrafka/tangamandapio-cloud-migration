@@ -108,6 +108,8 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
                 "SECRET_KEY": "test-session-secret-with-enough-entropy",
                 "BOOTSTRAP_ADMIN_USERNAME": "admin@example.test",
                 "BOOTSTRAP_ADMIN_PASSWORD": "Admin-Password-For-Tests-2026",
+                # This suite tests recordings and RBAC, not first-login setup.
+                "FORCE_INITIAL_PASSWORD_CHANGE": False,
                 "VOICE_RECORDINGS_DIR": self.recordings_dir,
                 "VOICE_RECORDINGS_BUCKET": "tangamandapio-voice-test",
                 "VOICE_RECORDINGS_PREFIX": "voice-recordings",

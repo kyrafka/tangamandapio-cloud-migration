@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-05",
+  "source": "AWS RDS PostgreSQL tangamandapio-postgres",
+  "backup_location": "Azure Blob container tangama-postgres-backups, object postgres/20261105-manual-validation.json",
+  "key_location": "Azure Key Vault kv-tangama-261030r, key postgres-backup-wrap, version 29aa95ea1d7e47f6955ce7c3fe14f0b5",
+  "protection": "AES-256-GCM archive encryption, RSA-OAEP-256 wrapping; private key remains in Azure Key Vault",
+  "ciphertext_sha256": "3a6ea39baa397c1d36a9c461ef73a1db77f7a8cedc75967d35337ec8bd1595a0",
+  "archive_sha256": "a9cfb9c7ad940271464f6f9f30e4e099d3ab0c514a9dfe9369226b44c47cca8b",
+  "source_tables": 20,
+  "restored_tables": 20,
+  "table_counts_match": true,
+  "restore_environment": "temporary isolated PostgreSQL, no TCP listener, separate EC2",
+  "export_command": "52cac2b3-ac02-4a9c-ad62-4e3e4196d700",
+  "restore_command": "b4d26417-35c0-4050-ac98-e4b9509aa3a2",
+  "limitations": "Manual validation only: no automatic schedule, no recovery point objective, and table counts do not establish row-by-row identity. Azure resource group and Key Vault must be preserved."
+}

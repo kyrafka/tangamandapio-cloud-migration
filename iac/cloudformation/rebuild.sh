@@ -33,6 +33,8 @@ PROJECT_NAME="${PROJECT_NAME:-tangamandapio}"
 TEMPLATE="${TEMPLATE:-$SCRIPT_DIR/aws-lab.yaml}"
 FUNCTION_URL="${AZURE_FULFILLMENT_URL:-}"
 FUNCTION_KEY_SECRET="${AZURE_FUNCTION_KEY_SECRET:-}"
+CERTIFICATE_ARN="${CERTIFICATE_ARN:-}"
+PORTAL_DOMAIN_NAME="${PORTAL_DOMAIN_NAME:-}"
 SNAPSHOT_IDENTIFIER="${RDS_SNAPSHOT_IDENTIFIER:-}"
 RESET_ADMINISTRATOR_PASSWORD="${RESET_ADMINISTRATOR_ON_RESTORE:-false}"
 
@@ -57,6 +59,55 @@ fi
 if [[ -z "$FUNCTION_URL" || -z "$FUNCTION_KEY_SECRET" ]]; then
   echo "Define AZURE_FULFILLMENT_URL y AZURE_FUNCTION_KEY_SECRET con la Function ya publicada y su clave sincronizada en Secrets Manager." >&2
   exit 2
+fi
+if [[ -n "$CERTIFICATE_ARN" || -n "$PORTAL_DOMAIN_NAME" ]]; then
+  if [[ -z "$CERTIFICATE_ARN" || -z "$PORTAL_DOMAIN_NAME" ]]; then
+    echo "HTTPS requiere definir juntos CERTIFICATE_ARN y PORTAL_DOMAIN_NAME." >&2
+    exit 2
+  fi
+  PORTAL_DOMAIN_NAME="${PORTAL_DOMAIN_NAME,,}"
+  if [[ ${#PORTAL_DOMAIN_NAME} -gt 253 || ! "$PORTAL_DOMAIN_NAME" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
+    echo "PORTAL_DOMAIN_NAME no parece un nombre DNS público válido." >&2
+    exit 2
+  fi
+  if [[ ! "$CERTIFICATE_ARN" =~ ^arn:aws:acm:[a-z0-9-]+:[0-9]{12}:certificate/[a-f0-9-]{36}$ ]]; then
+    echo "CERTIFICATE_ARN no tiene formato ACM válido." >&2
+    exit 2
+  fi
+  CERTIFICATE_REGION="${CERTIFICATE_ARN#arn:aws:acm:}"
+  CERTIFICATE_REGION="${CERTIFICATE_REGION%%:*}"
+  if [[ "$CERTIFICATE_REGION" != "$REGION" ]]; then
+    echo "El certificado ACM debe estar en la región del balanceador ($REGION)." >&2
+    exit 2
+  fi
+  CERTIFICATE_STATUS="$(aws acm describe-certificate --region "$REGION" --certificate-arn "$CERTIFICATE_ARN" --query 'Certificate.Status' --output text)"
+  if [[ "$CERTIFICATE_STATUS" != "ISSUED" ]]; then
+    echo "El certificado ACM debe estar ISSUED antes de habilitar HTTPS." >&2
+    exit 2
+  fi
+  CERTIFICATE_NAMES="$(aws acm describe-certificate --region "$REGION" --certificate-arn "$CERTIFICATE_ARN" --query 'Certificate.SubjectAlternativeNames' --output text)"
+  CERTIFICATE_COVERS_DOMAIN=false
+  for certificate_name in $CERTIFICATE_NAMES; do
+    certificate_name="${certificate_name,,}"
+    if [[ "$certificate_name" == "$PORTAL_DOMAIN_NAME" ]]; then
+      CERTIFICATE_COVERS_DOMAIN=true
+      break
+    fi
+    if [[ "$certificate_name" == \*.* ]]; then
+      certificate_suffix="${certificate_name#*.}"
+      if [[ "$PORTAL_DOMAIN_NAME" == *".$certificate_suffix" ]]; then
+        certificate_prefix="${PORTAL_DOMAIN_NAME%.$certificate_suffix}"
+        if [[ -n "$certificate_prefix" && "$certificate_prefix" != *.* ]]; then
+          CERTIFICATE_COVERS_DOMAIN=true
+          break
+        fi
+      fi
+    fi
+  done
+  if [[ "$CERTIFICATE_COVERS_DOMAIN" != "true" ]]; then
+    echo "El certificado ACM no cubre PORTAL_DOMAIN_NAME; no se preparará HTTPS." >&2
+    exit 2
+  fi
 fi
 if ! aws secretsmanager describe-secret --region "$REGION" --secret-id "$FUNCTION_KEY_SECRET" \
   --cli-connect-timeout 5 --cli-read-timeout 20 >/dev/null; then
@@ -181,8 +232,12 @@ if [[ -n "$SNAPSHOT_IDENTIFIER" ]]; then
   fi
 else
   echo "La base se creará vacía; si existe un secreto maestro retenido, se reutilizará."
+  echo "Al iniciar el portal, el ERP sembrará catálogo y socios sintéticos de forma idempotente; no creará ventas ni eventos WMS."
 fi
-echo "El perfil nativo predeterminado mantiene RDS Multi-AZ, WAF asociado al ALB y retención de respaldo de un día. AWS Backup sigue siendo opt-in."
+echo "El perfil nativo predeterminado mantiene RDS Multi-AZ, WAF asociado al ALB y retención de respaldo de siete días. AWS Backup sigue siendo opt-in."
+if [[ -z "$CERTIFICATE_ARN" ]]; then
+  echo "ATENCIÓN: sin CERTIFICATE_ARN y PORTAL_DOMAIN_NAME, el ALB se creará solo con HTTP."
+fi
 read -r -p "Escribe REBUILD para continuar: " confirmation
 if [[ "$confirmation" != "REBUILD" ]]; then
   echo "Cancelado; no se crearon recursos."
@@ -215,7 +270,7 @@ PARAMETERS=(
   "ParameterKey=AzureFulfillmentUrl,ParameterValue=$FUNCTION_URL"
   "ParameterKey=AzureFunctionKeySecret,ParameterValue=$FUNCTION_KEY_SECRET"
   "ParameterKey=DatabaseMultiAZ,ParameterValue=${DATABASE_MULTI_AZ:-true}"
-  "ParameterKey=DatabaseBackupRetentionDays,ParameterValue=${DATABASE_BACKUP_RETENTION_DAYS:-1}"
+  "ParameterKey=DatabaseBackupRetentionDays,ParameterValue=${DATABASE_BACKUP_RETENTION_DAYS:-7}"
   "ParameterKey=ManageDatabaseMasterPassword,ParameterValue=false"
   "ParameterKey=ResetAdministratorPassword,ParameterValue=$RESET_ADMINISTRATOR_PASSWORD"
   "ParameterKey=EnableWaf,ParameterValue=${ENABLE_WAF:-true}"
@@ -224,6 +279,16 @@ PARAMETERS=(
   "ParameterKey=EnableAwsBackup,ParameterValue=${ENABLE_AWS_BACKUP:-false}"
   "ParameterKey=BootstrapMode,ParameterValue=true"
 )
+if [[ -n "$CERTIFICATE_ARN" ]]; then
+  PARAMETERS+=("ParameterKey=CertificateArn,ParameterValue=$CERTIFICATE_ARN")
+  PARAMETERS+=("ParameterKey=PortalDomainName,ParameterValue=$PORTAL_DOMAIN_NAME")
+fi
+if [[ -n "${ALARM_NOTIFICATION_EMAIL_PRIMARY:-}" ]]; then
+  PARAMETERS+=("ParameterKey=AlarmNotificationEmailPrimary,ParameterValue=$ALARM_NOTIFICATION_EMAIL_PRIMARY")
+fi
+if [[ -n "${ALARM_NOTIFICATION_EMAIL_ALTERNATE:-}" ]]; then
+  PARAMETERS+=("ParameterKey=AlarmNotificationEmailAlternate,ParameterValue=$ALARM_NOTIFICATION_EMAIL_ALTERNATE")
+fi
 if [[ -n "$DATABASE_SECRET_ARN" ]]; then
   PARAMETERS+=("ParameterKey=ExistingDatabaseSecretArn,ParameterValue=$DATABASE_SECRET_ARN")
 fi
@@ -368,6 +433,7 @@ printf 'APPLY\n' | env \
   MANAGE_DATABASE_MASTER_PASSWORD="$([[ "$RESTORE_MASTER_SECRET_AFTER_BOOTSTRAP" == "true" ]] && echo true || echo false)" \
   APPLICATION_ARTIFACT_KEY="$ARTIFACT_KEY" \
   APPLICATION_ARTIFACT_REVISION="$REVISION" \
+  APPLICATION_ARTIFACT_SHA256="$ARTIFACT_SHA256" \
   "$SCRIPT_DIR/deploy.sh" "$TEMPLATE"
 
 DNS_NAME="$(aws cloudformation describe-stacks \

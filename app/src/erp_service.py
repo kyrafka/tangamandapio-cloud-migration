@@ -56,6 +56,17 @@ ERP_DEMO_PRODUCTS = (
     ("SKU-GALLETAS-001", "Galletas surtidas · caja x 24", "caja", 55.00, 41.50),
     ("SKU-MAIZ-001", "Maíz amarillo · saco 50 kg", "saco", 89.90, 73.00),
 )
+# Fictional ERP master data for a clean academic rebuild. The .invalid domain
+# is reserved for examples, and tax IDs are synthetic (not valid registrations).
+ERP_DEMO_PARTNERS = (
+    ("customer", "Distribuidora Andina Demo", "SYN-CUST-0001", "compras@andina.invalid", "+51-000-000-101", "Lima, Perú"),
+    ("customer", "Comercial Sur Demo", "SYN-CUST-0002", "pedidos@sur.invalid", "+51-000-000-102", "Arequipa, Perú"),
+    ("customer", "Abastecimientos Norte Demo", "SYN-CUST-0003", "logistica@norte.invalid", "+51-000-000-103", "Trujillo, Perú"),
+    ("customer", "Distribuciones Pacífico Demo", "SYN-CUST-0004", "contacto@pacifico.invalid", "+51-000-000-104", "Callao, Perú"),
+    ("supplier", "Alimentos Sierra Demo", "SYN-SUP-0001", "ventas@sierra.invalid", "+51-000-000-201", "Huancayo, Perú"),
+    ("supplier", "Empaques del Puerto Demo", "SYN-SUP-0002", "ventas@empaques.invalid", "+51-000-000-202", "Callao, Perú"),
+    ("supplier", "Granos del Valle Demo", "SYN-SUP-0003", "pedidos@granos.invalid", "+51-000-000-203", "Chiclayo, Perú"),
+)
 LOGGER = logging.getLogger("tangamandapio.erp.mail")
 
 
@@ -169,7 +180,7 @@ def _deliver_smtp(app, *, sender_username, recipient_username, subject, body, me
 
 
 def initialize_erp_database(connection, postgres=False):
-    """Create additive ERP tables; safe to call at every local app startup."""
+    """Create ERP tables and idempotent synthetic masters at app startup."""
     identity = "BIGSERIAL PRIMARY KEY" if postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
     number = "BIGINT" if postgres else "INTEGER"
     timestamp = "TIMESTAMPTZ" if postgres else "TEXT"
@@ -308,6 +319,12 @@ def initialize_erp_database(connection, postgres=False):
             """INSERT INTO erp_products(sku,name,unit,sale_price,purchase_cost,active,updated_at)
                VALUES (?,?,?,?,?,TRUE,?) ON CONFLICT(sku) DO NOTHING""",
             (sku, name, unit, sale_price, purchase_cost, now_text()),
+        )
+    for kind, name, tax_id, email, phone, address in ERP_DEMO_PARTNERS:
+        connection.execute(
+            """INSERT INTO erp_partners(kind,name,tax_id,email,phone,address,active,created_at)
+               VALUES (?,?,?,?,?,?,TRUE,?) ON CONFLICT(tax_id) DO NOTHING""",
+            (kind, name, tax_id, email, phone, address, now_text()),
         )
     connection.commit()
 

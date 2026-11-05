@@ -89,6 +89,13 @@ foreach ($relativePath in $powerShellScripts) {
   }
 }
 $costScriptPath = Join-Path $workspacePath 'iac\scripts\estimate_cloud_costs.ps1'
+Push-Location $workspacePath
+try {
+  & $pythonPath -m unittest discover -s tests\iac -p test_cost_estimate_culture.py -v
+  if ($LASTEXITCODE -ne 0) { throw 'Falló la prueba de formato monetario independiente de la cultura regional' }
+} finally {
+  Pop-Location
+}
 $costEstimateOutput = & $costScriptPath | Out-String
 if ($costEstimateOutput -notmatch 'Modeled AWS subtotal \(not all-in\)\s+\$\s*91\.92') {
   throw 'La estimación reproducible de costo no coincide con el subtotal base esperado de $91.92'

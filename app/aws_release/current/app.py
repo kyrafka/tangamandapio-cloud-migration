@@ -3159,19 +3159,24 @@ def ensure_portal_bootstrap(app, database_path):
             "SELECT id FROM companies WHERE slug = ?", ("tangamandapio",)
         ).fetchone()
         if company is None:
-            try:
-                company_id = insert_and_return_id(
-                    connection,
-                    "INSERT INTO companies(name, slug, created_at) VALUES (?, ?, ?)",
-                    ("Tangamandapio S.A.C.", "tangamandapio", datetime.now(timezone.utc).isoformat()),
-                )
-            except Exception as error:
-                if not is_integrity_error(error):
-                    raise
+            inserted_company = connection.execute(
+                """
+                INSERT INTO companies(name, slug, created_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT (slug) DO NOTHING
+                RETURNING id
+                """,
+                ("Tangamandapio S.A.C.", "tangamandapio", datetime.now(timezone.utc).isoformat()),
+            ).fetchone()
+            if inserted_company is None:
                 company = connection.execute(
                     "SELECT id FROM companies WHERE slug = ?", ("tangamandapio",)
                 ).fetchone()
+                if company is None:
+                    raise RuntimeError("Tenant bootstrap insert completed without returning a company.")
                 company_id = company["id"]
+            else:
+                company_id = inserted_company["id"]
         else:
             company_id = company["id"]
 

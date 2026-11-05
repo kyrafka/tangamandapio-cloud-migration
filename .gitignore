@@ -75,6 +75,9 @@ evidence/raw/
 # Artefactos locales, dependencias y material histórico no publicable
 build/
 artifacts/
+/entregables/
+/tmp/
+/%SystemDrive%/
 archive/
 export/
 qa/

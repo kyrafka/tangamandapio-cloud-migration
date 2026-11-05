@@ -126,6 +126,9 @@ class PlatformConsoleTestCase(unittest.TestCase):
                 "SECRET_KEY": "test-session-secret-for-platform",
                 "BOOTSTRAP_ADMIN_USERNAME": "admin@example.test",
                 "BOOTSTRAP_ADMIN_PASSWORD": "Admin-Password-For-Tests-2026",
+                # These tests exercise authorization after sign-in, not the
+                # separate first-login password-change workflow.
+                "FORCE_INITIAL_PASSWORD_CHANGE": False,
                 "VOICE_RECORDINGS_ENABLED": False,
                 "AUTO_DISPATCH_EVENTS": False,
                 "LOGIN_RATE_LIMIT_MAX": 2,

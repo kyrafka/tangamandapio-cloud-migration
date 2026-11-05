@@ -28,6 +28,38 @@ class AzureCliTimeoutTests(unittest.TestCase):
             run_mock.call_args.kwargs["timeout"], smoke.AZURE_CLI_TIMEOUT_SECONDS
         )
 
+
+class AzureFunctionDiscoveryTests(unittest.TestCase):
+    @patch.object(smoke, "azure_cli", side_effect=[
+        '{"state":"Running","httpsOnly":true,"defaultHostName":"wms.example.azurewebsites.net"}',
+        "function-key-kept-in-memory",
+    ])
+    def test_function_endpoint_uses_current_app_and_authenticated_cli(self, cli_mock) -> None:
+        base_url, key = smoke.azure_function_endpoint()
+
+        self.assertEqual(base_url, "https://wms.example.azurewebsites.net")
+        self.assertEqual(key, "function-key-kept-in-memory")
+        self.assertEqual(cli_mock.call_count, 2)
+        self.assertEqual(cli_mock.call_args_list[0].args[:5], (
+            "functionapp", "show", "--resource-group", smoke.RESOURCE_GROUP,
+            "--name",
+        ))
+        self.assertIn(smoke.FUNCTION_APP, cli_mock.call_args_list[0].args)
+        self.assertEqual(cli_mock.call_args_list[1].args[:4], (
+            "functionapp", "keys", "list", "--resource-group",
+        ))
+        self.assertIn(smoke.FUNCTION_APP, cli_mock.call_args_list[1].args)
+
+    @patch.object(smoke, "azure_cli", return_value=(
+        '{"state":"Stopped","httpsOnly":true,'
+        '"defaultHostName":"wms.example.azurewebsites.net"}'
+    ))
+    def test_stopped_function_is_rejected_before_requesting_its_key(self, cli_mock) -> None:
+        with self.assertRaisesRegex(smoke.SmokeFailure, "not running"):
+            smoke.azure_function_endpoint()
+
+        cli_mock.assert_called_once()
+
     @patch.object(smoke.shutil, "which", side_effect=[None, "az"])
     @patch.object(smoke.subprocess, "run")
     def test_successful_cli_output_is_returned(self, run_mock, _which_mock) -> None:
@@ -46,23 +78,27 @@ class AzureCliTimeoutTests(unittest.TestCase):
 class AzureEventPollingTests(unittest.TestCase):
     @patch.object(smoke, "urlopen")
     def test_gateway_and_server_errors_are_classified_as_transient(self, urlopen_mock) -> None:
-        urlopen_mock.side_effect = HTTPError(
+        response_error = HTTPError(
             "https://azure.example.test", 503, "temporarily unavailable", {}, None
         )
+        urlopen_mock.side_effect = response_error
 
         with self.assertRaisesRegex(smoke.AzureTransientReadError, "HTTP 503"):
             smoke.azure_json("https://azure.example.test/event", "not-printed")
+        self.assertTrue(response_error.file.closed)
 
     @patch.object(smoke, "urlopen")
     def test_authorization_errors_fail_immediately(self, urlopen_mock) -> None:
-        urlopen_mock.side_effect = HTTPError(
+        response_error = HTTPError(
             "https://azure.example.test", 401, "unauthorized", {}, None
         )
+        urlopen_mock.side_effect = response_error
 
         with self.assertRaisesRegex(smoke.SmokeFailure, "HTTP 401") as raised:
             smoke.azure_json("https://azure.example.test/event", "not-printed")
 
         self.assertNotIn("not-printed", str(raised.exception))
+        self.assertTrue(response_error.file.closed)
 
     @patch.object(smoke.time, "sleep")
     @patch.object(smoke, "azure_json", side_effect=[

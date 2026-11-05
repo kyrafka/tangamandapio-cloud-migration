@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "enabled": true,
+      "name": "postgres-backups-30-days",
+      "type": "Lifecycle",
+      "definition": {
+        "filters": {
+          "blobTypes": ["blockBlob"],
+          "prefixMatch": ["tangama-postgres-backups/postgres/"]
+        },
+        "actions": {
+          "baseBlob": {
+            "delete": {"daysAfterModificationGreaterThan": 30}
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,323 @@
+{
+  "load": {
+    "start_utc": "2026-11-03T15:32:31.965916-06:00",
+    "end_utc": "2026-11-03T15:36:42.352137-06:00",
+    "seconds": 250.38,
+    "counts": {
+      "200": 28187
+    },
+    "requests_per_second": 112.58,
+    "p95_ms": 189.55,
+    "aborted_on_errors": false,
+    "target": "static_asset"
+  },
+  "stack": "tangamandapio-live-20261103",
+  "captured_utc": "2026-11-03T21:41:13.5138457Z",
+  "asg": {
+    "AutoScalingGroups": [
+      {
+        "AutoScalingGroupName": "tangamandapio-asg",
+        "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:654654388734:autoScalingGroup:7d5b2e7c-7388-47fb-8ad4-d15a23d2b2a0:autoScalingGroupName/tangamandapio-asg",
+        "LaunchTemplate": {
+          "LaunchTemplateId": "lt-0f202c8273de720b0",
+          "LaunchTemplateName": "tangamandapio-app",
+          "Version": "1"
+        },
+        "MinSize": 2,
+        "MaxSize": 5,
+        "DesiredCapacity": 3,
+        "DefaultCooldown": 300,
+        "AvailabilityZones": [
+          "us-east-1a",
+          "us-east-1b"
+        ],
+        "AvailabilityZoneIds": [
+          "use1-az6",
+          "use1-az1"
+        ],
+        "LoadBalancerNames": [],
+        "TargetGroupARNs": [
+          "arn:aws:elasticloadbalancing:us-east-1:654654388734:targetgroup/tangamandapio-tg/5c74fd905898756a"
+        ],
+        "HealthCheckType": "ELB",
+        "HealthCheckGracePeriod": 420,
+        "Instances": [
+          {
+            "InstanceId": "i-0b27cfafab91824ae",
+            "InstanceType": "t3.micro",
+            "AvailabilityZone": "us-east-1a",
+            "AvailabilityZoneId": "use1-az6",
+            "LifecycleState": "InService",
+            "HealthStatus": "Healthy",
+            "LaunchTemplate": {
+              "LaunchTemplateId": "lt-0f202c8273de720b0",
+              "LaunchTemplateName": "tangamandapio-app",
+              "Version": "1"
+            },
+            "ProtectedFromScaleIn": false
+          },
+          {
+            "InstanceId": "i-0c9eeed606acfbac4",
+            "InstanceType": "t3.micro",
+            "AvailabilityZone": "us-east-1b",
+            "AvailabilityZoneId": "use1-az1",
+            "LifecycleState": "InService",
+            "HealthStatus": "Healthy",
+            "LaunchTemplate": {
+              "LaunchTemplateId": "lt-0f202c8273de720b0",
+              "LaunchTemplateName": "tangamandapio-app",
+              "Version": "1"
+            },
+            "ProtectedFromScaleIn": false
+          },
+          {
+            "InstanceId": "i-0f989c5ce6edd483e",
+            "InstanceType": "t3.micro",
+            "AvailabilityZone": "us-east-1b",
+            "AvailabilityZoneId": "use1-az1",
+            "LifecycleState": "InService",
+            "HealthStatus": "Healthy",
+            "LaunchTemplate": {
+              "LaunchTemplateId": "lt-0f202c8273de720b0",
+              "LaunchTemplateName": "tangamandapio-app",
+              "Version": "1"
+            },
+            "ProtectedFromScaleIn": false
+          }
+        ],
+        "CreatedTime": "2026-11-03T14:49:26.681-06:00",
+        "SuspendedProcesses": [],
+        "VPCZoneIdentifier": "subnet-05941391cc65fa155,subnet-0d86ab3611e9d7112",
+        "EnabledMetrics": [
+          {
+            "Metric": "GroupInServiceInstances",
+            "Granularity": "1Minute"
+          },
+          {
+            "Metric": "GroupDesiredCapacity",
+            "Granularity": "1Minute"
+          }
+        ],
+        "Tags": [
+          {
+            "ResourceId": "tangamandapio-asg",
+            "ResourceType": "auto-scaling-group",
+            "Key": "ManagedBy",
+            "Value": "cloudformation",
+            "PropagateAtLaunch": true
+          },
+          {
+            "ResourceId": "tangamandapio-asg",
+            "ResourceType": "auto-scaling-group",
+            "Key": "Project",
+            "Value": "tangamandapio",
+            "PropagateAtLaunch": true
+          },
+          {
+            "ResourceId": "tangamandapio-asg",
+            "ResourceType": "auto-scaling-group",
+            "Key": "aws:cloudformation:logical-id",
+            "Value": "AutoScalingGroup",
+            "PropagateAtLaunch": true
+          },
+          {
+            "ResourceId": "tangamandapio-asg",
+            "ResourceType": "auto-scaling-group",
+            "Key": "aws:cloudformation:stack-id",
+            "Value": "arn:aws:cloudformation:us-east-1:654654388734:stack/tangamandapio-live-20261103/c61d1580-d7c5-11f1-aaed-12fff2f75809",
+            "PropagateAtLaunch": true
+          },
+          {
+            "ResourceId": "tangamandapio-asg",
+            "ResourceType": "auto-scaling-group",
+            "Key": "aws:cloudformation:stack-name",
+            "Value": "tangamandapio-live-20261103",
+            "PropagateAtLaunch": true
+          }
+        ],
+        "TerminationPolicies": [
+          "Default"
+        ],
+        "NewInstancesProtectedFromScaleIn": false,
+        "ServiceLinkedRoleARN": "arn:aws:iam::654654388734:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+        "DefaultInstanceWarmup": 420,
+        "TrafficSources": [
+          {
+            "Identifier": "arn:aws:elasticloadbalancing:us-east-1:654654388734:targetgroup/tangamandapio-tg/5c74fd905898756a",
+            "Type": "elbv2"
+          }
+        ],
+        "AvailabilityZoneDistribution": {
+          "CapacityDistributionStrategy": "balanced-best-effort"
+        },
+        "CapacityReservationSpecification": {
+          "CapacityReservationPreference": "default"
+        },
+        "InstanceLifecyclePolicy": {
+          "RetentionTriggers": {
+            "TerminateHookAbandon": "terminate"
+          }
+        }
+      }
+    ]
+  },
+  "targets": {
+    "TargetHealthDescriptions": [
+      {
+        "Target": {
+          "Id": "i-0b27cfafab91824ae",
+          "Port": 8080
+        },
+        "HealthCheckPort": "8080",
+        "TargetHealth": {
+          "State": "healthy"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      },
+      {
+        "Target": {
+          "Id": "i-0f989c5ce6edd483e",
+          "Port": 8080
+        },
+        "HealthCheckPort": "8080",
+        "TargetHealth": {
+          "State": "healthy"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      },
+      {
+        "Target": {
+          "Id": "i-0c9eeed606acfbac4",
+          "Port": 8080
+        },
+        "HealthCheckPort": "8080",
+        "TargetHealth": {
+          "State": "healthy"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      }
+    ]
+  },
+  "account": "654654388734",
+  "activities": {
+    "Activities": [
+      {
+        "ActivityId": "7f06868d-673a-2ef8-7b3f-4c19b4014c01",
+        "AutoScalingGroupName": "tangamandapio-asg",
+        "Description": "Launching a new EC2 instance: i-0f989c5ce6edd483e",
+        "Cause": "At 2026-11-03T21:38:49Z a monitor alarm TargetTracking-tangamandapio-asg-AlarmHigh-c9954b6d-d66c-4635-b7bd-55993628024a in state ALARM triggered policy tangamandapio-live-20261103-RequestScalingPolicy-t1k5VaB2ZLCd changing the desired capacity from 2 to 3.  At 2026-11-03T21:38:52Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 2 to 3.",
+        "StartTime": "2026-11-03T15:38:54.219-06:00",
+        "StatusCode": "WaitingForInstanceWarmup",
+        "Progress": 90,
+        "Details": "{\"Availability Zone ID\":\"use1-az1\",\"Subnet ID\":\"subnet-0d86ab3611e9d7112\",\"Availability Zone\":\"us-east-1b\",\"InvokingAlarms\":[{\"AlarmArn\":\"arn:aws:cloudwatch:us-east-1:654654388734:alarm:TargetTracking-tangamandapio-asg-AlarmHigh-c9954b6d-d66c-4635-b7bd-55993628024a\",\"Trigger\":{\"MetricName\":\"RequestCountPerTarget\",\"EvaluateLowSampleCountPercentile\":\"\",\"ComparisonOperator\":\"GreaterThanThreshold\",\"TreatMissingData\":\"\",\"Statistic\":\"SUM\",\"StatisticType\":\"Statistic\",\"Period\":60,\"EvaluationPeriods\":3,\"Unit\":\"None\",\"Namespace\":\"AWS/ApplicationELB\",\"Threshold\":2500},\"AlarmName\":\"TargetTracking-tangamandapio-asg-AlarmHigh-c9954b6d-d66c-4635-b7bd-55993628024a\",\"AlarmDescription\":\"DO NOT EDIT OR DELETE. For TargetTrackingScaling policy arn:aws:autoscaling:us-east-1:654654388734:scalingPolicy:b12faa00-35cb-493f-964c-fe5b5891a164:autoScalingGroupName/tangamandapio-asg:policyName/tangamandapio-live-20261103-RequestScalingPolicy-t1k5V\",\"AWSAccountId\":\"654654388734\",\"OldStateValue\":\"OK\",\"Region\":\"US East (N. Virginia)\",\"NewStateValue\":\"ALARM\",\"AlarmConfigurationUpdatedTimestamp\":1793738970403,\"StateChangeTime\":1793741929697}]}",
+        "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:654654388734:autoScalingGroup:7d5b2e7c-7388-47fb-8ad4-d15a23d2b2a0:autoScalingGroupName/tangamandapio-asg"
+      },
+      {
+        "ActivityId": "a156868c-ba30-44bf-6136-0a930ca07960",
+        "AutoScalingGroupName": "tangamandapio-asg",
+        "Description": "Launching a new EC2 instance: i-0b27cfafab91824ae",
+        "Cause": "At 2026-11-03T20:51:36Z a user request update of AutoScalingGroup constraints to min: 2, max: 5, desired: 2 changing the desired capacity from 0 to 2.  At 2026-11-03T20:51:36Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 0 to 2.",
+        "StartTime": "2026-11-03T14:51:39.153-06:00",
+        "EndTime": "2026-11-03T14:58:44-06:00",
+        "StatusCode": "Successful",
+        "Progress": 100,
+        "Details": "{\"Availability Zone ID\":\"use1-az6\",\"Subnet ID\":\"subnet-05941391cc65fa155\",\"Availability Zone\":\"us-east-1a\"}",
+        "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:654654388734:autoScalingGroup:7d5b2e7c-7388-47fb-8ad4-d15a23d2b2a0:autoScalingGroupName/tangamandapio-asg"
+      },
+      {
+        "ActivityId": "7716868c-ba2e-7ebc-3db7-a36d574f01e9",
+        "AutoScalingGroupName": "tangamandapio-asg",
+        "Description": "Launching a new EC2 instance: i-0c9eeed606acfbac4",
+        "Cause": "At 2026-11-03T20:51:36Z a user request update of AutoScalingGroup constraints to min: 2, max: 5, desired: 2 changing the desired capacity from 0 to 2.  At 2026-11-03T20:51:36Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 0 to 2.",
+        "StartTime": "2026-11-03T14:51:39.039-06:00",
+        "EndTime": "2026-11-03T14:58:44-06:00",
+        "StatusCode": "Successful",
+        "Progress": 100,
+        "Details": "{\"Availability Zone ID\":\"use1-az1\",\"Subnet ID\":\"subnet-0d86ab3611e9d7112\",\"Availability Zone\":\"us-east-1b\"}",
+        "AutoScalingGroupARN": "arn:aws:autoscaling:us-east-1:654654388734:autoScalingGroup:7d5b2e7c-7388-47fb-8ad4-d15a23d2b2a0:autoScalingGroupName/tangamandapio-asg"
+      }
+    ]
+  },
+  "follow_up_20261104": {
+    "target": "GET /health",
+    "requests": 10000,
+    "concurrency": 40,
+    "http_status_counts": {
+      "200": 10000
+    },
+    "duration_seconds_approx": 46,
+    "asg_after_test": {
+      "desired": 2,
+      "min": 2,
+      "max": 5,
+      "scaled_up": false
+    },
+    "rds_touched": true,
+    "reason": "/health executes SELECT 1 against PostgreSQL",
+    "interpretation": "HTTP availability passed; this run did not demonstrate scaling and is not a 3000-user ERP test. No more load was run pending review of fresh RDS metrics."
+  },
+  "rds": [
+    "available",
+    true,
+    "us-east-1a",
+    "us-east-1b",
+    7,
+    true,
+    false
+  ],
+  "cross_cloud": {
+    "transport": "public HTTPS",
+    "aws_event_id": "evt-04d16ff9f38e411bae44b95efcd598cb",
+    "azure_status": "demo_fulfillment_completed",
+    "stock_before": 24,
+    "stock_after_sale": 23,
+    "compensation_event_id": "evt-restore-b16390c6d91c43da8241265db680b5ac",
+    "compensation_status": "demo_restock_completed",
+    "stock_after_compensation": 24
+  },
+  "waf": {
+    "normal_request_http": 200,
+    "xss_probe_http": 403,
+    "sql_probe_http": 403,
+    "managed_common_blocked": 1,
+    "managed_sqli_blocked": 1
+  },
+  "cost": {
+    "aws_academy_entry_usd": 18.6,
+    "aws_academy_exit_usd": 18.6,
+    "aws_meter_delay_hours": "8-12",
+    "azure_mtd_entry_usd": 0.0023796,
+    "azure_mtd_exit_usd": 0.0023796,
+    "azure_cost_data_may_lag": true,
+    "azure_nov01_usd": 0.00099536,
+    "azure_nov02_usd": 0.0008644,
+    "azure_hourly_average_nov01_nov02_usd": 3.8745e-05,
+    "hourly_average_scope": "Azure historical 48 hours, excludes delayed charges and does not measure the test session."
+  },
+  "cleanup": {
+    "aws_region": "us-east-1",
+    "project_stacks_deleted": true,
+    "lab_terminated": true,
+    "manual_rds_snapshots_observed": 0,
+    "project_secrets_retained": 5,
+    "azure_existing_resources_retained": true,
+    "azure_lifecycle_roundtrip_tested": false
+  },
+  "limitations": [
+    "Load test requested a static asset, not 3000 concurrent ERP users.",
+    "No private AWS-Azure VPN/BGP was deployed; CreateCustomerGateway was explicitly denied by SCP.",
+    "PostgreSQL restore from Azure Blob was not tested."
+  ]
+}

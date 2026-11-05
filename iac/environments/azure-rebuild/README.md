@@ -1,5 +1,30 @@
 # Reconstrucción del WMS de demostración en Azure
 
+## Respaldo PostgreSQL entre nubes — configuración parcial
+
+El 05/11/2026 se creó el contenedor privado `tangama-postgres-backups` y una política de ciclo de vida limitada al prefijo `tangama-postgres-backups/postgres/`, que elimina blobs de más de 30 días. El almacenamiento mantiene además eliminación temporal durante 7 días. Las definiciones correspondientes se agregaron al módulo Terraform y se validaron. La política ya se importó al estado, pero **el contenedor todavía debe importarse**: revisa el plan antes de aplicar esta raíz. El archivo `postgres-backup-lifecycle.json` refleja la política aplicada.
+
+La clave RSA `postgres-backup-wrap` protege una copia manual que se restauró y verificó en un entorno aislado, pero no está integrada a un proceso de copia programado ni gestionada por Terraform. El almacén tiene recuperación de borrado de 7 días, sin protección de purga; destruirlo puede perder la clave necesaria para descifrar respaldos. Las reglas `prevent_destroy` del módulo bloquean la destrucción normal de la cuenta de almacenamiento y del Key Vault mediante Terraform; no impiden borrados desde la consola. **No destruyas estos recursos ni presentes esta configuración como un respaldo programado** hasta que se configure y pruebe la conservación de la clave y el flujo automático.
+
+## Lanzador guiado del entorno
+
+`lifecycle.ps1` administra solo esta raíz Terraform y exige el GUID de la suscripción esperada. `up` construye un ZIP inmutable desde el código actual, inicializa el backend, muestra el plan y solo aplica si se escribe `APPLY`. `down` muestra el plan de destrucción y exige escribir el nombre exacto del grupo de recursos. Ambos conservan el backend remoto `azure-tfstate`, que hace falta para gestionar y reconstruir este entorno. Antes del primer uso, copia `rebuild.tfvars.example` a `terraform.tfvars` y ajusta nombres globalmente únicos; el archivo local está excluido de Git. Tras destruir, cambia el nombre del Key Vault si Azure aún lo mantiene en soft delete.
+
+Este comando **no levanta ni elimina** las otras raíces de red/VPN, la recuperación regional o los recursos AWS. El texto de alcance que imprime es intencional: no equivale a un ciclo integral multinube.
+
+```powershell
+.\lifecycle.ps1 up -ExpectedSubscriptionId '<GUID-de-la-suscripción>'
+.\lifecycle.ps1 down -ExpectedSubscriptionId '<GUID-de-la-suscripción>'
+```
+
+Se puede pasar `-VarFile` para elegir otra configuración local; por defecto usa `terraform.tfvars`. Si se perdió el backend remoto, primero ejecuta `bootstrap-state` con la misma suscripción y revisa su plan:
+
+```powershell
+.\lifecycle.ps1 bootstrap-state -ExpectedSubscriptionId '<GUID-de-la-suscripción>'
+```
+
+Este lanzador no elimina `azure-flex-private`, `azure-p2s-vpn` ni `aws-azure-vpn`; cada uno tiene estado y dependencias aparte. Un `down` de `azure-rebuild` elimina los datos de esa raíz según sus políticas de retención. Ningún comando se ejecutó al preparar esta guía.
+
 La comprobación más reciente, 16/10/2026 08:08 UTC, confirma la Function
 `Running`/HTTPS-only, health HTTP 200 con TLS válido y el componente Application
 Insights `Succeeded`; ARM enumera la Function, colas, contenedores, Key Vault,

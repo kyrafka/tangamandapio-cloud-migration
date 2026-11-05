@@ -24,14 +24,15 @@ from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RESOURCE_GROUP = "rg-tangamandapio-rebuild-wus"
-FUNCTION_APP = "tangama-wms-261008"
+RESOURCE_GROUP = os.environ.get(
+    "TANGAMA_AZURE_RESOURCE_GROUP", "rg-tangamandapio-rebuild-wus"
+)
+FUNCTION_APP = os.environ.get("TANGAMA_AZURE_FUNCTION_APP", "tangama-wms-261030")
 SKU = "SKU-ARROZ-001"
 OPT_IN_VALUE = "I_ACKNOWLEDGE_DEMO_STOCK_MUTATION"
 # Management-plane reads (especially Function keys) can take ~25s in the
 # student subscription; retain a finite bound without aborting a valid lookup.
 AZURE_CLI_TIMEOUT_SECONDS = 90
-AZURE_ARM_TIMEOUT_SECONDS = 60
 POLL_SECONDS = 150
 
 
@@ -71,23 +72,34 @@ def azure_cli(*args: str) -> str:
     return result.stdout.strip()
 
 
-def azure_arm_json(method: str, url: str, access_token: str) -> dict:
-    """Call ARM directly; some Azure CLI WebApp commands stall in this lab."""
-    request = Request(
-        url,
-        data=b"" if method == "POST" else None,
-        headers={
-            "Accept": "application/json",
-            "Authorization": f"Bearer {access_token}",
-        },
-        method=method,
+def azure_function_endpoint() -> tuple[str, str]:
+    """Resolve the current HTTPS Function host and key using the signed-in CLI."""
+    function = json.loads(
+        azure_cli(
+            "functionapp", "show",
+            "--resource-group", RESOURCE_GROUP,
+            "--name", FUNCTION_APP,
+            "--query", "{state:state,httpsOnly:httpsOnly,defaultHostName:defaultHostName}",
+            "--output", "json",
+        )
     )
-    try:
-        with urlopen(request, timeout=AZURE_ARM_TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
-        # Never include the request headers or response body (which may contain keys).
-        raise SmokeFailure(f"Azure management request failed ({type(error).__name__}).") from None
+    if function.get("state") != "Running" or function.get("httpsOnly") is not True:
+        raise SmokeFailure("The expected HTTPS-only Azure Function is not running.")
+    host = function.get("defaultHostName")
+    if not isinstance(host, str) or not host.endswith(".azurewebsites.net"):
+        raise SmokeFailure("The expected Azure Function host name is unavailable.")
+
+    # Keep the key in process memory only; do not write it or include it in errors.
+    key = azure_cli(
+        "functionapp", "keys", "list",
+        "--resource-group", RESOURCE_GROUP,
+        "--name", FUNCTION_APP,
+        "--query", "functionKeys.default",
+        "--output", "tsv",
+    )
+    if not key or key in {"None", "null"}:
+        raise SmokeFailure("Azure did not return a usable Function key.")
+    return f"https://{host}", key
 
 
 def azure_json(url: str, key: str) -> dict:
@@ -96,6 +108,7 @@ def azure_json(url: str, key: str) -> dict:
         with urlopen(request, timeout=15) as response:
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
+        error.close()
         if error.code in {408, 425, 429, 500, 502, 503, 504}:
             raise AzureTransientReadError(
                 f"Azure GET temporarily returned HTTP {error.code}."
@@ -124,6 +137,7 @@ def azure_post(url: str, key: str, payload: dict) -> tuple[int, dict]:
         with urlopen(request, timeout=15) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
+        error.close()
         raise SmokeFailure(f"Azure POST returned HTTP {error.code}.") from None
     except (URLError, TimeoutError, json.JSONDecodeError) as error:
         raise SmokeFailure(f"Azure POST failed ({type(error).__name__}).") from None
@@ -147,6 +161,7 @@ def require_http_status(
             actual_status = response.status
     except HTTPError as error:
         actual_status = error.code
+        error.close()
     except (URLError, TimeoutError) as error:
         raise SmokeFailure(
             f"Azure ingress probe failed ({type(error).__name__}); expected HTTP {expected_status}."
@@ -270,46 +285,7 @@ def main() -> int:
     if account.get("name") != "Azure for Students" or account.get("state") != "Enabled":
         raise SmokeFailure("The active Azure account is not the expected enabled student subscription.")
 
-    access_token = json.loads(
-        azure_cli(
-            "account", "get-access-token", "--resource", "https://management.azure.com/",
-            "--output", "json",
-        )
-    ).get("accessToken")
-    if not access_token:
-        raise SmokeFailure("Azure CLI did not return an ARM access token.")
-    subscription_id = account.get("id")
-    if not subscription_id:
-        raise SmokeFailure("The active Azure subscription ID is unavailable.")
-    site_resource = (
-        f"https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/"
-        f"{RESOURCE_GROUP}/providers/Microsoft.Web/sites/{FUNCTION_APP}"
-    )
-    function = azure_arm_json(
-        "GET", f"{site_resource}?api-version=2023-12-01", access_token
-    ).get("properties", {})
-    host = function.get("host")
-    if (
-        function.get("state") != "Running"
-        or function.get("httpsOnly") is not True
-    ):
-        raise SmokeFailure("The expected HTTPS-only Azure Function is not running.")
-    host = function.get("defaultHostName")
-    if not isinstance(host, str) or not host.endswith(".azurewebsites.net"):
-        raise SmokeFailure("The expected Azure Function host name is unavailable.")
-
-    # The secret stays in memory and is never written to a file or printed.
-    host_keys = azure_arm_json(
-        "POST",
-        f"{site_resource}/host/default/listkeys?api-version=2023-12-01",
-        access_token,
-    )
-    key = host_keys.get("functionKeys", {}).get("default")
-    access_token = None
-    if not isinstance(key, str) or not key:
-        raise SmokeFailure("Azure did not return a usable Function key.")
-
-    base_url = f"https://{host}"
+    base_url, key = azure_function_endpoint()
     verify_ingress_guards(base_url, key)
     inventory = azure_json(f"{base_url}/api/wms/inventory", key)
     if inventory.get("mode") != "demo-inventory-ledger" or inventory.get("is_real_erp") is not False:

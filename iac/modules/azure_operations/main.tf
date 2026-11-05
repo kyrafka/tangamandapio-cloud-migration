@@ -53,6 +53,12 @@ resource "azurerm_storage_account" "this" {
   https_traffic_only_enabled      = true
   tags                            = var.tags
 
+  # The account will hold disaster-recovery copies. Delete only after migrating
+  # and verifying those copies; a normal Terraform destroy must stop here.
+  lifecycle {
+    prevent_destroy = true
+  }
+
   blob_properties {
     delete_retention_policy {
       days = 7
@@ -68,6 +74,30 @@ resource "azurerm_storage_container" "evidence" {
   name                  = "fulfillment-events"
   storage_account_name  = azurerm_storage_account.this.name
   container_access_type = "private"
+}
+
+resource "azurerm_storage_container" "postgres_backups" {
+  name                  = "tangama-postgres-backups"
+  storage_account_name  = azurerm_storage_account.this.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_management_policy" "postgres_backups" {
+  storage_account_id = azurerm_storage_account.this.id
+
+  rule {
+    name    = "postgres-backups-30-days"
+    enabled = true
+    filters {
+      blob_types   = ["blockBlob"]
+      prefix_match = ["tangama-postgres-backups/postgres/"]
+    }
+    actions {
+      base_blob {
+        delete_after_days_since_modification_greater_than = 30
+      }
+    }
+  }
 }
 
 # Linux Consumption loads the Function from an external package URL. Keep the
@@ -115,6 +145,11 @@ resource "azurerm_key_vault" "operations" {
   soft_delete_retention_days    = 7
   public_network_access_enabled = true
   tags                          = var.tags
+
+  # Losing this vault can make offsite backups permanently unreadable.
+  lifecycle {
+    prevent_destroy = true
+  }
 
   network_acls {
     default_action = "Deny"

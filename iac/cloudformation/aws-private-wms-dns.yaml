@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Private VPC-only DNS for one Azure WMS Function hostname.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  WmsHostname:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{0,58}[a-z0-9]\.azurewebsites\.net$'
+  WmsPrivateIp:
+    Type: String
+    AllowedPattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+
+Resources:
+  PrivateWmsZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref WmsHostname
+      HostedZoneConfig:
+        Comment: VPC-only WMS endpoint
+      VPCs:
+        - VPCId: !Ref VpcId
+          VPCRegion: !Ref AWS::Region
+      HostedZoneTags:
+        - Key: Project
+          Value: Tangamandapio
+  PrivateWmsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PrivateWmsZone
+      Name: !Ref WmsHostname
+      Type: A
+      TTL: '60'
+      ResourceRecords:
+        - !Ref WmsPrivateIp
+
+Outputs:
+  PrivateHostedZoneId:
+    Value: !Ref PrivateWmsZone

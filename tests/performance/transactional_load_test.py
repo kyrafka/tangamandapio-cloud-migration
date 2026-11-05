@@ -25,6 +25,7 @@ RELEASE_DIR = PROJECT_ROOT / "app" / "aws_release" / "current"
 ADMIN_USERNAME = "load-test-admin@example.test"
 ADMIN_PASSWORD = secrets.token_urlsafe(32)
 APP_SESSION_SECRET = secrets.token_urlsafe(32)
+_IMPORT_DATABASE_SANDBOX = None
 
 
 def percentile(values, fraction):
@@ -36,10 +37,36 @@ def percentile(values, fraction):
 
 
 def load_portal_module():
+    global _IMPORT_DATABASE_SANDBOX
+
     # Put the package directory first so the release's app.py cannot be
     # shadowed by the repository's top-level app/ namespace package.
     sys.path.insert(0, str(RELEASE_DIR))
-    import app as portal  # pylint: disable=import-outside-toplevel
+    _IMPORT_DATABASE_SANDBOX = tempfile.TemporaryDirectory(
+        prefix="tangama-transactional-load-import-"
+    )
+    sandbox_path = str(Path(_IMPORT_DATABASE_SANDBOX.name) / "import.sqlite")
+    isolated_environment = {
+        "DATABASE_URL": "",
+        "DATABASE_PATH": sandbox_path,
+        "AUTO_DISPATCH_EVENTS": "false",
+        "OUTBOX_RETRY_INTERVAL": "0",
+        "VOICE_RECORDINGS_ENABLED": "false",
+        "INTERNAL_ERP_ENABLED": "false",
+        "METRICS_ENABLED": "false",
+    }
+    previous_environment = {
+        name: os.environ.get(name) for name in isolated_environment
+    }
+    try:
+        os.environ.update(isolated_environment)
+        import app as portal  # pylint: disable=import-outside-toplevel
+    finally:
+        for name, value in previous_environment.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
     return portal
 

@@ -1,9 +1,10 @@
-# Ejemplo aislado para reconstruir; validar disponibilidad global de los nombres
-# antes de aplicar. No contiene claves ni contraseñas.
+# Parámetros públicos para reconstruir el WMS de demostración. El lifecycle.ps1
+# genera y pasa el paquete ZIP actual; cambie los sufijos si Azure informa que
+# algún nombre global ya está ocupado. No contiene claves ni contraseñas.
 resource_group_name  = "rg-tangamandapio-rebuild-wus"
-storage_account_name = "sttangama261008r"
-key_vault_name       = "kv-tangama-261008r"
-function_app_name    = "tangama-wms-261008"
+storage_account_name = "sttangama261030r"
+key_vault_name       = "kv-tangama-261030r"
+function_app_name    = "tangama-wms-261030"
 name_prefix          = "tangama"
 function_package_path = "../../../artifacts/azure_function_package-97383da268c023b54c38c8bba28c31853abb10545b796b995b8b336511bbe30d.zip"
 alert_email_receivers = []
