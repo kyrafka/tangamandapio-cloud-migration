@@ -1,5 +1,7 @@
 # AWS CloudFormation — portal y recuperación
 
+**Corte 05/11/2026:** se probó una conexión privada mediante routers Tailscale propios y una conmutación del router AWS. Se restauró una copia manual de PostgreSQL desde Azure Blob. La programación de copias y el ciclo completo de destrucción y reconstrucción siguen pendientes. Los párrafos fechados de octubre y del 04/11 que aparecen más abajo describen estados históricos.
+
 ## Qué administra
 
 `aws-lab.yaml` es la plantilla principal del portal. Define su red, ALB, EC2/Auto Scaling, PostgreSQL RDS, almacenamiento, seguridad, alarmas y salidas. La plantilla incluye el escalado por carga del ALB y por CPU; un umbral definido en código no demuestra que el ASG haya escalado bajo una carga real.
@@ -68,7 +70,7 @@ El borrado necesita Python 3 con PyYAML para comprobar las políticas del templa
 
 `destroy.sh` bloquea por defecto, exige `EXPECTED_AWS_ACCOUNT_ID`, `STACK_NAME` explícito y confirmaciones coincidentes. Verifica que la base tenga políticas de snapshot y los secretos estén retenidos durante el borrado del stack. Si la deriva aún está `NOT_CHECKED`, inicia una detección y espera el resultado; cualquier estado distinto a `IN_SYNC` detiene el proceso antes de vaciar buckets. Luego purga snapshots y backups; las credenciales de Secrets Manager/SSM se conservan salvo que `PURGE_PROJECT_SECRETS=true` y una confirmación independiente identifique exactamente el stack.
 
-La revisión del 04/11/2026 está en [`../../evidence/current/aws/AWS-SPOF-CURRENT-STATE-2026-11-04.md`](../../evidence/current/aws/AWS-SPOF-CURRENT-STATE-2026-11-04.md). El inventario inicial mostró el stack `tangamandapio-live-20261104` con 49 recursos, grabaciones activas, ASG en 0, RDS disponible/Multi-AZ y WAF asociado. Después se recuperaron dos instancias; una prueba de 10.000 solicitudes a `/health` obtuvo 200 pero no escaló y sí consultó RDS. La VPN propia no está activa: no se encontró router, interfaz `tun` ni ruta privada. `us-west-2` no tiene una pila Tangamandapio. El registro de borrado previo fue seguido por esta nueva reconstrucción, así que no prueba apagado actual. No existe un ciclo integral probado que levante y elimine también VPN y recuperación regional.
+En la revisión histórica del 04/11/2026 el inventario inicial mostró el stack `tangamandapio-live-20261104` con 49 recursos, grabaciones activas, ASG en 0, RDS disponible/Multi-AZ y WAF asociado. Después se recuperaron dos instancias; una prueba de 10.000 solicitudes a `/health` obtuvo 200 pero no escaló y sí consultó RDS. En ese momento no se encontró un túnel privado; el piloto Tailscale se verificó posteriormente. `us-west-2` no tenía una pila Tangamandapio. El registro de borrado previo fue seguido por esta nueva reconstrucción, así que no prueba apagado actual. No existe un ciclo integral probado que levante y elimine también VPN y recuperación regional.
 
 No destruyas una cuenta si el snapshot, artefacto, DNS, secretos y procedimiento de reconstrucción no están comprobados. El token temporal de AWS Academy no es un respaldo y puede expirar o perder permisos.
 
