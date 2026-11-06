@@ -340,10 +340,10 @@ def create_app(test_config=None):
         ERP_SMTP_RECIPIENT_DOMAIN=os.getenv("ERP_SMTP_RECIPIENT_DOMAIN", "").strip().lower(),
         AUTO_DISPATCH_EVENTS=os.getenv("AUTO_DISPATCH_EVENTS", "true").lower()
         in {"1", "true", "yes"},
-        # Las cuentas provisionadas desde el panel deben rotar la clave
-        # temporal en su primer acceso; solo se desactiva explícitamente.
+        # Las cuentas provisionadas pueden usar la clave entregada y cambiarla
+        # después desde su cuenta; no se fuerza una rotación en el primer acceso.
         FORCE_INITIAL_PASSWORD_CHANGE=os.getenv(
-            "FORCE_INITIAL_PASSWORD_CHANGE", "true"
+            "FORCE_INITIAL_PASSWORD_CHANGE", "false"
         ).strip().lower() in {"1", "true", "yes"},
         # 0 (por defecto) mantiene el reintento apagado: solo se enciende cuando
         # el entorno lo declara, para no dejar hilos en imports y en tests.
@@ -558,20 +558,6 @@ def create_app(test_config=None):
                 )
             )
             return jsonify(error="csrf_token_required"), 403
-        return None
-
-    @app.before_request
-    def require_temporary_password_rotation():
-        if not request.path.startswith("/api/") or request.path in {
-            "/api/auth/login",
-            "/api/auth/logout",
-            "/api/auth/session",
-            "/api/auth/password",
-        }:
-            return None
-        user = current_portal_user(database_path)
-        if user and user["must_change_password"]:
-            return jsonify(error="password_change_required"), 428
         return None
 
     @app.after_request
@@ -1584,7 +1570,7 @@ def create_app(test_config=None):
             connection.execute(
                 """
                 UPDATE portal_users
-                SET password_hash = ?, must_change_password = TRUE,
+                SET password_hash = ?, must_change_password = FALSE,
                     auth_version = auth_version + 1
                 WHERE id = ?
                 """,
@@ -3225,7 +3211,7 @@ def ensure_portal_bootstrap(app, database_path):
                         connection.execute(
                             """
                             UPDATE portal_users
-                            SET password_hash = ?, must_change_password = TRUE,
+                            SET password_hash = ?, must_change_password = FALSE,
                                 auth_version = auth_version + 1
                             WHERE id = ?
                             """,

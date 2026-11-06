@@ -1,6 +1,27 @@
 # Paquete de release AWS
 
-> Último release preparado localmente: v19,
+## Release desplegado v29 — contraseña temporal sin bloqueo (5 de noviembre de 2026)
+
+Desplegado en `tangamandapio-live-20261104` como
+`20261105-password-change-optional-v29-python312`. El artefacto inmutable está
+en S3 como
+`releases/tangamandapio/portal-b2b-20261105-password-change-optional-v29-python312-0c1b86e998a483764f7a80a1cec3e0f90d73c60d564f907fa1c8dc4e59a6152e.tar.gz`
+(SHA-256 `0c1b86e998a483764f7a80a1cec3e0f90d73c60d564f907fa1c8dc4e59a6152e`).
+CloudFormation terminó `UPDATE_COMPLETE`; el ASG volvió a capacidad 2 y ambas
+instancias nuevas quedaron saludables. La página y `/health` respondieron 200
+por HTTPS; `/api/erp/access` sin sesión respondió 401, no 428. Las pruebas
+locales cubren la cuenta marcada con contraseña temporal y el flujo de cambio
+opcional. No se modificó la base ni se probó el acceso interactivo de la cuenta
+reportada.
+
+El backend ya no bloquea cuentas con clave temporal; alta y restablecimiento no
+marcan una rotación obligatoria. El cambio de contraseña sigue disponible como
+opción y conserva la validación de clave actual, longitud mínima, no
+reutilización, auditoría y revocación de sesiones. Los flags existentes se
+mantienen solo como información compatible. La plantilla de CloudFormation
+también deja de solicitar cambio obligatorio para cuentas nuevas.
+
+> Release anterior preparado localmente: v19,
 > `20261016-webrtc-ice-config-v19-python312`, SHA-256
 > `e5ab7874feafd8f22ad2c0d631acbd3448188479616d42fbc1f7bb649c1e12d8`.
 > El paquete está creado, pero no subido a S3 ni desplegado. AWS reconoce STS,
@@ -262,9 +283,10 @@ y estos endpoints protegidos:
 - `PATCH /api/admin/users/<id>` cambia rol, empresa y estado activo; cada cambio
   incrementa `auth_version` e invalida las sesiones anteriores.
 - `POST /api/admin/users/<id>/reset-password` emite una contraseña temporal,
-  la revela una sola vez y obliga al usuario a cambiarla.
-- `POST /api/auth/password` valida la contraseña actual y exige una nueva de al
-  menos 12 caracteres; después revoca la sesión.
+  la revela una sola vez; el usuario puede cambiarla después de entrar.
+- `POST /api/auth/password` permite cambiar la contraseña de forma opcional,
+  valida la contraseña actual y exige una nueva de al menos 12 caracteres;
+  después revoca la sesión.
 - `GET /api/voice/ice-config` entrega STUN y, solo si están configurados
   `WEBRTC_TURN_URLS` y `WEBRTC_TURN_SHARED_SECRET`, credenciales TURN efímeras.
   La clave compartida nunca se devuelve al navegador.

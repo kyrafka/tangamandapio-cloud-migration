@@ -1209,12 +1209,13 @@ class PasswordManagementTestCase(unittest.TestCase):
         )
         return response
 
-    def test_admin_reset_revokes_sessions_and_forces_self_service_change(self):
+    def test_admin_reset_revokes_sessions_but_password_change_is_optional(self):
         admin_login = self.login(
             self.client, "admin@tangamandapio.local", "Temporal-Admin-2026"
         )
         self.assertEqual(admin_login.status_code, 200)
         admin_csrf = admin_login.get_json()["csrf_token"]
+        self.app.config["FORCE_INITIAL_PASSWORD_CHANGE"] = True
         created = self.client.post(
             "/api/admin/users",
             json={
@@ -1234,6 +1235,7 @@ class PasswordManagementTestCase(unittest.TestCase):
         )
         self.assertEqual(initial_login.status_code, 200)
         self.assertTrue(initial_login.get_json()["user"]["must_change_password"])
+        self.assertEqual(sales_client.get("/api/orders").status_code, 200)
         initial_password_change = sales_client.post(
             "/api/auth/password",
             json={
@@ -1264,7 +1266,7 @@ class PasswordManagementTestCase(unittest.TestCase):
         self.assertEqual(reset.status_code, 200)
         temporary_password = reset.get_json()["temporary_password"]
         self.assertGreaterEqual(len(temporary_password), 20)
-        self.assertTrue(reset.get_json()["must_change_password"])
+        self.assertFalse(reset.get_json()["must_change_password"])
 
         revoked = sales_client.get("/api/auth/session").get_json()
         self.assertFalse(revoked["authenticated"])
@@ -1278,8 +1280,8 @@ class PasswordManagementTestCase(unittest.TestCase):
             sales_client, "ventas@tangamandapio.local", temporary_password
         )
         self.assertEqual(temporary_login.status_code, 200)
-        self.assertTrue(temporary_login.get_json()["user"]["must_change_password"])
-        self.assertEqual(sales_client.get("/api/orders").status_code, 428)
+        self.assertFalse(temporary_login.get_json()["user"]["must_change_password"])
+        self.assertEqual(sales_client.get("/api/orders").status_code, 200)
 
         changed = sales_client.post(
             "/api/auth/password",

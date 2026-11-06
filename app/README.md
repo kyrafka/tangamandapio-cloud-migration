@@ -33,25 +33,23 @@ por sí solo el despliegue detrás de un proxy HTTPS.
 
 ### Ciclo de vida de contraseñas
 
-El portal local fuerza el cambio de la contraseña de bootstrap y de toda clave
-temporal antes de permitir otras operaciones (`428 password_change_required`).
-Cada usuario puede cambiar su propia contraseña desde **Mi cuenta**; el backend
-valida la clave actual, exige entre 12 y 256 caracteres, rechaza reutilizarla,
-registra la acción y revoca las sesiones anteriores incrementando `auth_version`.
-Un administrador puede iniciar un restablecimiento para otra cuenta activa,
-confirmándolo en la interfaz. El backend genera una clave aleatoria temporal,
-la devuelve una sola vez, marca el cambio como obligatorio y revoca sesiones;
-la auditoría no registra el secreto. El administrador no puede usar el flujo
-para restablecer su propia cuenta. Entrega la clave temporal al usuario por un
-canal seguro y no la guardes en tickets o chats.
+Las claves temporales y las de bootstrap ya no bloquean el uso del portal. El
+cambio de contraseña es opcional desde **Mi cuenta**. Cuando se cambia, el
+backend valida la clave actual, exige entre 12 y 256 caracteres, rechaza
+reutilizarla, registra la acción y revoca las sesiones anteriores incrementando
+`auth_version`. Un administrador puede restablecer la clave de otra cuenta
+activa; la nueva clave aleatoria se muestra una sola vez y las sesiones
+anteriores se revocan. La auditoría no registra el secreto. El administrador no
+puede restablecer su propia cuenta. Entrega la clave temporal por un canal
+seguro y recomienda al usuario elegir una propia después de entrar.
 
-Las columnas `auth_version` y `must_change_password` se incorporan mediante una
-migración aditiva compatible con las bases existentes. Los defaults
-`FORCE_BOOTSTRAP_PASSWORD_CHANGE` y `FORCE_INITIAL_PASSWORD_CHANGE` están
-activados por defecto; las pruebas pueden desactivarlos explícitamente. La
-implementación y su prueba actual son locales; no acredita que el artefacto
-desplegado en AWS tenga esta versión ni sustituye MFA o un proveedor corporativo
-de identidad.
+Las columnas `auth_version` y `must_change_password` se conservan por
+compatibilidad con las bases existentes; `must_change_password` solo identifica
+cuentas que usan una clave temporal y ya no impone un bloqueo. Los valores
+`FORCE_BOOTSTRAP_PASSWORD_CHANGE` y `FORCE_INITIAL_PASSWORD_CHANGE` quedan
+desactivados por defecto. El login, el control de roles, CSRF y la revocación de
+sesiones siguen activos. Esto no sustituye MFA ni un proveedor corporativo de
+identidad.
 
 El primer administrador no está codificado. Para un arranque local se define una contraseña temporal en la sesión de PowerShell, nunca en Git:
 

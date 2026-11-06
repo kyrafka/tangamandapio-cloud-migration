@@ -106,6 +106,22 @@ class ErpReleaseTests(unittest.TestCase):
             names = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         self.assertTrue({"erp_products", "erp_sales_orders", "erp_purchase_orders", "erp_financial_documents", "internal_messages"}.issubset(names))
 
+    def test_temporary_password_flag_does_not_block_portal_access(self):
+        self.application.config["FORCE_INITIAL_PASSWORD_CHANGE"] = True
+        created = self.post(self.client, "/api/admin/users", {
+            "username": "temporal@release.test",
+            "password": "Release-Temporary-Password-2026!",
+            "role": "sales",
+        })
+        self.assertEqual(created.status_code, 201)
+        self.assertTrue(created.get_json()["user"]["must_change_password"])
+
+        client = self.application.test_client()
+        self.login(client, "temporal@release.test", "Release-Temporary-Password-2026!")
+        session = client.get("/api/auth/session").get_json()
+        self.assertTrue(session["user"]["must_change_password"])
+        self.assertEqual(client.get("/api/erp/access").status_code, 200)
+
     @patch("app.insert_audit", side_effect=RuntimeError("audit store unavailable"))
     def test_admin_user_creation_rolls_back_when_audit_insert_fails(self, _insert_audit):
         with self.assertRaisesRegex(RuntimeError, "audit store unavailable"):

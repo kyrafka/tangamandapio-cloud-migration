@@ -116,7 +116,7 @@
       const companyOptions = state.companies.map((company) =>
         `<option value="${company.id}" ${Number(company.id) === Number(user.company_id) ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("");
       return `<tr data-user-row="${user.id}">
-        <td><strong>${escapeHtml(user.username)}</strong><small>${user.must_change_password ? "Cambio de clave pendiente" : `Creada ${new Date(user.created_at).toLocaleDateString("es-PE")}`}</small></td>
+        <td><strong>${escapeHtml(user.username)}</strong><small>${user.must_change_password ? "Usa una clave temporal" : `Creada ${new Date(user.created_at).toLocaleDateString("es-PE")}`}</small></td>
         <td><select data-user-role aria-label="Rol de ${escapeHtml(user.username)}">${roleOptions}</select></td>
         <td><select data-user-company aria-label="Empresa de ${escapeHtml(user.username)}">${companyOptions}</select></td>
         <td><select data-user-active aria-label="Acceso de ${escapeHtml(user.username)}"><option value="true" ${user.active ? "selected" : ""}>Activo</option><option value="false" ${!user.active ? "selected" : ""}>Suspendido</option></select></td>

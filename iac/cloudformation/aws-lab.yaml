@@ -669,7 +669,7 @@ Resources:
                 "BOOTSTRAP_ADMIN_PASSWORD": admin["password"],
                 "RESET_BOOTSTRAP_ADMIN_PASSWORD": os.environ.get("RESET_BOOTSTRAP_ADMIN_PASSWORD", "false"),
                 "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION": os.environ.get("PORTAL_ADMIN_SECRET_VERSION", ""),
-                "FORCE_INITIAL_PASSWORD_CHANGE": "true",
+                "FORCE_INITIAL_PASSWORD_CHANGE": "false",
                 "DEMO_VOICE_PASSWORD": os.environ.get("DEMO_VOICE_PASSWORD", ""),
                 "VOICE_RECORDINGS_BUCKET": os.environ.get("VOICE_RECORDINGS_BUCKET", "").strip(),
                 "APP_SESSION_SECRET": session["session_secret"],

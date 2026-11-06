@@ -200,10 +200,10 @@ def create_app(test_config=None):
         ),
         BOOTSTRAP_ADMIN_PASSWORD=os.getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
         FORCE_BOOTSTRAP_PASSWORD_CHANGE=os.getenv(
-            "FORCE_BOOTSTRAP_PASSWORD_CHANGE", "true"
+            "FORCE_BOOTSTRAP_PASSWORD_CHANGE", "false"
         ).lower() in {"1", "true", "yes"},
         FORCE_INITIAL_PASSWORD_CHANGE=os.getenv(
-            "FORCE_INITIAL_PASSWORD_CHANGE", "true"
+            "FORCE_INITIAL_PASSWORD_CHANGE", "false"
         ).lower() in {"1", "true", "yes"},
         LOGIN_RATE_LIMIT_MAX=int(os.getenv("LOGIN_RATE_LIMIT_MAX", "5")),
         LOGIN_RATE_LIMIT_SECONDS=int(os.getenv("LOGIN_RATE_LIMIT_SECONDS", "300")),
@@ -274,20 +274,6 @@ def create_app(test_config=None):
                 "path": request.path,
             }))
             return jsonify(error="csrf_token_required"), 403
-        return None
-
-    @app.before_request
-    def require_temporary_password_change():
-        if not request.path.startswith("/api/") or request.path in {
-            "/api/auth/login",
-            "/api/auth/logout",
-            "/api/auth/session",
-            "/api/auth/password",
-        }:
-            return None
-        user = current_portal_user(database_path)
-        if user and user["must_change_password"]:
-            return jsonify(error="password_change_required"), 428
         return None
 
     @app.after_request
@@ -818,7 +804,7 @@ def create_app(test_config=None):
             connection.execute(
                 """
                 UPDATE portal_users
-                SET password_hash = ?, must_change_password = TRUE,
+                SET password_hash = ?, must_change_password = FALSE,
                     auth_version = auth_version + 1
                 WHERE id = ?
                 """,
@@ -837,7 +823,7 @@ def create_app(test_config=None):
             user_id=user_id,
             username=target["username"],
             temporary_password=temporary_password,
-            must_change_password=True,
+            must_change_password=False,
         )
 
     @app.patch("/api/admin/users/<int:user_id>")

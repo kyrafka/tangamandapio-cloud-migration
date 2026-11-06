@@ -1,5 +1,35 @@
 # Infraestructura como código
 
+## Comprobación de recuperación y costos
+
+La comprobación más reciente encontró el laboratorio AWS Academy en estado
+`Terminated`. Esto no demuestra que todos los recursos de AWS estén eliminados:
+al terminar la sesión pueden permanecer RDS, almacenamiento, balanceadores y
+otros recursos facturables. La última consulta EC2 con credenciales válidas
+mostró cuatro instancias del proyecto; no se ha confirmado su estado después de
+terminar la sesión.
+
+En Azure se observaron encendidas `vm-tangama-ts-pilot` y
+`vm-tangama-ts-backup`. También existen la VNet, el Private Endpoint, las
+Functions, las cuentas de almacenamiento y los almacenes de claves. Estos
+recursos pueden generar cargos independientemente de AWS Academy.
+
+La configuración de las seis raíces Azure se validó sintácticamente. Pasar
+`terraform validate` no prueba que los recursos puedan recrearse ni restaura
+datos. El estado de `azure-rebuild` incluye la política de retención, pero no
+el contenedor `tangama-postgres-backups`, que existe en Azure y requiere una
+importación revisada antes de aplicar cambios a esa raíz. La consulta de blobs
+con la identidad actual recibió una denegación de permisos; por tanto no se ha
+comprobado el contenido ni que exista una copia reciente recuperable.
+
+El comando de AWS no reconstruye por sí solo la VPN Tailscale completa y su
+borrado se detiene si detecta los routers o DNS privado no administrados. El
+comando de Azure cubre solamente `azure-rebuild`, no las raíces de red privada
+y routers. El enrolamiento de Tailscale y la restauración integral de los datos
+siguen siendo pasos independientes. No se ha validado un ciclo completo de
+destrucción y reconstrucción de ambas nubes; conserva los datos, el backend de
+estado, las claves y la configuración externa hasta comprobar su recuperación.
+
 ## Estado de recuperación — 05/11/2026
 
 Las secciones anteriores al 05/11 son históricas. El piloto actual usa routers Tailscale propios en AWS y Azure; se verificaron un pedido privado y una conmutación del router AWS, sin afirmar BGP ni VPN Site-to-Site administrada. Se guardó una copia manual cifrada de PostgreSQL en Blob y se restauró en una base aislada con 20 tablas verificadas. El respaldo periódico y la recuperación multirregión siguen pendientes.
