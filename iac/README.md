@@ -22,6 +22,13 @@ acumulado con retraso; no acredita que el gasto actual sea cero. No se pudo
 comprobar si RDS y otros recursos facturables siguieron activos tras terminar la
 sesión, pues las credenciales de AWS CLI estaban vencidas.
 
+En la revisión posterior se encontró la instancia PostgreSQL en la consola y
+se solicitó su detención temporal. AWS indicó que se reanudará automáticamente
+el 12/11/2026 a las 23:30 (UTC-05:00). Al cerrar el laboratorio la solicitud
+seguía en transición: no se confirmó el estado final `stopped`. Aunque esté
+detenida, el almacenamiento, los respaldos y otros recursos conservados pueden
+seguir generando cargos. Academy volvió a mostrar `Lab terminated` y `00:00`.
+
 La configuración de las seis raíces Azure se validó sintácticamente. Pasar
 `terraform validate` no prueba que los recursos puedan recrearse ni restaura
 datos. El estado de `azure-rebuild` incluye la política de retención, pero no
@@ -40,7 +47,7 @@ estado, las claves y la configuración externa hasta comprobar su recuperación.
 
 ## Estado de recuperación — 05/11/2026
 
-Las secciones anteriores al 05/11 son históricas. El piloto actual usa routers Tailscale propios en AWS y Azure; se verificaron un pedido privado y una conmutación del router AWS, sin afirmar BGP ni VPN Site-to-Site administrada. Se guardó una copia manual cifrada de PostgreSQL en Blob y se restauró en una base aislada con 20 tablas verificadas. El respaldo periódico y la recuperación multirregión siguen pendientes.
+Las secciones anteriores al 05/11 son históricas. El piloto actual usa routers Tailscale propios en AWS y Azure; se verificaron un pedido privado y una conmutación del router AWS, sin afirmar BGP ni VPN Site-to-Site administrada. Hubo dos pruebas manuales distintas: una utilizó una clave y artefactos temporales; otra registró una copia cifrada en Blob con su clave protegida en Key Vault y una restauración aislada de 20 tablas. Esta evidencia histórica no confirma que la copia y la clave sigan disponibles hoy. El respaldo periódico y la recuperación multirregión siguen pendientes.
 
 CloudFormation y Terraform tienen validaciones de plantilla y pruebas automatizadas, pero no se ha completado un ciclo integral de destruir y reconstruir ambas nubes. No ejecutes el borrado general como prueba. El contenedor de copias de Azure requiere importación al estado Terraform y el Key Vault debe conservarse para descifrarlas; la política ya fue importada. Consulta los requisitos de [CloudFormation](cloudformation/README.md) y [Azure](environments/azure-rebuild/README.md).
 
