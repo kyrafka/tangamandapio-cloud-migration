@@ -33,9 +33,12 @@ La configuración de las seis raíces Azure se validó sintácticamente. Pasar
 `terraform validate` no prueba que los recursos puedan recrearse ni restaura
 datos. El estado de `azure-rebuild` incluye la política de retención, pero no
 el contenedor `tangama-postgres-backups`, que existe en Azure y requiere una
-importación revisada antes de aplicar cambios a esa raíz. La consulta de blobs
-con la identidad actual recibió una denegación de permisos; por tanto no se ha
-comprobado el contenido ni que exista una copia reciente recuperable.
+importación revisada antes de aplicar cambios a esa raíz. Con acceso de lectura
+temporal se confirmó que existe `postgres/20261105-manual-validation.json`
+(86.362 bytes) y que la versión de la clave usada en la prueba histórica está
+habilitada. Después se retiró el permiso temporal. Esta comprobación solo leyó
+metadatos: no se comprobó de nuevo la integridad ni se restauró esa copia, y no
+se ha demostrado una copia automática o reciente recuperable.
 
 El comando de AWS no reconstruye por sí solo la VPN Tailscale completa y su
 borrado se detiene si detecta los routers o DNS privado no administrados. El
