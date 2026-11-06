@@ -9,10 +9,18 @@ otros recursos facturables. La última consulta EC2 con credenciales válidas
 mostró cuatro instancias del proyecto; no se ha confirmado su estado después de
 terminar la sesión.
 
-En Azure se observaron encendidas `vm-tangama-ts-pilot` y
-`vm-tangama-ts-backup`. También existen la VNet, el Private Endpoint, las
-Functions, las cuentas de almacenamiento y los almacenes de claves. Estos
-recursos pueden generar cargos independientemente de AWS Academy.
+En Azure se desasignaron `vm-tangama-ts-pilot` y `vm-tangama-ts-backup`;
+ambas quedaron en `VM deallocated`. Las Functions `tangama-flex-261104` y
+`tangama-wms-261030` quedaron en `Stopped`. No se borraron la VNet, el Private
+Endpoint, las cuentas de almacenamiento ni los almacenes de claves. Los
+recursos conservados pueden generar cargos independientemente de AWS Academy.
+Para reanudar, inicia las dos VM y ambas Functions, y comprueba el enrolamiento,
+las rutas y el recorrido privado antes de considerar que el servicio funciona.
+
+El último medidor observado en Academy mostraba US$25.10 de US$50. Es un
+acumulado con retraso; no acredita que el gasto actual sea cero. No se pudo
+comprobar si RDS y otros recursos facturables siguieron activos tras terminar la
+sesión, pues las credenciales de AWS CLI estaban vencidas.
 
 La configuración de las seis raíces Azure se validó sintácticamente. Pasar
 `terraform validate` no prueba que los recursos puedan recrearse ni restaura
