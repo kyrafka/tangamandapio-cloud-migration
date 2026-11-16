@@ -1,4 +1,110 @@
-# Matriz de evidencia por criterio — actualización 29/10/2026
+# Matriz de evidencia por criterio — actualización 16/11/2026, 21:00 UTC
+
+## Revisión actual — 16/11/2026, 21:00 UTC
+
+Esta tabla es el corte vigente contra la rúbrica entregada. No es una nota
+oficial: varios criterios requieren demostración del estudiante y la rúbrica
+nombra AWS–OCI, mientras el proyecto desplegado conecta AWS–Azure. El usuario
+indicó que el docente aceptó Azure; adjuntar esa aprobación en la entrega para
+que no quede solo como comentario verbal.
+
+| Criterio | Estado actual | Evidencia o falta concreta |
+|---|---|---|
+| Problema y requisitos | Parcial | Portal y WMS operativos con datos de demostración. La prueba de carga no simula pedidos ni 3.000 usuarios; documentar el escenario de negocio y sus límites. |
+| Diseño de nube | Parcial | AWS tiene ALB, ASG, RDS y WAF; Azure tiene Function privada, Storage/Queues y Application Insights. TLS de origen, ruta privada AWS→Azure y recuperación regional siguen pendientes. |
+| VPC/VCN | Parcial | Azure anuncia `10.20.1.0/24`; en us-east-2 no hay ruta `10.20.1.4/32` y el inventario EC2 solo muestra las dos instancias de app. El cliente Tailscale local está `NoState`; no se toma su lista en caché como prueba de routers conectados. |
+| Cómputo, almacenamiento y base de datos | Parcial | Portal en EC2/ALB; RDS PostgreSQL cifrada y disponible; Blob/Queue y Function activos. RDS es Single-AZ, retención 1 día, y no hay copia RDS reciente a Blob. |
+| Seguridad | Parcial | WAF restablecido a 30.000 por 5 min, buckets AWS cifrados/bloqueados y contenedor Azure privado. ACM está `ISSUED`, existe listener de origen 443 y se reportó desplegada la regla Cloudflare `Full (strict)` limitada al hostname; falta una revalidación HTTPS de extremo a extremo. La clave AWS de `receive_fulfillment_event` no sirve para `/api/wms/inventory`. Falta cerrar la búsqueda/rotación de credenciales expuestas y dejar evidencia de mínimo privilegio. |
+| Alta disponibilidad y escalado | Parcial | Prueba automática real alcanzó 2→4→5 y luego bajó sola 5→4→3→2; el corte final confirmó 2/2 instancias y 2/2 destinos sanos, sin capacidad extra. Carga larga: 1,47% errores (umbral 1%); carga corta: 0%. **Pendiente:** explicar/reducir los errores de red del ensayo largo. RTO de 5 s no demostrado y RDS sigue Single-AZ; Multi-AZ requiere revisar el costo y aplicar un cambio planificado. |
+| Monitoreo y alertas | Parcial | Cinco alarmas CloudWatch propias y dos reglas Azure de 5xx/latencia están habilitadas. SNS Gmail está confirmado; UPeU aparece dos veces como `PendingConfirmation`. Falta una señal controlada con recepción comprobada y comprobar entrega de Azure. |
+| Infraestructura como código | Parcial | CloudFormation administra la pila AWS; tras el scale-in, detección de deriva `IN_SYNC`/0. Localmente se alinearon los defaults de RDS (`MultiAZ=false`, retención 1 día) con el estado vivo; cinco pruebas y `cfn-lint` pasan. No se aplicó ese cambio en nube. Terraform fmt pasó para todas las raíces y `azure-rebuild` pasó init sin backend y validate. Falta validar cada raíz y reconciliar Azure con estado declarativo; no ejecutar `apply` a ciegas. |
+| Copias y recuperación (RTO/RPO) | Pendiente | Retención RDS de 1 día; no existe exportación automática cifrada PostgreSQL→Azure Blob ni restauración aislada comprobada. |
+| Multinube AWS–OCI | Pendiente / decisión docente | Despliegue usa AWS–Azure, no OCI. Además la ruta privada AWS→Azure no está implementada ni validada. Incluir aprobación escrita del cambio de proveedor y prueba E2E cuando se conecte. |
+| Costos | Parcial | AWS Free Plan: quedan USD 158,62 de USD 200 (USD 41,38 consumidos del crédito desde el inicio); Cost Explorer da USD 0 y la API `GetCredits` queda denegada por una SCP, así que no hay detalle por servicio. Azure for Students: saldo publicado USD 92,95 de USD 100; Cost Management registra USD 6,842993 en noviembre. El presupuesto AWS de USD 200 solo avisa; no hay presupuesto Azure. Revisar el corte justo antes de la defensa. |
+| Pruebas | Parcial | `/health`/`/ready` HTTP 200; 89 pruebas locales IaC pasan; 3.000 solicitudes GET de comprobación pasaron; la carga de 300.000 solicitudes quedó en 1,47% de error y no pasa su umbral. **Pendiente:** ruta privada para probar un pedido AWS→Function/Queue/Blob/Insights, failover VPN y restauración de backup. |
+| Documentación | Parcial | Integrante Jose Dario Zuñiga Medina, docente Fernando Manuel Asin Gomez y ciclo 8 ya están incorporados al informe. Falta adjuntar aprobación escrita AWS–Azure, fotografías/evidencias que tomará el equipo y registrar RTO/RPO cuando se midan. La bitácora de costos actual es `evidence/current/COST-CREDIT-RECHECK-2026-11-16-2100.json`. |
+| Presentación y defensa | Pendiente | Preparar recorrido en vivo, diagrama final real/desplegado, explicar límites (Single-AZ, Flexible, VPN overlay, 1,47% en estrés) y mostrar la evidencia fechada. |
+
+### Reconsulta de costos, TLS y alertas — 16/11/2026, 21:00 UTC
+
+- AWS `main` autentica en la cuenta `481056890449` como rol de acceso completo.
+  El plan Free está `ACTIVE`: USD 158,62 disponibles de USD 200; el crédito
+  vence el 15/05/2027. Cost Explorer devolvió USD 0 para octubre y noviembre;
+  no interpretarlo como gasto cero porque el saldo de crédito sí disminuyó. La
+  operación `billing:GetCredits` fue denegada por una SCP de AWS Organizations,
+  así que no se obtuvo el detalle de cargos por servicio.
+- Azure for Students: el crédito activo es USD 100, con USD 92,95 de saldo
+  cerrado y vencimiento 25/09/2027. Cost Management registró USD 6,842993 en
+  noviembre, principalmente en `rg-tangama-private-network`. El saldo cerrado
+  y el costo mensual no tienen el mismo corte; Azure indica que el saldo de
+  crédito corresponde al último cierre. Un crédito antiguo de alta de USD 200
+  expiró el 04/08/2026 y ya no está disponible.
+- AWS mantiene el presupuesto de USD 200 como aviso; Azure no tiene un
+  presupuesto configurado. Ninguno se debe presentar como límite duro de gasto.
+- El certificado ACM ya figura `ISSUED`; la tabla de rutas del VPC no tiene
+  `10.20.1.4/32`. No existe la pila de routers AWS y no hay secretos Tailscale
+  disponibles para enrolarlos. No se probó el pedido privado ni el failover.
+- SNS Gmail está confirmado; SNS UPeU aparece dos veces pendiente. No se afirma
+  recepción de una alerta de prueba. Las alertas Azure siguen habilitadas, pero
+  su disparo/entrega no está demostrado.
+
+### Reconsulta adicional — 16/11/2026, 18:12 UTC
+
+- AWS CLI `main` se renovó con `aws login`; STS confirmó de nuevo la cuenta
+  `481056890449` y el rol `AccountFullAccessRole`.
+- En `us-east-2`, `DescribeInstances` devuelve solo las dos EC2 de aplicación;
+  RDS está `available`, ALB `active`, CloudFormation `UPDATE_COMPLETE` y los
+  parámetros vivos de RDS siguen `MultiAZ=false`/retención `1`. No hay ruta
+  `10.20.1.4/32` en las cinco tablas consultadas.
+- Secrets Manager no devuelve ningún nombre que contenga `tailscale`. El ACM
+  sigue `PENDING_VALIDATION`; su CNAME DNS-only continúa pendiente por solicitud
+  del usuario. SNS devuelve dos suscripciones de correo,
+  ambas `PendingConfirmation`.
+- El presupuesto sigue en USD 200 hasta el 07/12/2026 y Cost Explorer informa
+  USD 0 en noviembre, valor sujeto a retraso de facturación.
+- No se encontraron routers AWS en el inventario de `us-east-2`. La consulta de
+  EC2 en `us-west-2` fue denegada por la SCP
+  `p-4lylrj0n` de AWS Organizations `976848034062`; la cuenta nueva no tiene
+  permiso para leer el contenido de esa política. Por eso no se afirma que no
+  existan instancias fuera de `us-east-2`.
+- El cliente Tailscale local quedó en `NoState`, con mapa de pares vacío y error
+  de coordinación. La salida de texto conserva nombres de nodos antiguos, pero
+  no acredita que estén conectados ni que correspondan a la cuenta actual.
+- Azure CLI sigue autenticado en `Azure for Students`; ambos routers Azure
+  aparecen `Running` en `10.20.0.4` y `10.20.0.5`.
+- No se modificaron recursos cloud en esta reconsulta.
+
+### Evidencia nueva de escalado — 16/11/2026
+
+- `../evidence/current/aws/AWS-ASG-SCALE-2-5-2026-11-16-http.json`: prueba de
+  300.000 peticiones, 50 concurrentes, 1.645,443 s, p95 315,47 ms y 1,47% de
+  errores. Auto Scaling cambió 2→4 y luego 4→5 con la alarma de solicitudes.
+- `../evidence/current/aws/AWS-ASG-SCALE-POSTCHECK-2026-11-16-http.json`:
+  prueba corta posterior, 3.000 peticiones, 30 concurrentes, 0 errores y p95
+  263,86 ms con WAF a 30.000 por cinco minutos.
+- El WAF se restauró con CloudFormation a 30.000. El ASG redujo automáticamente
+  5→2 mediante alarmas de baja CPU/solicitudes, y la detección de deriva terminó
+  `IN_SYNC`/0. La última consulta del 16/11 confirmó dos instancias `InService`
+  y `Healthy`, dos destinos `healthy`, capacidad deseada 2 y máximo 5. No quedó
+  un nodo de prueba en proceso de drenaje.
+- Evidencia consolidada de pruebas y estado AWS: [`AWS-ASG-SCALE-2-5-2026-11-16-cloud.json`](../evidence/current/aws/AWS-ASG-SCALE-2-5-2026-11-16-cloud.json).
+
+### Cierre local de observaciones — 16/11/2026
+
+- La plantilla CloudFormation local y `rebuild.sh` ahora usan por defecto
+  `DatabaseMultiAZ=false` y retención de un día, iguales a la pila viva y al
+  objetivo de controlar consumo. Se ejecutaron cinco pruebas unitarias y
+  `cfn-lint`; no hubo `deploy`, change set ni mutación en AWS.
+- Se generaron el informe siguiendo la plantilla oficial y un manual técnico
+  independiente. Los estados de nube se citan con fecha; lo que necesita una
+  clave, aprobación externa o acción manual permanece marcado como pendiente.
+- Se actualizaron la vista SVG y el diagrama editable Draw.io al corte del
+  16/11. Los archivos dejan separada la infraestructura desplegada del flujo
+  privado y la recuperación que aún faltan.
+- Aún requiere al usuario: publicar el CNAME DNS-only de ACM (se solicitó
+  recordarlo para más adelante), confirmar el correo de SNS, crear y guardar
+  claves Tailscale directamente en Secrets Manager, y obtener aprobación
+  escrita del docente para usar Azure en lugar de OCI.
 
 ## Corte cloud vivo — 29/10/2026, 21:11–21:14 UTC
 

@@ -1,0 +1,71 @@
+{
+  "observed_at_utc": "2026-11-16T10:21:43Z",
+  "subscription_id": "1480b165-7420-4bed-a201-5ecadd7104d0",
+  "resource_group": "rg-tangamandapio-rebuild-wus",
+  "function_app": {
+    "name": "tangama-flex-261104",
+    "state": "Running",
+    "hosting": "Flex Consumption",
+    "public_network_access": "Disabled",
+    "private_endpoint_ip": "10.20.1.4",
+    "aws_public_hostname_probe_http": 403,
+    "interpretation": "Expected for the public hostname while public access is disabled; this does not test the private route."
+  },
+  "credentials": {
+    "aws_secret_name": "tangamandapio/azure/function-key",
+    "matches_active_function_key": false,
+    "secret_value_recorded": false
+  },
+  "application_insights": {
+    "component": "tangama-wms-ai",
+    "workspace": "tangama-ops-law",
+    "retention_days": 30,
+    "function_connection_matches_component": true,
+    "request_records_last_hour": 0
+  },
+  "action_group": {
+    "name": "tangama-ops-ag",
+    "enabled": true,
+    "email_receivers": 2,
+    "receiver_statuses": ["Enabled", "Enabled"]
+  },
+  "alerts": {
+    "deployed_from": "iac/azure-monitoring/function-alerts.json",
+    "deployment": "tangamandapio-function-alerts-20261116",
+    "deployment_state": "Succeeded",
+    "new_rules": [
+      {
+        "name": "tangama-flex-5xx-es",
+        "enabled": true,
+        "severity": 2,
+        "evaluation_frequency": "PT5M",
+        "window": "PT5M",
+        "threshold": "one or more HTTP 5xx responses",
+        "action_group": "tangama-ops-ag",
+        "fired_or_email_delivery_tested": false
+      },
+      {
+        "name": "tangama-flex-latencia-es",
+        "enabled": true,
+        "severity": 3,
+        "evaluation_frequency": "PT5M",
+        "window": "PT15M",
+        "threshold": "average request duration greater than 5000 ms",
+        "action_group": "tangama-ops-ag",
+        "fired_or_email_delivery_tested": false
+      }
+    ],
+    "disabled_obsolete_rules": [
+      "tangama-wms-fn-5xx",
+      "tangama-wms-fn-latency"
+    ],
+    "disabled_rule_target": "tangama-wms-261030 (Stopped)",
+    "disabled_rules_had_action_group": false
+  },
+  "remaining": [
+    "Create/store a fresh Tailscale auth key in AWS Secrets Manager without sending it in chat.",
+    "Update the AWS Function key secret to the active Function's current function key.",
+    "Finish AWS-to-Azure private routing and verify a synthetic request, its Queue/Blob outputs, and telemetry.",
+    "Validate alert firing and actual email delivery after private requests produce telemetry."
+  ]
+}

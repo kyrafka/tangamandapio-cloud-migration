@@ -1,6 +1,6 @@
 # AWS CloudFormation — portal y recuperación
 
-**Corte 05/11/2026:** se probó una conexión privada mediante routers Tailscale propios y una conmutación del router AWS. Se restauró una copia manual de PostgreSQL desde Azure Blob. La programación de copias y el ciclo completo de destrucción y reconstrucción siguen pendientes. Los párrafos fechados de octubre y del 04/11 que aparecen más abajo describen estados históricos.
+**Corte vigente 16/11/2026:** la cuenta activa es `481056890449`, región `us-east-2`; CloudFormation administra el portal y ASG en estado sano. La prueba de carga llegó a 5 instancias y volvió automáticamente a 2, aunque el ensayo largo registró 1,47% de errores. RDS está disponible, cifrada, Single-AZ y con retención de 1 día. No está implementado el respaldo automático cifrado PostgreSQL→Azure Blob ni una restauración aislada. La ruta privada AWS→Azure y el failover desde AWS siguen pendientes. SNS todavía requiere confirmación del correo; ACM espera el CNAME que el usuario pidió dejar para después. Ver el [estado real completo](../ESTADO_REAL_2026-11-16.md). Los párrafos fechados de octubre y principios de noviembre que aparecen más abajo son registros históricos, no estado actual.
 
 ## Qué administra
 
@@ -15,7 +15,7 @@ Plantillas auxiliares:
 
 ## Estado operativo conocido
 
-El último inventario documentado (27/10/2026) corresponde a la cuenta anterior y no describe la cuenta AWS Academy que el usuario cambió intencionalmente. En el reintento del 29/10, STS autenticó en la cuenta nueva, pero la política explícita `voc-cancel-cred` bloqueó el inventario. En la comprobación pública, `/` y `/health` devolvieron HTTP 200; esto confirma respuesta del endpoint, no el estado de RDS, ALB targets, ASG ni WAF. No se aplicó infraestructura.
+La verificación viva del 16/11 consultó la cuenta `481056890449` con el perfil `main`. El stack principal figura `UPDATE_COMPLETE`; el ASG tiene dos instancias y dos destinos saludables, con capacidad min 2 / desired 2 / max 5. RDS está disponible, cifrada, Single-AZ y con un día de retención. El escalado 2→4→5 y el scale-in 5→4→3→2 fueron automáticos. La prueba de 300.000 solicitudes tuvo 1,47% de errores; el postcheck de 3.000 tuvo cero. CloudFormation drift quedó `IN_SYNC` con cero recursos desviados. Esto no demuestra ruta privada hacia Azure, recuperación regional ni restore de RDS desde Blob.
 
 ## Preparar un cambio
 
@@ -29,7 +29,7 @@ El script conserva parámetros existentes con `UsePreviousValue` y tiene preflig
 
 ## Reconstruir
 
-`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias; publica el paquete versionado antes de habilitar la capacidad de EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en un bucket cuando se le proporcionan parámetros explícitos. El valor por defecto del lanzador para retención RDS quedó alineado con la plantilla: **7 días**, con Multi-AZ y WAF activos por defecto.
+`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias; publica el paquete versionado antes de habilitar la capacidad de EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en un bucket cuando se le proporcionan parámetros explícitos. Para evitar un aumento involuntario de costo, el default local queda alineado con el estado vivo: **Single-AZ y 1 día**. Multi-AZ y más días son opciones explícitas (`DATABASE_MULTI_AZ=true`, `DATABASE_BACKUP_RETENTION_DAYS=N`) tras comprobar permisos, precio y saldo. Esta edición es local: no cambia el stack AWS ni la facturación.
 
 La IaC no contiene datos ni todos los insumos de recuperación. Antes de reconstruir:
 

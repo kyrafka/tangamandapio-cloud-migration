@@ -1,0 +1,311 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Par privado de routers Tailscale para que la aplicación Tangamandapio llegue
+  al Private Endpoint de Azure; la ruta se mantiene desactivada hasta verificar
+  ambos routers y aprobar las rutas en el tailnet.
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: Dos EC2 privadas en las subredes de aplicación comparten una ruta de aplicación al endpoint WMS privado de Azure; el respaldo monitorea la salud y cambia la ruta mediante una política IAM limitada.
+    must:
+      - No incluir claves Tailscale en user data, parámetros, metadatos, paquetes o repositorio.
+      - Mantener desactivada la ruta privada hasta confirmar ambas sondas HTTPS y la aprobación de ruta en Tailscale.
+      - No modificar la ruta predeterminada, la ruta de RDS ni reglas de entrada pública.
+      - El controlador solo puede reemplazar la ruta exacta al endpoint privado en la tabla indicada.
+    ref:
+      - at: iac/environments/aws-azure-tailscale/README.md
+        has: diseño de conectividad y procedimiento de prueba
+        scope: proyecto
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '^[a-z0-9-]+$'
+  AmazonLinuxAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Imagen regional Amazon Linux 2023.
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+    Description: Tamaño de costo controlado; revisar saldo antes de cambiarlo.
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC de la pila tangamandapio-live.
+  AppSubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subred privada de aplicación en la primera AZ.
+  AppSubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subred privada de aplicación en la segunda AZ.
+  AppRouteTableId:
+    Type: String
+    AllowedPattern: '^rtb-[0-9a-f]{8,17}$'
+    Description: Tabla compartida por las dos subredes app; no la tabla de RDS.
+  AppCidr:
+    Type: String
+    Default: 10.10.10.0/23
+    AllowedPattern: '^10\.10\.(10|11)\.0/23$'
+  AssetBucketName:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'
+  RouterArtifactKey:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9._/-]+$'
+    Description: Paquete de scripts versionado por SHA-256 en el bucket privado de activos.
+  RouterArtifactSha256:
+    Type: String
+    AllowedPattern: '^[a-f0-9]{64}$'
+  PrimaryAuthKeySecretName:
+    Type: String
+    Default: tangamandapio/tailscale/aws-pilot
+    AllowedPattern: '^tangamandapio/tailscale/aws-pilot$'
+  BackupAuthKeySecretName:
+    Type: String
+    Default: tangamandapio/tailscale/aws-backup
+    AllowedPattern: '^tangamandapio/tailscale/aws-backup$'
+  AlarmTopicName:
+    Type: String
+    Default: tangamandapio-alarms
+    AllowedPattern: '^[A-Za-z0-9_-]{1,256}$'
+  EnablePrivateWmsRoute:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Activar únicamente después de que ambos routers devuelvan HTTP 200 por la ruta Tailscale.
+
+Conditions:
+  EnablePrivateWmsRoute: !Equals [!Ref EnablePrivateWmsRoute, 'true']
+
+Resources:
+  RouterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Permitir solo el HTTPS reenviado desde las subredes de aplicación y la sonda de salud entre el par.
+        must:
+          - No añadir SSH ni entrada desde Internet.
+          - Mantener la sonda 9797 limitada a miembros del mismo grupo.
+    Properties:
+      GroupDescription: Tráfico reenviado al WMS privado y salud entre routers; sin entrada pública.
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Tailscale, SSM, Secrets Manager, CloudFormation bootstrap y acceso a Azure.
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-vpn-router-sg'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+
+  RouterApplicationHttpsIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RouterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: !Ref AppCidr
+      Description: HTTPS reenviado desde las EC2 de aplicación.
+
+  RouterPeerHealthIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RouterSecurityGroup
+      IpProtocol: tcp
+      FromPort: 9797
+      ToPort: 9797
+      SourceSecurityGroupId: !Ref RouterSecurityGroup
+      Description: Sonda privada de salud entre el par de routers.
+
+  RouterInstanceRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Rol común de las dos EC2 privadas, acotado a enrolamiento, sondeo, lectura de ruta y conmutación del destino WMS.
+        must:
+          - Leer solo los dos secretos de alta nombrados en parámetros.
+          - Reemplazar rutas únicamente en AppRouteTableId y publicar solo en el tema de alarmas indicado.
+          - No conceder permisos para crear o modificar redes, instancias, grupos de seguridad o bases de datos.
+    Properties:
+      RoleName: !Sub '${ProjectName}-vpn-router-role'
+      Description: Rol mínimo para enrolar y conmutar el par privado Tailscale.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+      Policies:
+        - PolicyName: !Sub '${ProjectName}-vpn-router-runtime'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadOnlyRouterBootstrapArtifact
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${AssetBucketName}/${RouterArtifactKey}'
+              - Sid: ReadOnlyRouterAuthKeys
+                Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${PrimaryAuthKeySecretName}-*'
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${BackupAuthKeySecretName}-*'
+              - Sid: ReadRouterRouteAndInterfaces
+                Effect: Allow
+                Action:
+                  - ec2:DescribeRouteTables
+                  - ec2:DescribeInstances
+                Resource: '*'
+              - Sid: ReplaceOnlyApplicationRoute
+                Effect: Allow
+                Action: ec2:ReplaceRoute
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:route-table/${AppRouteTableId}'
+              - Sid: PublishRouterFailoverNotice
+                Effect: Allow
+                Action: sns:Publish
+                Resource: !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AlarmTopicName}'
+
+  RouterInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Adjunta a los dos routers el rol mínimo de SSM, secretos, artefacto y cambio de una ruta.
+        must:
+          - No adjuntar AdministratorAccess ni roles compartidos del proyecto.
+    Properties:
+      InstanceProfileName: !Sub '${ProjectName}-vpn-router-profile'
+      Roles: [!Ref RouterInstanceRole]
+
+  PrimaryRouter:
+    Type: AWS::EC2::Instance
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Router activo inicial en la primera AZ; recibe el tráfico encaminado desde las dos subredes app.
+        must:
+          - Mantener la comprobación de origen/destino desactivada para reenviar paquetes.
+          - Mantener solo interfaz privada y almacenamiento cifrado.
+        mutable: change-with-constraints
+    Properties:
+      ImageId: !Ref AmazonLinuxAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref RouterInstanceProfile
+      SubnetId: !Ref AppSubnetA
+      SecurityGroupIds: [!Ref RouterSecurityGroup]
+      SourceDestCheck: false
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+        InstanceMetadataTags: enabled
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-aws-vpn-pilot'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+        - {Key: RouterRole, Value: primary}
+        - {Key: AuthKeySecretName, Value: !Ref PrimaryAuthKeySecretName}
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          install -d -m 0755 /opt/tangamandapio-router
+          aws s3 cp "s3://${AssetBucketName}/${RouterArtifactKey}" /tmp/tangamandapio-router.tar.gz --region ${AWS::Region}
+          printf '%s  %s\n' '${RouterArtifactSha256}' /tmp/tangamandapio-router.tar.gz | sha256sum -c -
+          tar -xzf /tmp/tangamandapio-router.tar.gz -C /opt/tangamandapio-router
+          rm -f /tmp/tangamandapio-router.tar.gz
+          bash /opt/tangamandapio-router/bootstrap_tailscale_router.sh primary ${AWS::Region} '${PrimaryAuthKeySecretName}' tangamandapio-aws-pilot
+
+  BackupRouter:
+    Type: AWS::EC2::Instance
+    DependsOn: PrimaryRouter
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Router de espera en la segunda AZ; verifica el activo y solo reemplaza la ruta exacta cuando el WMS sigue sano desde el respaldo.
+        must:
+          - No ejecutar conmutación si la tabla, el destino o la interfaz observada son desconocidos.
+          - Mantener el estado del contador local con permisos 0600.
+          - Registrar y notificar cada cambio de ruta por SNS.
+        mutable: change-with-constraints
+    Properties:
+      ImageId: !Ref AmazonLinuxAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref RouterInstanceProfile
+      SubnetId: !Ref AppSubnetB
+      SecurityGroupIds: [!Ref RouterSecurityGroup]
+      SourceDestCheck: false
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+        InstanceMetadataTags: enabled
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - {Key: Name, Value: !Sub '${ProjectName}-aws-vpn-backup'}
+        - {Key: Project, Value: !Ref ProjectName}
+        - {Key: ManagedBy, Value: cloudformation}
+        - {Key: RouterRole, Value: backup}
+        - {Key: AuthKeySecretName, Value: !Ref BackupAuthKeySecretName}
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          install -d -m 0755 /opt/tangamandapio-router
+          aws s3 cp "s3://${AssetBucketName}/${RouterArtifactKey}" /tmp/tangamandapio-router.tar.gz --region ${AWS::Region}
+          printf '%s  %s\n' '${RouterArtifactSha256}' /tmp/tangamandapio-router.tar.gz | sha256sum -c -
+          tar -xzf /tmp/tangamandapio-router.tar.gz -C /opt/tangamandapio-router
+          rm -f /tmp/tangamandapio-router.tar.gz
+          bash /opt/tangamandapio-router/bootstrap_tailscale_router.sh backup ${AWS::Region} '${BackupAuthKeySecretName}' tangamandapio-aws-backup '${AppRouteTableId}' '${PrimaryRouter.PrimaryNetworkInterfaceId}' '${PrimaryRouter.PrivateIp}' 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AlarmTopicName}'
+
+  PrivateWmsRoute:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateWmsRoute
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Enviar únicamente el HTTPS del endpoint privado Function a través del router primario.
+        must:
+          - El destino debe seguir exactamente en 10.20.1.4/32.
+          - La tabla debe ser la de aplicación compartida; nunca una tabla de base de datos.
+          - La ruta queda opcional y desactivada por defecto.
+        mutable: change-with-constraints
+    Properties:
+      RouteTableId: !Ref AppRouteTableId
+      DestinationCidrBlock: 10.20.1.4/32
+      NetworkInterfaceId: !GetAtt PrimaryRouter.PrimaryNetworkInterfaceId
+
+Outputs:
+  PrimaryRouterInstanceId:
+    Description: EC2 privada activa inicial.
+    Value: !Ref PrimaryRouter
+  BackupRouterInstanceId:
+    Description: EC2 privada de respaldo y control de conmutación.
+    Value: !Ref BackupRouter
+  PrimaryRouterPrivateIp:
+    Value: !GetAtt PrimaryRouter.PrivateIp
+  BackupRouterPrivateIp:
+    Value: !GetAtt BackupRouter.PrivateIp
+  RouterRoleArn:
+    Value: !GetAtt RouterInstanceRole.Arn
+  ApplicationRouteTableId:
+    Value: !Ref AppRouteTableId
+  PrivateWmsRouteState:
+    Value: !If [EnablePrivateWmsRoute, enabled, disabled]

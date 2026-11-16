@@ -1,0 +1,72 @@
+{
+  "checkedAtUtc": "2026-11-16T21:00:32Z",
+  "aws": {
+    "accountId": "481056890449",
+    "region": "us-east-2",
+    "access": "STS confirmed AccountFullAccessRole",
+    "freePlan": {
+      "status": "ACTIVE",
+      "initialCreditUsd": 200.0,
+      "remainingCreditUsd": 158.62,
+      "creditConsumedSincePlanStartUsd": 41.38,
+      "expiration": "2027-05-15T17:44:30.347Z"
+    },
+    "costExplorer": {
+      "periods": [
+        { "start": "2026-10-01", "endExclusive": "2026-11-01", "unblendedCostUsd": 0.0 },
+        { "start": "2026-11-01", "endExclusive": "2026-11-17", "unblendedCostUsd": 0.0 }
+      ],
+      "note": "Cost Explorer returned zero although the account-plan credit balance decreased; do not treat this response as proof of zero resource consumption."
+    },
+    "billingCreditsApi": {
+      "result": "AccessDenied",
+      "operation": "billing:GetCredits",
+      "reason": "Explicit deny in AWS Organizations service control policy; no per-service credit transaction breakdown available."
+    },
+    "budget": {
+      "limitUsd": 200.0,
+      "name": "Tangamandapio-3weeks-USD200-20261116",
+      "end": "2026-12-07T03:39:08-05:00",
+      "behavior": "Notification threshold; it does not stop resources."
+    }
+  },
+  "azure": {
+    "subscription": "Azure for Students",
+    "subscriptionId": "1480b165-7420-4bed-a201-5ecadd7104d0",
+    "studentCredit": {
+      "source": "Azure for students credit",
+      "initialCreditUsd": 100.0,
+      "closedBalanceUsd": 92.95,
+      "consumedFromPostedBalanceUsd": 7.05,
+      "balanceIsEstimated": false,
+      "balanceMeaning": "Credit lot closed balance from the last invoice; not a live intraday balance.",
+      "start": "2026-09-25T00:59:34Z",
+      "expiration": "2027-09-25T00:59:34Z"
+    },
+    "oldSignUpCredit": {
+      "initialCreditUsd": 200.0,
+      "closedBalanceUsd": 0.0,
+      "expiration": "2026-08-04T02:57:51Z",
+      "status": "Expired; excluded from active balance."
+    },
+    "costManagementMonthToDate": {
+      "period": "2026-11-01 through current MonthToDate snapshot",
+      "actualCostUsd": 6.842993,
+      "groupedByResourceGroup": {
+        "rg-tangama-private-network": 6.79043002385571,
+        "rg-tangamandapio-rebuild-wus": 0.0522895658924731,
+        "rg-tangamandapio-tfstate-wus": 0.00027356
+      },
+      "note": "Azure Cost Management data can lag; this MTD actual-cost query and the last-invoice credit balance have different cutoffs."
+    },
+    "budget": {
+      "configured": false,
+      "result": "No subscription budgets returned."
+    }
+  },
+  "math": {
+    "azureMtdVsPostedCreditUseDeltaUsd": 0.207007,
+    "method": "Calculated with Python Decimal from API values; the delta reflects differing billing cutoffs and is not treated as unexplained billed debt."
+  },
+  "secretsIncluded": false
+}

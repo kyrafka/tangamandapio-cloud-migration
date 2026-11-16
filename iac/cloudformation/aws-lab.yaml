@@ -1,8 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  Laboratorio Tangamandapio: VPC segmentada, ALB, Auto Scaling, RDS PostgreSQL,
-  ERP corporativo, correo interno, S3, registros, alarmas y dashboard.
-  Dise??ado para AWS Academy Learner Lab.
+  Portal Tangamandapio multinube — ALB y Auto Scaling en dos zonas con PostgreSQL
+  cifrado; secretos y datos permanecen en servicios administrados del proyecto.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: ALB -> ASG en dos AZ -> RDS PostgreSQL; integraciones privadas Azure requieren rutas y credenciales Tailscale.
+    must:
+      - Mantener secretos fuera de la plantilla y usar Secrets Manager.
+      - Revisar cambios que puedan reemplazar o borrar RDS y buckets con datos.
+    ref:
+      - at: iac/ESTADO_REAL_2026-11-16.md
+        has: estado observado del despliegue y pendientes de nube
+        scope: proyecto
 
 Parameters:
   ProjectName:
@@ -20,26 +32,26 @@ Parameters:
     MaxValue: 100000
     Description: Umbral ALB por destino y minuto para escalar el ASG segun solicitudes HTTP.
   AmazonLinuxAmiId:
-    Type: AWS::EC2::Image::Id
-    Default: ami-097855b862d5b1eb2
-    Description: AMI Amazon Linux 2023 validada en us-east-1; actualizar explícitamente tras probar una nueva versión.
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Parámetro público regional de Amazon Linux 2023. Para una reconstrucción idéntica, fija una AMI validada mediante un override de este parámetro.
   DBInstanceClass:
     Type: String
     Default: db.t3.micro
     AllowedValues: [db.t3.micro, db.t4g.micro]
   ApplicationArtifactKey:
     Type: String
-    Default: releases/tangamandapio/portal-b2b-20261027-rds-connection-pool-v26-python312-61b36692a2754e5e47515a1af2a5742a15ff8c6c278225d1294e6288e841e53b.tar.gz
+    Default: releases/tangamandapio/portal-b2b-20261105-password-change-optional-v29-python312-0c1b86e998a483764f7a80a1cec3e0f90d73c60d564f907fa1c8dc4e59a6152e.tar.gz
     AllowedPattern: '[A-Za-z0-9._/-]+'
     Description: Artefacto versionado del portal, almacenado de forma privada en el bucket del proyecto.
   ApplicationArtifactRevision:
     Type: String
-    Default: 20261027-rds-connection-pool-v26-python312
+    Default: 20261105-password-change-optional-v29-python312
     AllowedPattern: '[A-Za-z0-9._-]+'
     Description: Identificador inmutable de la revisi??n del artefacto; fuerza una actualizaci??n gradual del ASG cuando cambia.
   ApplicationArtifactSha256:
     Type: String
-    Default: 61b36692a2754e5e47515a1af2a5742a15ff8c6c278225d1294e6288e841e53b
+    Default: 0c1b86e998a483764f7a80a1cec3e0f90d73c60d564f907fa1c8dc4e59a6152e
     AllowedPattern: '^$|^[a-f0-9]{64}$'
     Description: SHA-256 esperado del paquete privado; vacío solo para compatibilidad con stacks previos.
   DemoVoicePassword:
@@ -85,15 +97,15 @@ Parameters:
     Description: Nombre DNS público cubierto por CertificateArn; el registro debe apuntar al ALB.
   DatabaseMultiAZ:
     Type: String
-    Default: 'true'
+    Default: 'false'
     AllowedValues: ['true', 'false']
-    Description: Mantiene alta disponibilidad Multi-AZ para RDS. Eleva el costo; desactivar solo mediante un cambio revisado.
+    Description: RDS usa Single-AZ por defecto para mantener el despliegue dentro del perfil de costo observado. Habilitar Multi-AZ solo con revisión de presupuesto y permisos.
   DatabaseBackupRetentionDays:
     Type: Number
-    Default: 7
+    Default: 1
     MinValue: 1
     MaxValue: 35
-    Description: D??as de retenci??n de backups autom??ticos de RDS.
+    Description: Retención RDS por defecto alineada con la instancia observada; aumentarla requiere revisar costos y permisos.
   DatabaseSnapshotIdentifier:
     Type: String
     Default: ''
@@ -448,6 +460,11 @@ Resources:
             Status: Enabled
             NoncurrentVersionExpiration: {NoncurrentDays: 30}
             AbortIncompleteMultipartUpload: {DaysAfterInitiation: 7}
+          - Id: ExpireCloudFormationTemplates
+            Status: Enabled
+            Prefix: cloudformation/
+            ExpirationInDays: 30
+            NoncurrentVersionExpiration: {NoncurrentDays: 1}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -456,6 +473,57 @@ Resources:
       Tags:
         - {Key: Project, Value: !Ref ProjectName}
         - {Key: ManagedBy, Value: cloudformation}
+
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-app-role'
+      Description: Rol de ejecucion acotado para las instancias del portal Tangamandapio.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
+      Policies:
+        - PolicyName: !Sub '${ProjectName}-app-runtime'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadVersionedApplicationArtifact
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${AssetBucket.Arn}/${ApplicationArtifactKey}'
+              - Sid: ReadProjectSecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/*'
+              - Sid: ReadOperationsMetrics
+                Effect: Allow
+                Action: cloudwatch:GetMetricData
+                Resource: '*'
+              - Sid: ManageAlarmEmailSubscriptions
+                Effect: Allow
+                Action:
+                  - sns:ListSubscriptionsByTopic
+                  - sns:Subscribe
+                Resource: !Ref AlarmNotificationTopic
+              - Sid: RemoveAlarmEmailSubscriptions
+                Effect: Allow
+                Action: sns:Unsubscribe
+                Resource: !Sub '${AlarmNotificationTopic}:*'
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${ProjectName}-app-profile'
+      Roles:
+        - !Ref AppInstanceRole
 
   DBSecret:
     Type: AWS::SecretsManager::Secret
@@ -578,7 +646,7 @@ Resources:
       LaunchTemplateData:
         ImageId: !Ref AmazonLinuxAmiId
         InstanceType: !Ref InstanceType
-        IamInstanceProfile: {Name: LabInstanceProfile}
+        IamInstanceProfile: {Name: !Ref AppInstanceProfile}
         SecurityGroupIds: [!Ref AppSecurityGroup]
         MetadataOptions:
           HttpEndpoint: enabled
@@ -842,6 +910,15 @@ Resources:
           Metrics:
             - GroupDesiredCapacity
             - GroupInServiceInstances
+      # El SNS recibe eventos de ciclo de vida del ASG; la entrega por correo
+      # requiere que la suscripción de la persona esté confirmada.
+      NotificationConfigurations:
+        - TopicARN: !Ref AlarmNotificationTopic
+          NotificationTypes:
+            - autoscaling:EC2_INSTANCE_LAUNCH
+            - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+            - autoscaling:EC2_INSTANCE_TERMINATE
+            - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
@@ -902,9 +979,15 @@ Resources:
 
   HighCPUAlarm:
     Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Alertar sobre presión de CPU sostenida en las instancias del portal.
+        must:
+          - Notificar por SNS al cruzar y al recuperar el umbral.
+          - Tratar los datos ausentes como faltantes, sin fabricar un valor cero.
     Properties:
       AlarmName: !Sub '${ProjectName}-high-cpu'
-      AlarmDescription: CPU promedio mayor a 70 por ciento durante dos periodos de cinco minutos; los datos ausentes se muestran como indeterminados
+      AlarmDescription: CPU promedio de EC2 superior a 70 % en dos periodos consecutivos de 5 minutos. Señala presión sostenida en el grupo del portal; revisar latencia, instancias y actividad de escalado. Notifica por SNS al entrar en ALARM y al volver a OK. Los datos ausentes no se interpretan como cero.
       Namespace: AWS/EC2
       MetricName: CPUUtilization
       Dimensions:
@@ -922,9 +1005,15 @@ Resources:
 
   UnhealthyTargetsAlarm:
     Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Detectar destinos que el balanceador dejó de considerar saludables.
+        must:
+          - Notificar por SNS al cruzar y al recuperar el umbral.
+          - Conservar la comprobación de salud configurada en el grupo destino.
     Properties:
       AlarmName: !Sub '${ProjectName}-unhealthy-targets'
-      AlarmDescription: Uno o mas destinos del ALB no estan saludables
+      AlarmDescription: El ALB registra uno o más destinos no saludables durante dos periodos consecutivos de 60 segundos. Revisar /health, estado de EC2, grupo de seguridad y último despliegue. Notifica por SNS al entrar en ALARM y al volver a OK. La ausencia de métrica queda como dato faltante.
       Namespace: AWS/ApplicationELB
       MetricName: UnHealthyHostCount
       Dimensions:
@@ -943,9 +1032,15 @@ Resources:
   InServiceCapacityAlarm:
     Type: AWS::CloudWatch::Alarm
     Condition: ProductionServingMode
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Alertar cuando el ASG pierde la capacidad mínima de dos instancias listas.
+        must:
+          - Notificar por SNS al cruzar y al recuperar el mínimo.
+          - Mantener la alarma solo en modo de servicio, no durante bootstrap.
     Properties:
       AlarmName: !Sub '${ProjectName}-in-service-capacity'
-      AlarmDescription: Menos de dos instancias InService indica capacidad base degradada; la ausencia de datos aparece como INSUFFICIENT_DATA.
+      AlarmDescription: El ASG mantiene menos de 2 instancias InService durante dos periodos de 60 segundos. La capacidad base del portal está degradada; revisar actividades, salud de instancias, cuotas y destinos del ALB. Notifica por SNS al entrar en ALARM y al recuperar dos instancias. Sin datos, queda INSUFFICIENT_DATA.
       Namespace: AWS/AutoScaling
       MetricName: GroupInServiceInstances
       Dimensions:
@@ -962,9 +1057,15 @@ Resources:
 
   Target5xxAlarm:
     Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Señalar errores HTTP 5xx observados por el balanceador en los destinos del portal.
+        must:
+          - Notificar por SNS al cruzar y al recuperar el umbral.
+          - No contar periodos sin tráfico como si fueran errores.
     Properties:
       AlarmName: !Sub '${ProjectName}-target-5xx'
-      AlarmDescription: Errores HTTP 5xx generados por la aplicacion
+      AlarmDescription: Los destinos del portal generan al menos 5 respuestas HTTP 5xx en un periodo de 60 segundos, dentro de una ventana evaluada de 2 minutos. Correlacionar con logs de aplicación, cambios recientes y salud de RDS. Notifica por SNS al entrar en ALARM y al volver a OK; periodos sin datos no cuentan como infracción.
       Namespace: AWS/ApplicationELB
       MetricName: HTTPCode_Target_5XX_Count
       Dimensions:
@@ -982,9 +1083,15 @@ Resources:
 
   DatabaseCPUAlarm:
     Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Detectar saturación sostenida de CPU en PostgreSQL administrado.
+        must:
+          - Notificar por SNS al cruzar y al recuperar el umbral.
+          - Mantener el tratamiento conservador de datos ausentes.
     Properties:
       AlarmName: !Sub '${ProjectName}-rds-high-cpu'
-      AlarmDescription: CPU alta sostenida en RDS PostgreSQL
+      AlarmDescription: La CPU promedio de RDS PostgreSQL supera 75 % durante 3 periodos consecutivos de 60 segundos. Revisar consultas, conexiones y carga del portal antes de modificar la clase de instancia. Notifica por SNS al entrar en ALARM y al volver a OK; los periodos sin datos no activan la alarma.
       Namespace: AWS/RDS
       MetricName: CPUUtilization
       Dimensions:

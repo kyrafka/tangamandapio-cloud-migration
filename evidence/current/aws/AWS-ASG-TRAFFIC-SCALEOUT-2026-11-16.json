@@ -1,0 +1,63 @@
+{
+  "observed_at_utc": "2026-11-16T10:21:43Z",
+  "account_id": "481056890449",
+  "region": "us-east-2",
+  "stack": "tangamandapio-live-20261116",
+  "test_type": "controlled HTTP traffic to ALB; target-tracking autoscaling",
+  "load": {
+    "target_rate_requests_per_second": 90,
+    "duration_seconds": 240,
+    "requests": 21600,
+    "http_200": 21600,
+    "other_http_statuses": 0,
+    "errors": 0,
+    "p95_latency_ms": 252.15,
+    "max_latency_ms": 961.52,
+    "endpoint": "ALB /api",
+    "waf_http_blocks_observed": 0
+  },
+  "target_tracking": {
+    "metric": "ALBRequestCountPerTarget",
+    "target_per_target_per_minute": 2500,
+    "observed_per_target_per_minute": [
+      { "minute_utc": "2026-11-16T10:00:00Z", "value": 2700 },
+      { "minute_utc": "2026-11-16T10:01:00Z", "value": 2700 },
+      { "minute_utc": "2026-11-16T10:02:00Z", "value": 2700 }
+    ],
+    "alarm_state": "ALARM",
+    "alarm_triggered_at_utc": "2026-11-16T10:05:14Z",
+    "automatic_desired_capacity_change": "2->3",
+    "instance_launch_started_at_utc": "2026-11-16T10:05:26Z",
+    "scale_out_instance_id": "i-0d90fc3322dfef09d",
+    "alarm_state_after_load": "OK",
+    "alarm_ok_at_utc": "2026-11-16T10:07:14Z"
+  },
+  "verification": {
+    "asg_desired_capacity": 3,
+    "asg_in_service_healthy_instances": 3,
+    "alb_healthy_targets": 3,
+    "portal_health_http": 200,
+    "portal_ready_http": 200,
+    "verified_at_utc": "2026-11-16T10:08:49Z"
+  },
+  "cleanup": {
+    "requested_at_utc": "2026-11-16T10:13:25Z",
+    "desired_capacity_restored_to": 2,
+    "load_test_instance_id": "i-0d90fc3322dfef09d",
+    "completed_at_utc": "2026-11-16T10:19:07Z",
+    "instance_state": "terminated",
+    "load_test_target_state": "removed",
+    "remaining_base_instances": 2,
+    "remaining_base_targets_healthy": 2,
+    "portal_health_http": 200,
+    "portal_ready_http": 200,
+    "cloudformation_drift": "IN_SYNC",
+    "automatic_scale_in_verified": false,
+    "reason": "The target-group deregistration delay is 300 seconds; the test instance was removed manually after scale-out to limit cost."
+  },
+  "limits": [
+    "This load test verified automatic scale-out from 2 to 3 only.",
+    "Capacity steps 3, 4, and 5 were separately tested by manually changing desired capacity; automatic traffic-driven scaling to 4 and 5 and automatic scale-in remain unverified.",
+    "No five-second EC2 replacement or router failover claim is made."
+  ]
+}

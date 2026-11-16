@@ -1,0 +1,8 @@
+# Cuenta y recursos observados al 16/11/2026; actualizar IDs después de reconstruir la pila de aplicación.
+aws_region             = "us-east-2"
+deployment_approved    = false
+enable_private_wms_route = false
+
+# No pongas claves Tailscale aquí. Guárdalas directamente en Secrets Manager con los nombres definidos en CloudFormation.
+router_artifact_key    = "releases/tangamandapio/tailscale-ha-<sha256>.tar.gz"
+router_artifact_sha256 = "<64-hex-sha256>"

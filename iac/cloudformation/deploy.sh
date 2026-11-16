@@ -23,7 +23,7 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 STACK_NAME="${STACK_NAME:-}"
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-us-east-2}"
 TEMPLATE="${1:-$SCRIPT_DIR/aws-lab.yaml}"
 CHANGE_SET_NAME="${CHANGE_SET_NAME:-tangamandapio-$(date -u +%Y%m%dT%H%M%SZ)}"
 APPLY_CHANGE_SET="${APPLY_CHANGE_SET:-false}"
@@ -159,9 +159,25 @@ if [[ -n "$CERTIFICATE_ARN" || -n "$PORTAL_DOMAIN_NAME" ]]; then
   fi
 fi
 
+TEMPLATE_SIZE_BYTES="$(wc -c < "$TEMPLATE")"
+TEMPLATE_ARGS=(--template-body "file://$TEMPLATE")
+if (( TEMPLATE_SIZE_BYTES > 51200 )); then
+  ASSET_BUCKET="$(aws cloudformation describe-stacks \
+    --region "$REGION" --stack-name "$STACK_NAME" \
+    --query "Stacks[0].Outputs[?OutputKey=='AssetBucketName'].OutputValue" \
+    --output text)"
+  if [[ -z "$ASSET_BUCKET" || "$ASSET_BUCKET" == "None" ]]; then
+    echo "No se pudo obtener el bucket privado para preparar la plantilla grande." >&2
+    exit 2
+  fi
+  TEMPLATE_SHA256="$(sha256sum "$TEMPLATE" | awk '{print $1}')"
+  TEMPLATE_KEY="cloudformation/${STACK_NAME}/aws-lab-${TEMPLATE_SHA256}.yaml"
+  aws s3 cp "$TEMPLATE" "s3://$ASSET_BUCKET/$TEMPLATE_KEY" --region "$REGION" --sse AES256 >/dev/null
+  TEMPLATE_URL="https://${ASSET_BUCKET}.s3.${REGION}.amazonaws.com/${TEMPLATE_KEY}"
+  TEMPLATE_ARGS=(--template-url "$TEMPLATE_URL")
+fi
 aws cloudformation validate-template \
-  --region "$REGION" \
-  --template-body "file://$TEMPLATE" >/dev/null
+  --region "$REGION" "${TEMPLATE_ARGS[@]}" >/dev/null
 
 # Preserve every current parameter, including NoEcho values that AWS will not
 # return in clear text. Only explicitly supplied deployment controls are changed.
@@ -312,7 +328,7 @@ CHANGE_SET_ID="$(aws cloudformation create-change-set \
   --stack-name "$STACK_NAME" \
   --change-set-name "$CHANGE_SET_NAME" \
   --change-set-type UPDATE \
-  --template-body "file://$TEMPLATE" \
+  "${TEMPLATE_ARGS[@]}" \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --parameters "${PARAMETERS[@]}" \
   --query Id \

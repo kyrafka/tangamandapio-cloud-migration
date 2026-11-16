@@ -3,7 +3,27 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte:** 16/10/2026, 07:03 UTC — AWS/Azure revalidados; E2E integrado y puerta local aprobados
+**Corte operativo vigente:** 16/11/2026, 18:12 UTC — AWS/Azure reconsultados; portal y escala probados, con brechas abiertas
+
+El estado comprobado de AWS/Azure, las pruebas y las acciones pendientes se
+mantienen en [ESTADO_REAL_2026-11-16](../iac/ESTADO_REAL_2026-11-16.md). Los
+cortes fechados desde el 16/10 en adelante son antecedentes; no deben usarse
+como inventario actual. Al último corte, AWS tiene la pila activa, dos
+instancias/destinos sanos y deriva `IN_SYNC`; el test largo de 300.000
+solicitudes registró 1,47% de error. La ruta privada AWS→Azure, el backup
+PostgreSQL→Blob, la entrega de alertas por correo y el TLS de origen continúan
+pendientes.
+
+La reconsulta de las 18:12 UTC está respaldada por
+[`evidence/current/CLOUD-RECHECK-2026-11-16-1812.json`](../evidence/current/CLOUD-RECHECK-2026-11-16-1812.json).
+La cuenta AWS volvió a autenticar; en `us-east-2` solo se encontraron las dos
+EC2 de aplicación y no existe la ruta al PE. La SCP `p-4lylrj0n` de la
+Organization `976848034062` bloquea `DescribeInstances` en `us-west-2`; no fue
+posible leer la política desde la cuenta miembro. Hay dos suscripciones SNS
+`PendingConfirmation`; ACM espera el CNAME que el usuario dejó para después.
+El cliente local Tailscale está `NoState`, así que los nombres que su caché
+imprime no se consideran prueba de routers AWS conectados. No hubo mutaciones
+cloud en esta reconsulta.
 
 ## 1. Caso y objetivo
 

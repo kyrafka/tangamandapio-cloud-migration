@@ -1,0 +1,104 @@
+{
+  "checkedAtUtc": "2026-11-16T18:12:15Z",
+  "aws": {
+    "profile": "main",
+    "accountId": "481056890449",
+    "role": "AccountFullAccessRole",
+    "region": "us-east-2",
+    "cloudFormation": {
+      "stack": "tangamandapio-live-20261116",
+      "status": "UPDATE_COMPLETE",
+      "databaseMultiAz": false,
+      "databaseBackupRetentionDays": 1
+    },
+    "ec2": {
+      "describeInstancesUsEast2": "success",
+      "instances": [
+        {
+          "name": "tangamandapio-app",
+          "id": "i-0992678b44664769b",
+          "state": "running",
+          "privateIp": "10.10.10.160",
+          "availabilityZone": "us-east-2a"
+        },
+        {
+          "name": "tangamandapio-app",
+          "id": "i-0a4d97105000a9ca6",
+          "state": "running",
+          "privateIp": "10.10.11.91",
+          "availabilityZone": "us-east-2b"
+        }
+      ],
+      "tailscaleRoutersFoundInUsEast2": 0,
+      "crossRegionDescribeInstances": {
+        "usWest2": "explicit deny by SCP p-4lylrj0n",
+        "organizationId": "976848034062",
+        "canReadScpContentFromMemberAccount": false
+      }
+    },
+    "rds": {
+      "identifier": "tangamandapio-postgres",
+      "status": "available",
+      "engine": "postgres",
+      "engineVersion": "18.3",
+      "multiAz": false,
+      "backupRetentionDays": 1
+    },
+    "loadBalancer": {
+      "name": "tangamandapio-alb",
+      "state": "active"
+    },
+    "privateWmsRoute": {
+      "destination": "10.20.1.4/32",
+      "routeTablesChecked": 5,
+      "present": false
+    },
+    "tailscaleSecretMetadata": {
+      "search": "Secrets Manager names containing tailscale",
+      "matches": 0,
+      "secretValuesRead": false
+    },
+    "acm": {
+      "certificateStatus": "PENDING_VALIDATION",
+      "recordType": "CNAME",
+      "recordName": "_7408575772140ac4b6bcd8e3ab10a8ca.tangamandapio.kendellnm.me.",
+      "recordTarget": "_694a9f814a3985f9576fb181841dc9d3.wzccmgtwzk.acm-validations.aws."
+    },
+    "sns": {
+      "subscriptionsOnAlarmsTopic": 2,
+      "pendingConfirmation": 2
+    },
+    "budget": {
+      "name": "Tangamandapio-3weeks-USD200-20261116",
+      "limitUsd": 200,
+      "periodStart": "2026-11-16T03:39:08-05:00",
+      "periodEnd": "2026-12-07T03:39:08-05:00",
+      "costExplorerNovemberUsd": 0,
+      "billingLagCaveat": true
+    },
+    "cloudMutations": 0
+  },
+  "azure": {
+    "subscriptionName": "Azure for Students",
+    "state": "Enabled",
+    "tailscaleRouters": [
+      {
+        "name": "vm-tangama-ts-pilot",
+        "state": "Running",
+        "privateIp": "10.20.0.4"
+      },
+      {
+        "name": "vm-tangama-ts-backup",
+        "state": "Running",
+        "privateIp": "10.20.0.5"
+      }
+    ]
+  },
+  "localTailscale": {
+    "backendState": "NoState",
+    "peerMapPresent": false,
+    "coordinationSyncError": true,
+    "staleTextOutputIsNotUsedAsProof": true
+  },
+  "interpretation": "The AWS-initiated private request remains unverified. The text status cache alone does not prove AWS routers are online or in this account."
+}

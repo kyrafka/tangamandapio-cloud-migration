@@ -1,6 +1,27 @@
 # Infraestructura como código
 
-## Comprobación de recuperación y costos
+## Estado real de nube — 16/11/2026
+
+La verificación actual de la cuenta nueva está en
+[ESTADO_REAL_2026-11-16.md](ESTADO_REAL_2026-11-16.md). Ese corte reemplaza los
+estados de AWS Academy y los cortes locales anteriores para describir lo que
+está desplegado ahora. La pila principal de CloudFormation está activa; el
+tráfico privado AWS–Azure, los respaldos PostgreSQL hacia Blob y la restauración
+aislada siguen pendientes de sus dependencias indicadas allí.
+
+> **Actualizado en consulta cloud — 16/11/2026:** la infraestructura dibujada en
+> [estado real y observaciones pendientes](architecture/cambios-esperados.svg)
+> refleja el inventario AWS/Azure de ese día; ámbar/discontinuo marca lo que
+> aún falta desplegar o probar. El [original editable de Draw.io](architecture/cambios-esperados.drawio)
+> mantiene los mismos estados. El plan conserva la secuencia de remediación;
+> el [registro vivo](ESTADO_REAL_2026-11-16.md) prevalece sobre toda evidencia
+> fechada antes de ese corte.
+
+## Corte histórico de recuperación y costos — previo al 16/11/2026
+
+Los datos de esta sección pertenecen a la cuenta/laboratorio y a las
+comprobaciones previas; no describen los recursos de la cuenta AWS activa.
+Para el inventario vigente, usa [ESTADO_REAL_2026-11-16](ESTADO_REAL_2026-11-16.md).
 
 La comprobación más reciente encontró el laboratorio AWS Academy en estado
 `Terminated`. Esto no demuestra que todos los recursos de AWS estén eliminados:
@@ -48,7 +69,7 @@ siguen siendo pasos independientes. No se ha validado un ciclo completo de
 destrucción y reconstrucción de ambas nubes; conserva los datos, el backend de
 estado, las claves y la configuración externa hasta comprobar su recuperación.
 
-## Estado de recuperación — 05/11/2026
+## Registro histórico de recuperación — 05/11/2026 (no describe el corte actual)
 
 Las secciones anteriores al 05/11 son históricas. El piloto actual usa routers Tailscale propios en AWS y Azure; se verificaron un pedido privado y una conmutación del router AWS, sin afirmar BGP ni VPN Site-to-Site administrada. Hubo dos pruebas manuales distintas: una utilizó una clave y artefactos temporales; otra registró una copia cifrada en Blob con su clave protegida en Key Vault y una restauración aislada de 20 tablas. Esta evidencia histórica no confirma que la copia y la clave sigan disponibles hoy. El respaldo periódico y la recuperación multirregión siguen pendientes.
 

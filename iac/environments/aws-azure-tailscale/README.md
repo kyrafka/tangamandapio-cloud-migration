@@ -1,6 +1,21 @@
 # Túnel overlay AWS–Azure con Tailscale (propuesta controlada)
 
-## Prueba desde el ERP — 05/11/2026
+> **Corte vigente 16/11/2026:** la red AWS del despliegue nuevo está en la
+> cuenta `481056890449`, no en AWS Academy. Los IDs, rutas y mediciones históricas
+> de este archivo describen ensayos anteriores y no prueban el estado actual.
+> Los dos routers Azure actuales siguen anunciando `10.20.1.0/24`; se fijó
+> `accept-routes=false` en ambos para evitar que lleguen al Private Endpoint por
+> el propio overlay. Desde ambos routers, la salud de `tangama-flex-261104`
+> volvió a HTTP 200. En AWS todavía faltan el secreto de alta Tailscale, los
+> routers/ruta/DNS privados y la prueba de pedido de extremo a extremo. Ver
+> [estado real del 16/11](../../ESTADO_REAL_2026-11-16.md).
+
+## Registro histórico: pruebas desde el ERP — 05/11/2026
+
+> Estas pruebas corresponden a la huella anterior. La cuenta nueva se revalidó
+> el 16/11/2026 y no tiene ruta AWS a `10.20.1.4/32`, routers Tailscale AWS ni
+> evidencia de pedido privado. Consulta el [estado actual](../../ESTADO_REAL_2026-11-16.md)
+> antes de ejecutar comandos o usar los identificadores históricos de abajo.
 
 ### Conmutación automática AWS verificada
 

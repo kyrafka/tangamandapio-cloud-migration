@@ -1,0 +1,101 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "applicationInsightsResourceId": { "type": "string" },
+    "actionGroupResourceId": { "type": "string" },
+    "location": { "type": "string", "defaultValue": "westus" }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2021-08-01",
+      "name": "tangama-flex-5xx-es",
+      "location": "[parameters('location')]",
+      "kind": "LogAlert",
+      "tags": {
+        "Project": "Tangamandapio",
+        "ManagedBy": "ARM"
+      },
+      "properties": {
+        "displayName": "Tangamandapio: errores HTTP 5xx en WMS Flex",
+        "description": "Alerta cuando la Function WMS Flex registra una o más respuestas HTTP 5xx en cinco minutos.",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "scopes": [ "[parameters('applicationInsightsResourceId')]" ],
+        "windowSize": "PT5M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "requests | where timestamp >= ago(5m) | where cloud_RoleName == 'tangama-flex-261104' | where toint(resultCode) >= 500 | summarize MetricValue=count()",
+              "timeAggregation": "Maximum",
+              "metricMeasureColumn": "MetricValue",
+              "dimensions": [],
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "autoMitigate": true,
+        "actions": {
+          "actionGroups": [ "[parameters('actionGroupResourceId')]" ],
+          "customProperties": { "idioma": "es", "servicio": "Azure Functions Flex" }
+        },
+        "skipQueryValidation": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2021-08-01",
+      "name": "tangama-flex-latencia-es",
+      "location": "[parameters('location')]",
+      "kind": "LogAlert",
+      "tags": {
+        "Project": "Tangamandapio",
+        "ManagedBy": "ARM"
+      },
+      "properties": {
+        "displayName": "Tangamandapio: latencia alta en WMS Flex",
+        "description": "Alerta cuando la latencia media de las solicitudes de la Function WMS Flex supera cinco segundos durante quince minutos.",
+        "severity": 3,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "scopes": [ "[parameters('applicationInsightsResourceId')]" ],
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "requests | where timestamp >= ago(15m) | where cloud_RoleName == 'tangama-flex-261104' | summarize MetricValue=avg(duration)",
+              "timeAggregation": "Average",
+              "metricMeasureColumn": "MetricValue",
+              "dimensions": [],
+              "operator": "GreaterThan",
+              "threshold": 5000,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "autoMitigate": true,
+        "actions": {
+          "actionGroups": [ "[parameters('actionGroupResourceId')]" ],
+          "customProperties": { "idioma": "es", "servicio": "Azure Functions Flex", "unidad": "milisegundos" }
+        },
+        "skipQueryValidation": true
+      }
+    }
+  ],
+  "outputs": {
+    "alertNames": {
+      "type": "array",
+      "value": [ "tangama-flex-5xx-es", "tangama-flex-latencia-es" ]
+    }
+  }
+}

@@ -28,7 +28,7 @@ fi
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 STACK_NAME="${STACK_NAME:-}"
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-us-east-2}"
 PROJECT_NAME="${PROJECT_NAME:-tangamandapio}"
 TEMPLATE="${TEMPLATE:-$SCRIPT_DIR/aws-lab.yaml}"
 FUNCTION_URL="${AZURE_FULFILLMENT_URL:-}"
@@ -37,6 +37,8 @@ CERTIFICATE_ARN="${CERTIFICATE_ARN:-}"
 PORTAL_DOMAIN_NAME="${PORTAL_DOMAIN_NAME:-}"
 SNAPSHOT_IDENTIFIER="${RDS_SNAPSHOT_IDENTIFIER:-}"
 RESET_ADMINISTRATOR_PASSWORD="${RESET_ADMINISTRATOR_ON_RESTORE:-false}"
+TEMPLATE_STAGE_BUCKET=""
+TEMPLATE_STAGE_KEY=""
 
 if [[ ! "$STACK_NAME" =~ ^tangamandapio-live-[0-9]{8}$ ]]; then
   echo "Reconstrucción bloqueada: define STACK_NAME explícitamente con un nombre de proyecto verificado (tangamandapio-live-YYYYMMDD)." >&2
@@ -49,6 +51,10 @@ ARTIFACT_PATH="$(mktemp "${TMPDIR:-/tmp}/tangamandapio-portal.XXXXXX.tar.gz")"
 
 cleanup() {
   rm -f -- "$ARTIFACT_PATH"
+  if [[ -n "$TEMPLATE_STAGE_BUCKET" ]]; then
+    aws s3 rm "s3://$TEMPLATE_STAGE_BUCKET/$TEMPLATE_STAGE_KEY" --region "$REGION" >/dev/null 2>&1 || true
+    aws s3api delete-bucket --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 
@@ -214,7 +220,28 @@ elif [[ "$STACK_LOOKUP_OUTPUT" != *"(ValidationError)"* || \
   exit 2
 fi
 
-aws cloudformation validate-template --region "$REGION" --template-body "file://$TEMPLATE" >/dev/null
+TEMPLATE_SIZE_BYTES="$(wc -c < "$TEMPLATE")"
+TEMPLATE_ARGS=(--template-body "file://$TEMPLATE")
+if (( TEMPLATE_SIZE_BYTES > 51200 )); then
+  ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+  TEMPLATE_STAGE_BUCKET="${PROJECT_NAME}-cfn-stage-${ACCOUNT_ID}-${REGION}-$(date -u +%s)"
+  TEMPLATE_STAGE_KEY="$STACK_NAME/aws-lab.yaml"
+  if [[ "$REGION" == "us-east-1" ]]; then
+    aws s3api create-bucket --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" >/dev/null
+  else
+    aws s3api create-bucket --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" \
+      --create-bucket-configuration "LocationConstraint=$REGION" >/dev/null
+  fi
+  aws s3api put-public-access-block --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" \
+    --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+  aws s3api put-bucket-encryption --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" \
+    --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+  aws s3 cp "$TEMPLATE" "s3://$TEMPLATE_STAGE_BUCKET/$TEMPLATE_STAGE_KEY" --region "$REGION" --sse AES256 >/dev/null
+  TEMPLATE_URL="https://${TEMPLATE_STAGE_BUCKET}.s3.${REGION}.amazonaws.com/${TEMPLATE_STAGE_KEY}"
+  TEMPLATE_ARGS=(--template-url "$TEMPLATE_URL")
+fi
+
+aws cloudformation validate-template --region "$REGION" "${TEMPLATE_ARGS[@]}" >/dev/null
 aws cloudformation validate-template --region "$REGION" \
   --template-body "file://$SCRIPT_DIR/voice-recordings.yaml" >/dev/null
 
@@ -234,7 +261,7 @@ else
   echo "La base se creará vacía; si existe un secreto maestro retenido, se reutilizará."
   echo "Al iniciar el portal, el ERP sembrará catálogo y socios sintéticos de forma idempotente; no creará ventas ni eventos WMS."
 fi
-echo "El perfil nativo predeterminado mantiene RDS Multi-AZ, WAF asociado al ALB y retención de respaldo de siete días. AWS Backup sigue siendo opt-in."
+echo "Configuración solicitada: RDS Multi-AZ=${DATABASE_MULTI_AZ:-false}, retención de respaldo=${DATABASE_BACKUP_RETENTION_DAYS:-1} día(s), WAF=${ENABLE_WAF:-true}. Multi-AZ y retención extendida son opt-in y requieren revisar costo/permisos. AWS Backup sigue siendo opt-in."
 if [[ -z "$CERTIFICATE_ARN" ]]; then
   echo "ATENCIÓN: sin CERTIFICATE_ARN y PORTAL_DOMAIN_NAME, el ALB se creará solo con HTTP."
 fi
@@ -269,8 +296,8 @@ PARAMETERS=(
   "ParameterKey=InternalErpEnabled,ParameterValue=true"
   "ParameterKey=AzureFulfillmentUrl,ParameterValue=$FUNCTION_URL"
   "ParameterKey=AzureFunctionKeySecret,ParameterValue=$FUNCTION_KEY_SECRET"
-  "ParameterKey=DatabaseMultiAZ,ParameterValue=${DATABASE_MULTI_AZ:-true}"
-  "ParameterKey=DatabaseBackupRetentionDays,ParameterValue=${DATABASE_BACKUP_RETENTION_DAYS:-7}"
+  "ParameterKey=DatabaseMultiAZ,ParameterValue=${DATABASE_MULTI_AZ:-false}"
+  "ParameterKey=DatabaseBackupRetentionDays,ParameterValue=${DATABASE_BACKUP_RETENTION_DAYS:-1}"
   "ParameterKey=ManageDatabaseMasterPassword,ParameterValue=false"
   "ParameterKey=ResetAdministratorPassword,ParameterValue=$RESET_ADMINISTRATOR_PASSWORD"
   "ParameterKey=EnableWaf,ParameterValue=${ENABLE_WAF:-true}"
@@ -302,10 +329,16 @@ fi
 aws cloudformation create-stack \
   --region "$REGION" \
   --stack-name "$STACK_NAME" \
-  --template-body "file://$TEMPLATE" \
+  "${TEMPLATE_ARGS[@]}" \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --parameters "${PARAMETERS[@]}" >/dev/null
 aws cloudformation wait stack-create-complete --region "$REGION" --stack-name "$STACK_NAME"
+if [[ -n "$TEMPLATE_STAGE_BUCKET" ]]; then
+  aws s3 rm "s3://$TEMPLATE_STAGE_BUCKET/$TEMPLATE_STAGE_KEY" --region "$REGION" >/dev/null
+  aws s3api delete-bucket --bucket "$TEMPLATE_STAGE_BUCKET" --region "$REGION" >/dev/null
+  TEMPLATE_STAGE_BUCKET=""
+  echo "La plantilla temporal se retiró del bucket de staging privado."
+fi
 
 # The recordings bucket is a separate stack. Create it only after the portal
 # stack has restored its IAM role, which the bucket policy references.
@@ -325,7 +358,7 @@ else
     --template-body "file://$SCRIPT_DIR/voice-recordings.yaml" \
     --parameters \
       ParameterKey=ProjectName,ParameterValue=tangamandapio \
-      ParameterKey=ApplicationRoleName,ParameterValue=LabRole >/dev/null
+      ParameterKey=ApplicationRoleName,ParameterValue=${PROJECT_NAME}-app-role >/dev/null
   aws cloudformation wait stack-create-complete --region "$REGION" --stack-name "$VOICE_STACK"
 fi
 

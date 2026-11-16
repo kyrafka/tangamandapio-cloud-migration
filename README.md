@@ -2,6 +2,24 @@
 
 Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
 
+## Estado operativo vigente — 16/11/2026
+
+El portal responde HTTP 200. En AWS `us-east-2`, CloudFormation administra la
+pila activa; el ASG permite de 2 a 5 instancias y cerró en 2/2 saludables. La
+prueba automática real escaló 2→4→5 y descendió 5→4→3→2. Una carga larga de
+300.000 solicitudes tuvo 1,47% de errores y no pasó el umbral de 1%; una
+comprobación corta de 3.000 solicitudes GET terminó sin errores. Esto no
+demuestra capacidad para 3.000 usuarios.
+
+Azure conserva Function Flex privada, Queue, Blob, Application Insights y dos
+routers Tailscale en West US. **Aún falta la ruta privada desde AWS**, el
+respaldo automático de PostgreSQL a Blob, una restauración reciente aislada,
+la confirmación del correo SNS y la validación TLS del dominio. La evidencia y
+las acciones manuales concretas están en
+[estado real del 16/11](iac/ESTADO_REAL_2026-11-16.md) y la
+[matriz de rúbrica](core/04_matriz_rubrica.md). El proyecto no está cerrado
+hasta completar esos pasos.
+
 ## Uso e infraestructura
 
 El portal y el WMS se despliegan por separado. AWS usa CloudFormation; Azure usa varias raíces Terraform. Las sesiones de AWS Academy caducan: antes de operar, inicia el laboratorio y verifica la cuenta con `aws sts get-caller-identity`. Para Azure, inicia sesión con `az login` y verifica la suscripción con `az account show`. Nunca incluyas credenciales, tokens, archivos de estado o planes en el repositorio.

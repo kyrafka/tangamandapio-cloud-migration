@@ -4,3 +4,4 @@
 cfn-lint==1.56.0
 pip-audit==2.10.1
 pip-tools==7.6.2
+cryptography>=50,<51

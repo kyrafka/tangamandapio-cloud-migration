@@ -2,7 +2,31 @@
 
 Esta carpeta conserva capturas y resultados con fecha. Cada archivo acredita solo lo que describe y el entorno donde se tomó; una captura antigua no demuestra el estado actual de una nube.
 
-## Último corte vivo — 29/10/2026
+## Último corte vivo — 16/11/2026
+
+La reconsulta de las 18:12 UTC quedó en
+[`current/CLOUD-RECHECK-2026-11-16-1812.json`](current/CLOUD-RECHECK-2026-11-16-1812.json).
+Confirma cuenta/rol, dos EC2 de aplicación en `us-east-2`, ausencia de ruta
+`10.20.1.4/32`, RDS/ALB, ACM aún pendiente, dos suscripciones SNS sin confirmar,
+presupuesto/gasto consultados y dos routers Azure encendidos. La enumeración
+de EC2 fuera de `us-east-2` está bloqueada por una SCP; la salida local de
+Tailscale está `NoState` y sus nombres en caché no se cuentan como routers
+activos.
+
+[`current/aws/AWS-ASG-SCALE-2-5-2026-11-16-cloud.json`](current/aws/AWS-ASG-SCALE-2-5-2026-11-16-cloud.json)
+consolida la cuenta/región observada, el escalado automático 2→4→5→2, el
+estado final 2/2 del ASG y destinos, las cinco alarmas y el resultado de dos
+pruebas HTTP. La carga larga de 300.000 peticiones registró 1,47% de errores
+(umbral 1%); el chequeo de 3.000 peticiones tuvo cero errores. La detección de
+deriva de CloudFormation terminó `IN_SYNC`/0. No equivale a 3.000 usuarios ni
+prueba operaciones transaccionales o tráfico privado a Azure.
+
+El estado multinube de ese corte se describe en
+[`../iac/ESTADO_REAL_2026-11-16.md`](../iac/ESTADO_REAL_2026-11-16.md). La ruta
+AWS→Azure, el respaldo PostgreSQL→Blob y la confirmación de alertas siguen
+pendientes; el registro de octubre que aparece abajo es evidencia histórica.
+
+## Corte anterior — 29/10/2026
 
 [`current/azure/AZURE-LIVE-CHECK-2026-10-29.json`](current/azure/AZURE-LIVE-CHECK-2026-10-29.json) reúne el estado HTTPS del portal, la denegación de inventario AWS, una recepción Azure Queue/Function con replay idempotente y la lectura de gateway/Storage. No contiene claves ni payload completo. El evento cambia el ledger sintético una unidad. No es evidencia de PostgreSQL cross-cloud, de login/roles, de túnel AWS→Flex ni de autoescalado.
 

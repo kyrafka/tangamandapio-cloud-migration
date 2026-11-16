@@ -10,7 +10,7 @@ Parameters:
     AllowedPattern: '[a-z0-9-]+'
   ApplicationRoleName:
     Type: String
-    Default: LabRole
+    Default: tangamandapio-app-role
     AllowedPattern: '[A-Za-z0-9+=,.@_-]+'
 
 Resources:

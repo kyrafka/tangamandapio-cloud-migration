@@ -1,0 +1,25 @@
+{
+  "test_id": "PT-PERF-01",
+  "url": "http://tangamandapio-alb-1518602404.us-east-2.elb.amazonaws.com/",
+  "connect_to": null,
+  "requests": 3000,
+  "concurrency": 30,
+  "elapsed_seconds": 26.598,
+  "latency_ms": {
+    "min": 230.88,
+    "mean": 254.49,
+    "p95": 263.86,
+    "max": 1864.22
+  },
+  "errors": 0,
+  "error_rate": 0.0,
+  "thresholds": {
+    "max_p95_ms": 5000.0,
+    "max_error_rate": 0.01
+  },
+  "status_counts": {
+    "200": 3000
+  },
+  "error_types": {},
+  "passed": true
+}

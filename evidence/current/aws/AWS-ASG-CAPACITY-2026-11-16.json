@@ -1,0 +1,43 @@
+{
+  "observed_at_utc": "2026-11-16T09:47:19Z",
+  "account_id": "481056890449",
+  "region": "us-east-2",
+  "stack": "tangamandapio-live-20261116",
+  "test_type": "manual desired-capacity steps; not a traffic-driven target-tracking test",
+  "steps": [
+    { "desired_capacity": 3, "healthy_asg_instances": 3, "healthy_alb_targets": 3 },
+    { "desired_capacity": 4, "healthy_asg_instances": 4, "healthy_alb_targets": 4 },
+    { "desired_capacity": 5, "healthy_asg_instances": 5, "healthy_alb_targets": 5 }
+  ],
+  "cleanup": {
+    "desired_capacity": 2,
+    "in_service_instances": 2,
+    "healthy_alb_targets": 2,
+    "result": "complete",
+    "verified_at_utc": "2026-11-16T09:47:19Z"
+  },
+  "health_checks": {
+    "portal_health_http": 200,
+    "portal_ready_http": 200,
+    "verified_at_utc": "2026-11-16T09:47:19Z"
+  },
+  "autoscaling_notifications": {
+    "sns_topic": "tangamandapio-alarms",
+    "configured_events": [
+      "autoscaling:EC2_INSTANCE_LAUNCH",
+      "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+      "autoscaling:EC2_INSTANCE_TERMINATE",
+      "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+    ],
+    "sns_messages_published_in_0930_1000_utc_window": 7,
+    "email_subscription": "PendingConfirmation"
+  },
+  "cloudformation": {
+    "status": "UPDATE_COMPLETE",
+    "drift": "IN_SYNC"
+  },
+  "limitations": [
+    "Capacity steps were requested manually; target tracking reaction to generated load was not tested.",
+    "No claim is made that an EC2 replacement completes within five seconds."
+  ]
+}
