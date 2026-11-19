@@ -2,6 +2,16 @@
 
 ## Respaldo PostgreSQL entre nubes — configuración parcial
 
+El 18/11/2026 el contenedor `tangama-postgres-backups` se importó al estado
+remoto de esta raíz. Terraform conserva el contenedor mediante
+`prevent_destroy`. La [copia y restauración actual](../../ESTADO_REAL_2026-11-18.md)
+se comprobaron manualmente. Falta una identidad y programación periódica.
+El párrafo siguiente registra la situación anterior a esa importación.
+
+Las alertas de la Function Flex activa se declaran en
+[`function-alerts.json`](../../azure-monitoring/function-alerts.json). La raíz
+`azure-rebuild` conserva apagadas las alarmas métricas de la Function heredada.
+
 El 05/11/2026 se creó el contenedor privado `tangama-postgres-backups` y una política de ciclo de vida limitada al prefijo `tangama-postgres-backups/postgres/`, que elimina blobs de más de 30 días. El almacenamiento mantiene además eliminación temporal durante 7 días. Las definiciones correspondientes se agregaron al módulo Terraform y se validaron. La política ya se importó al estado, pero **el contenedor todavía debe importarse**: revisa el plan antes de aplicar esta raíz. El archivo `postgres-backup-lifecycle.json` refleja la política aplicada.
 
 La clave RSA `postgres-backup-wrap` protege una copia manual que se restauró y verificó en un entorno aislado, pero no está integrada a un proceso de copia programado ni gestionada por Terraform. El almacén tiene recuperación de borrado de 7 días, sin protección de purga; destruirlo puede perder la clave necesaria para descifrar respaldos. Las reglas `prevent_destroy` del módulo bloquean la destrucción normal de la cuenta de almacenamiento y del Key Vault mediante Terraform; no impiden borrados desde la consola. **No destruyas estos recursos ni presentes esta configuración como un respaldo programado** hasta que se configure y pruebe la conservación de la clave y el flujo automático.

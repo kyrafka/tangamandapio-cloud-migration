@@ -1,0 +1,36 @@
+{
+  "limaDate": "2026-11-18",
+  "awsAccount": "481056890449",
+  "awsRegion": "us-east-2",
+  "sourceDatabase": "tangamandapio-postgres",
+  "sourceStartedAtUtc": "2026-11-19T03:14:56.527597Z",
+  "blob": {
+    "account": "sttangama261030r",
+    "container": "tangama-postgres-backups",
+    "object": "postgres/20261119T031447Z-79b6a664ff5d.json",
+    "uploadHttp": 201,
+    "archiveBytes": 62118,
+    "ciphertextBytes": 83590,
+    "archiveSha256": "a1de17214c55cce30463defc9e7b17db1dc055fe5b742a63d000a8d7f49bad8b",
+    "ciphertextSha256": "1370f36fda881da575b5f9c435f3f4186bcfb8634cad60e3b4bdaf4b56eacbeb",
+    "keyId": "https://kv-tangama-261030r.vault.azure.net/keys/postgres-backup-wrap/29aa95ea1d7e47f6955ce7c3fe14f0b5",
+    "envelope": "AES-256-GCM and RSA-OAEP-256"
+  },
+  "restore": {
+    "startedAtUtc": "2026-11-19T03:22:13.232397Z",
+    "secondsEndToEnd": 29.794,
+    "secondsOnHost": 3.396,
+    "backupAgeAtStartSeconds": 436.705,
+    "environment": "Temporary PostgreSQL 18.6 cluster on a separate EC2 host from the export, with RAM-backed storage and a private Unix socket",
+    "tcpEnabled": false,
+    "verifiedSha256Digests": true,
+    "tables": 20,
+    "portalUsers": 1,
+    "orders": 0,
+    "outboxEvents": 0,
+    "awsSsmCommandId": "f7d8ea63-1609-4666-851d-8e1ca9dd4204"
+  },
+  "exportAwsSsmCommandId": "f6f58919-64a5-49ba-8dd8-2ea3192774b8",
+  "scheduled": false,
+  "scope": "Measured manual restore time. Backup age is not a measured operational RPO."
+}

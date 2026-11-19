@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "contactEmails": { "type": "array", "minLength": 1 },
+    "startDate": { "type": "string" },
+    "endDate": { "type": "string" },
+    "monthlyAmount": { "type": "int", "defaultValue": 25, "minValue": 1 }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Consumption/budgets",
+      "apiVersion": "2024-08-01",
+      "name": "tangamandapio-demo-usd25",
+      "properties": {
+        "category": "Cost",
+        "amount": "[parameters('monthlyAmount')]",
+        "timeGrain": "Monthly",
+        "timePeriod": {
+          "startDate": "[parameters('startDate')]",
+          "endDate": "[parameters('endDate')]"
+        },
+        "notifications": {
+          "Actual50": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 50, "thresholdType": "Actual", "contactEmails": "[parameters('contactEmails')]" },
+          "Actual80": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 80, "thresholdType": "Actual", "contactEmails": "[parameters('contactEmails')]" },
+          "Actual100": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 100, "thresholdType": "Actual", "contactEmails": "[parameters('contactEmails')]" }
+        }
+      }
+    }
+  ]
+}

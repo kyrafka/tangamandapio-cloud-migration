@@ -12,6 +12,7 @@ import socket
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener, urlopen
@@ -88,7 +89,13 @@ def request_once(url, timeout, opener=None):
     except HTTPError as exc:
         status = exc.code
         error = type(exc).__name__
-    except (URLError, TimeoutError, OSError) as exc:
+    except URLError as exc:
+        reason = exc.reason
+        error = f"URLError/{type(reason).__name__}"
+        code = getattr(reason, "winerror", None) or getattr(reason, "errno", None)
+        if isinstance(code, int):
+            error = f"{error}/{code}"
+    except (TimeoutError, OSError) as exc:
         error = type(exc).__name__
     return (time.perf_counter() - started) * 1000, status, error
 
@@ -127,6 +134,7 @@ def main():
         except ValueError as error:
             parser.error(str(error))
 
+    started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
         futures = [
@@ -139,6 +147,8 @@ def main():
     failures = [row for row in results if row[1] < 200 or row[1] >= 400]
     result = {
         "test_id": "PT-PERF-01",
+        "started_at_utc": started_at.isoformat(),
+        "finished_at_utc": datetime.now(timezone.utc).isoformat(),
         "url": args.url,
         "connect_to": args.connect_to,
         "requests": len(results),

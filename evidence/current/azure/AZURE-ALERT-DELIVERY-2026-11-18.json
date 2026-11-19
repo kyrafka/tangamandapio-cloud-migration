@@ -1,0 +1,16 @@
+{
+  "limaDate": "2026-11-18",
+  "monitoring": "Application Insights tangama-wms-ai",
+  "functionRole": "tangama-flex-261104",
+  "productionRulesEnabled": ["tangama-flex-5xx-es", "tangama-flex-latencia-es"],
+  "actionGroup": "tangama-ops-ag",
+  "simulationApi": { "result": "Conflict", "reason": "Free subscription not supported" },
+  "realControlledTest": {
+    "rule": "tangama-flex-prueba-entrega-20261118",
+    "signal": "HTTP 200 from a private Function health probe recorded in Application Insights",
+    "state": "Fired",
+    "firedAtUtc": "2026-11-19T03:36:27.9587244Z",
+    "temporaryRuleDeleted": true,
+    "emailInboxConfirmed": false
+  }
+}

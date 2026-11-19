@@ -1,5 +1,34 @@
 # Infraestructura como código
 
+## Estado y recuperación verificados el 18/11/2026
+
+Consulta el [corte vigente](ESTADO_REAL_2026-11-18.md) para el resultado de la
+restauración, el estado de la VPN, las alertas y el costo. CloudFormation
+administra los logs del ALB mediante `EnableAlbAccessLogs` y la retención del
+prefijo `alb-access/`. El [presupuesto ARM](azure-monitoring/subscription-budget.json)
+se despliega a nivel de suscripción, fuera de las raíces Terraform existentes.
+
+### Repetir el respaldo manual de PostgreSQL
+
+1. Verifica la sesión AWS de la cuenta y el inicio Azure de la suscripción del
+   proyecto. El operador necesita escribir exclusivamente en el contenedor de
+   respaldo y el permiso de generar delegación de almacenamiento. El restore
+   requiere leer ese contenedor y ejecutar `unwrapKey` en la clave versionada.
+2. Ejecuta `python iac/scripts/run_postgres_blob_export.py --instance <EC2-app-SSM>`
+   con el perfil AWS `main`. Requiere `botocore` y Azure CLI en el equipo. La
+   instancia necesita el cliente PostgreSQL 18, `cryptography`, acceso TLS a
+   RDS y salida HTTPS hacia Blob. La copia queda bajo `postgres/` con la regla
+   de retención existente. Guarda el nombre del objeto y sus dos hashes.
+3. Ejecuta `python iac/scripts/restore_postgres_blob.py --restore-host <otra-EC2-SSM> --storage sttangama261030r --container tangama-postgres-backups --object <blob> --key-id <URI-versionada> --cipher-sha256 <hash-cifrado> --archive-sha256 <hash-dump>`.
+   El procedimiento usa un clúster efímero en RAM con socket local. Verifica
+   los conteos y el tiempo de recuperación que imprime la orden. No se pasa
+   una contraseña o URL SAS como argumento.
+
+La identidad de este flujo manual caduca con la sesión del operador. Para
+programarlo se requiere una identidad de servicio con permiso sobre el
+contenedor, un rol PostgreSQL de exportación y un único ejecutor con alerta de
+omisión o fallo. El respaldo manual y el restore del 18/11 están probados.
+
 ## Estado real de nube — 16/11/2026
 
 La verificación actual de la cuenta nueva está en

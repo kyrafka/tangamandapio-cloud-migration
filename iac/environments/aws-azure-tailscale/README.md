@@ -178,3 +178,11 @@ Referencias oficiales:
 - [VM Linux Azure con Tailscale](https://tailscale.com/docs/install/cloud/azure/linux)
 - [Subnet routers y forwarding](https://tailscale.com/kb/1104/enable-ip-forwarding)
 - [Aprobación de rutas y control de acceso](https://tailscale.com/docs/reference/route-injection)
+
+## Activación de la ruta y el DNS en la pila HA
+
+La pila `aws-azure-tailscale-ha.yaml` crea la ruta `/32` y la zona DNS privada
+de un solo nombre al activar `EnablePrivateWmsRoute`. Esa pila es propietaria
+de ambos recursos en el flujo HA. `enable_tailscale_ha_route.sh` consulta la
+Function desde las EC2 por DNS normal y exige HTTPS 200 en `10.20.1.4`. Si
+falla el sondeo, revierte la ruta y la zona recién creadas.

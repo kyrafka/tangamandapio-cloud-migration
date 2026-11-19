@@ -73,22 +73,32 @@ echo 'Comprobando salud por SSM de los dos routers antes de crear la ruta.'
 check_router "$PRIMARY"
 check_router "$BACKUP"
 
+parameter_keys="$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$ROUTER_STACK_NAME" \
+  --query 'Stacks[0].Parameters[].ParameterKey' --output text | tr -d '\r')"
+read -r -a keys <<< "$parameter_keys"
+previous_parameters=()
+for key in "${keys[@]}"; do
+  if [[ "$key" != EnablePrivateWmsRoute ]]; then
+    previous_parameters+=("ParameterKey=$key,UsePreviousValue=true")
+  fi
+done
+
 aws cloudformation update-stack --region "$REGION" --stack-name "$ROUTER_STACK_NAME" \
   --use-previous-template --capabilities CAPABILITY_NAMED_IAM \
-  --parameters ParameterKey=EnablePrivateWmsRoute,ParameterValue=true >/dev/null
+  --parameters "${previous_parameters[@]}" ParameterKey=EnablePrivateWmsRoute,ParameterValue=true >/dev/null
 aws cloudformation wait stack-update-complete --region "$REGION" --stack-name "$ROUTER_STACK_NAME"
 
 rollback_route() {
   echo 'La comprobación privada desde las EC2 no pasó; desactivando la ruta recién creada.' >&2
   aws cloudformation update-stack --region "$REGION" --stack-name "$ROUTER_STACK_NAME" \
     --use-previous-template --capabilities CAPABILITY_NAMED_IAM \
-    --parameters ParameterKey=EnablePrivateWmsRoute,ParameterValue=false >/dev/null
+    --parameters "${previous_parameters[@]}" ParameterKey=EnablePrivateWmsRoute,ParameterValue=false >/dev/null
   aws cloudformation wait stack-update-complete --region "$REGION" --stack-name "$ROUTER_STACK_NAME"
 }
 
 APP_INSTANCES_TEXT="$(aws autoscaling describe-auto-scaling-groups --region "$REGION" \
   --auto-scaling-group-names tangamandapio-asg \
-  --query 'AutoScalingGroups[0].Instances[?LifecycleState==`InService`].InstanceId' --output text)"
+  --query 'AutoScalingGroups[0].Instances[?LifecycleState==`InService`].InstanceId' --output text | tr -d '\r')"
 read -r -a APP_INSTANCES <<< "$APP_INSTANCES_TEXT"
 if (( ${#APP_INSTANCES[@]} < 2 )); then
   rollback_route
@@ -97,18 +107,21 @@ if (( ${#APP_INSTANCES[@]} < 2 )); then
 fi
 
 for instance_id in "${APP_INSTANCES[@]}"; do
-  command_id="$(aws ssm send-command --region "$REGION" --instance-ids "$instance_id" \
+  if ! command_id="$(aws ssm send-command --region "$REGION" --instance-ids "$instance_id" \
     --document-name AWS-RunShellScript \
-    --parameters "commands=curl -fsS --connect-timeout 2 --max-time 8 --resolve ${HOSTNAME}:443:10.20.1.4 --output /dev/null --write-out private_function_http=%{http_code} https://${HOSTNAME}/api/health" \
-    --query 'Command.CommandId' --output text)"
+    --parameters "commands=curl -fsS --connect-timeout 2 --max-time 8 --retry 5 --retry-all-errors --retry-delay 5 --output /dev/null --write-out private_function_http=%{http_code}_private_ip=%{remote_ip} https://${HOSTNAME}/api/health" \
+    --query 'Command.CommandId' --output text)"; then
+    rollback_route
+    exit 2
+  fi
   if ! aws ssm wait command-executed --region "$REGION" --command-id "$command_id" --instance-id "$instance_id"; then
     rollback_route
     echo "La prueba desde $instance_id falló; se revirtió la ruta." >&2
     exit 2
   fi
-  result="$(aws ssm get-command-invocation --region "$REGION" --command-id "$command_id" \
-    --instance-id "$instance_id" --query StandardOutputContent --output text)"
-  if [[ "$result" != *'private_function_http=200'* ]]; then
+  if ! result="$(aws ssm get-command-invocation --region "$REGION" --command-id "$command_id" \
+    --instance-id "$instance_id" --query StandardOutputContent --output text)" || \
+    [[ "$result" != *'private_function_http=200_private_ip=10.20.1.4'* ]]; then
     rollback_route
     echo "La Function privada no devolvió 200 desde $instance_id; se revirtió la ruta." >&2
     exit 2

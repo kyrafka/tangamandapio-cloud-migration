@@ -143,6 +143,11 @@ Parameters:
     Default: 'true'
     AllowedValues: ['true', 'false']
     Description: Crea AWS WAF administrado por esta pila y lo asocia al ALB.
+  EnableAlbAccessLogs:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Escribe registros del ALB en el prefijo privado alb-access del bucket de artefactos.
   ManageWafAssociation:
     Type: String
     Default: 'true'
@@ -172,6 +177,10 @@ Mappings:
       DBB: 10.10.21.0/24
 
 Conditions:
+  UseAlbAccessLogs: !Equals [!Ref EnableAlbAccessLogs, 'true']
+  HasAzureFunctionKey: !Not [!Equals [!Ref AzureFunctionKeySecret, '']]
+  ExistingDatabaseSecretIsArn: !Equals [!Select [0, !Split [':', !Ref ExistingDatabaseSecretArn]], 'arn']
+  ExistingPortalAdminSecretIsArn: !Equals [!Select [0, !Split [':', !Ref ExistingPortalAdminSecretArn]], 'arn']
   HasCertificate: !Not [!Equals [!Ref CertificateArn, '']]
   HasAlarmEmailPrimary: !Not [!Equals [!Ref AlarmNotificationEmailPrimary, '']]
   HasAlarmEmailAlternate: !Not [!Equals [!Ref AlarmNotificationEmailAlternate, '']]
@@ -465,6 +474,11 @@ Resources:
             Prefix: cloudformation/
             ExpirationInDays: 30
             NoncurrentVersionExpiration: {NoncurrentDays: 1}
+          - Id: ExpireAlbAccessLogs
+            Status: Enabled
+            Prefix: alb-access/
+            ExpirationInDays: 7
+            NoncurrentVersionExpiration: {NoncurrentDays: 1}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -473,6 +487,19 @@ Resources:
       Tags:
         - {Key: Project, Value: !Ref ProjectName}
         - {Key: ManagedBy, Value: cloudformation}
+
+  AssetBucketAccessLogPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AssetBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowOnlyAccountAlbLogDelivery
+            Effect: Allow
+            Principal: {Service: logdelivery.elasticloadbalancing.amazonaws.com}
+            Action: s3:PutObject
+            Resource: !Sub '${AssetBucket.Arn}/alb-access/AWSLogs/${AWS::AccountId}/*'
 
   AppInstanceRole:
     Type: AWS::IAM::Role
@@ -502,7 +529,28 @@ Resources:
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ProjectName}/*'
+                  - !Ref PortalSessionSecret
+                  - !If
+                    - CreatePortalAdminSecret
+                    - !Ref PortalAdminSecret
+                    - !If
+                      - ExistingPortalAdminSecretIsArn
+                      - !Ref ExistingPortalAdminSecretArn
+                      - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ExistingPortalAdminSecretArn}-??????'
+                  - !If
+                    - CreateDatabaseSecret
+                    - !Ref DBSecret
+                    - !If
+                      - HasExistingDatabaseSecret
+                      - !If
+                        - ExistingDatabaseSecretIsArn
+                        - !Ref ExistingDatabaseSecretArn
+                        - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ExistingDatabaseSecretArn}-??????'
+                      - !If [UseRdsManagedMasterPassword, !GetAtt Database.MasterUserSecret.SecretArn, !Ref 'AWS::NoValue']
+                  - !If
+                    - HasAzureFunctionKey
+                    - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AzureFunctionKeySecret}-??????'
+                    - !Ref 'AWS::NoValue'
               - Sid: ReadOperationsMetrics
                 Effect: Allow
                 Action: cloudwatch:GetMetricData
@@ -847,12 +895,18 @@ Resources:
 
   AppLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: AssetBucketAccessLogPolicy
     Properties:
       Name: !Sub '${ProjectName}-alb'
       Scheme: internet-facing
       Type: application
       SecurityGroups: [!Ref ALBSecurityGroup]
       Subnets: [!Ref PublicSubnetA, !Ref PublicSubnetB]
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: !Ref EnableAlbAccessLogs
+        - !If [UseAlbAccessLogs, {Key: access_logs.s3.bucket, Value: !Ref AssetBucket}, !Ref 'AWS::NoValue']
+        - !If [UseAlbAccessLogs, {Key: access_logs.s3.prefix, Value: alb-access}, !Ref 'AWS::NoValue']
       Tags:
         - {Key: Project, Value: !Ref ProjectName}
         - {Key: ManagedBy, Value: cloudformation}

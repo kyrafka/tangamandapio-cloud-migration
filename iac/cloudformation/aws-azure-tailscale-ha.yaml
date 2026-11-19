@@ -292,6 +292,29 @@ Resources:
       DestinationCidrBlock: 10.20.1.4/32
       NetworkInterfaceId: !GetAtt PrimaryRouter.PrimaryNetworkInterfaceId
 
+  PrivateWmsHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: EnablePrivateWmsRoute
+    DependsOn: PrivateWmsRoute
+    Properties:
+      Name: tangama-flex-261104.azurewebsites.net
+      VPCs:
+        - VPCId: !Ref VpcId
+          VPCRegion: !Ref AWS::Region
+      HostedZoneTags:
+        - Key: Project
+          Value: !Ref ProjectName
+
+  PrivateWmsAddress:
+    Type: AWS::Route53::RecordSet
+    Condition: EnablePrivateWmsRoute
+    Properties:
+      HostedZoneId: !Ref PrivateWmsHostedZone
+      Name: tangama-flex-261104.azurewebsites.net.
+      Type: A
+      TTL: '60'
+      ResourceRecords: [10.20.1.4]
+
 Outputs:
   PrimaryRouterInstanceId:
     Description: EC2 privada activa inicial.

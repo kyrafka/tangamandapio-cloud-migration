@@ -51,3 +51,9 @@ variable "allowed_event_sources" {
     error_message = "Cada source debe ser un identificador de 2-64 caracteres en minúscula, números o guiones."
   }
 }
+
+variable "enable_legacy_metric_alerts" {
+  description = "Activa las alertas métricas de la Function Linux Consumption heredada."
+  type        = bool
+  default     = true
+}

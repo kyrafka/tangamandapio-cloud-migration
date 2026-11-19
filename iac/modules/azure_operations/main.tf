@@ -80,6 +80,10 @@ resource "azurerm_storage_container" "postgres_backups" {
   name                  = "tangama-postgres-backups"
   storage_account_name  = azurerm_storage_account.this.name
   container_access_type = "private"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_storage_management_policy" "postgres_backups" {
@@ -280,6 +284,7 @@ resource "azurerm_monitor_metric_alert" "function_http_5xx" {
   resource_group_name = local.operations_resource_group_name
   scopes              = [azurerm_linux_function_app.wms.id]
   description         = "La Function WMS devolvió errores HTTP 5xx."
+  enabled             = var.enable_legacy_metric_alerts
   severity            = 2
   frequency           = "PT1M"
   window_size         = "PT5M"
@@ -304,6 +309,7 @@ resource "azurerm_monitor_metric_alert" "function_latency" {
   resource_group_name = local.operations_resource_group_name
   scopes              = [azurerm_linux_function_app.wms.id]
   description         = "La latencia media de la Function WMS superó el umbral esperado."
+  enabled             = var.enable_legacy_metric_alerts
   severity            = 3
   frequency           = "PT5M"
   window_size         = "PT15M"

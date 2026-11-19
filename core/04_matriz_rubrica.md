@@ -1,4 +1,18 @@
-# Matriz de evidencia por criterio — actualización 16/11/2026, 21:00 UTC
+# Matriz de evidencia por criterio — actualización 18/11/2026
+
+## Verificación del 18/11/2026
+
+El [registro vivo del 18/11](../iac/ESTADO_REAL_2026-11-18.md) actualiza las
+filas históricas siguientes. Estados que cambiaron:
+
+| Criterios | Evidencia reciente | Falta |
+|---|---|---|
+| 2, 3, 10 | TLS público y de origen verificados. Ambos routers Azure llegaron al endpoint privado y su telemetría apareció en Insights. La política Tailscale del tag AWS existe. | Alta de ambos routers en la VPC de AWS actual, ruta y DNS, pedido correlacionado y aprobación escrita de AWS–Azure. |
+| 4, 9 | Dump cifrado actual de RDS en Blob y 20 tablas restauradas. Restore manual de 29,794 s. | Programar la exportación, medir RPO, evaluar Multi-AZ y completar recuperación regional. |
+| 5, 7 | Permisos del rol de aplicación acotados a cuatro secretos. Logs del ALB activos. SNS aceptó el aviso y se reenvió UPeU. Azure Insights confirmó telemetría y una regla controlada quedó `Fired`. | Recuperar acceso del administrador, rotar claves expuestas y verificar recepción de los avisos. |
+| 6, 12 | 600/600 HTTP 200 en la comprobación directa al origen. El diagnóstico de la carga anterior distingue fallos de transporte y 502 del ALB. | Repetir carga sostenida con logs y demostrar conmutación. No se conoce la causa exacta de los errores antiguos. |
+| 8, 11 | CloudFormation incluye permisos y logs. Presupuesto Azure implementado y validado en ARM por USD 25 mensuales. | Probar reconstrucción completa y conciliar las raíces Terraform con su estado activo. |
+| 1, 13, 14 | Datos del integrante, docente y ciclo en el informe previo. Nueva evidencia reproducible de recuperación. | Pedido funcional, fotos, constancia del docente y demostración. |
 
 ## Revisión actual — 16/11/2026, 21:00 UTC
 

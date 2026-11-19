@@ -16,7 +16,8 @@ class RouteEnablementTests(unittest.TestCase):
 
     def test_failed_application_private_probe_disables_the_route_again(self):
         text = SCRIPT.read_text(encoding="utf-8")
-        self.assertIn("--resolve", text)
+        self.assertNotIn("--resolve", text)
+        self.assertIn("private_function_http=200_private_ip=10.20.1.4", text)
         self.assertIn("10.20.1.4", text)
         self.assertIn("EnablePrivateWmsRoute,ParameterValue=false", text)
         self.assertIn("curl", text)
