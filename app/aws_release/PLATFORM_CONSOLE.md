@@ -25,6 +25,49 @@ pantalla. Si el endpoint de cumplimiento está en modo `demo-only`, se marca
 visiblemente como demostración. Los reintentos requieren confirmación y solo
 Operaciones TI o Administración pueden ejecutarlos.
 
+## Seguimiento de pedidos por rol
+
+Desde **Seguimiento de pedidos**, selecciona un pedido o abre `/seguimiento?pedido=<id>`.
+El orden de trabajo es **registro en el portal → entrega al almacén → resultado**.
+En producción, el portal registra las líneas y el outbox en una transacción y
+responde al comprador antes de esperar a Azure. El worker usa el mismo ID de
+evento en cada intento. **Verificar en almacén** consulta el resultado de Azure
+bajo demanda. Los pedidos antiguos sin líneas pueden requerir revisión y el
+resultado del inventario de laboratorio se etiqueta como demostración.
+
+```mermaid
+flowchart LR
+  B[Cliente B2B, Ventas o Administración] --> P[Guardar pedido y outbox en AWS]
+  P --> A[Confirmar al usuario]
+  P --> W[Worker privado entrega a Azure]
+  W --> Q[Function escribe evento en Blob y lo publica en Queue]
+  Q --> R[WMS valida SKU y guarda el resultado]
+  R --> C[Seguimiento según rol]
+  W -. entrega pendiente .-> O[Operaciones o Administración reintentan]
+```
+
+| Rol existente | Acciones en seguimiento |
+| --- | --- |
+| Cliente B2B | Registra pedidos con SKU y cantidad y consulta los de su empresa. |
+| Ventas | Registra pedidos y revisa los resultados operativos permitidos por su rol. |
+| Almacén | Consulta las líneas y el resultado técnico del WMS. |
+| Operaciones TI | Supervisa el outbox y las colas de Azure y reintenta entregas con auditoría. |
+| Auditoría | Consulta el historial técnico y las marcas de tiempo. |
+| Administración | Registra, consulta, reintenta y asigna roles desde el formulario existente. |
+
+La consulta de colas diferencia un conteo de cero de una lectura no disponible.
+En Azure se reutilizan Function Flex, identidad administrada, Storage Queue,
+Blob y Application Insights. Las operaciones de consulta leen metadatos y dejan
+los mensajes en sus colas. El flujo B2B identifica sus propios eventos aunque
+un pedido de ERP tenga el mismo número.
+
+Del ejemplo ANDESLOG se reutilizan la ruta privada, el outbox PostgreSQL, la
+idempotencia por evento y la trazabilidad en Application Insights. El despliegue
+propio usa un NAT Gateway zonal compartido en AWS y carece de un recurso NAT
+Gateway en Azure. Los dos NAT por zona, Traffic Manager, Azure Files para SMB y
+la réplica regional del diagrama son opciones para requisitos y presupuestos
+distintos.
+
 ## Respaldos y pruebas de capacidad
 
 Entra a `/administracion` con una cuenta administradora. **Respaldos** muestra

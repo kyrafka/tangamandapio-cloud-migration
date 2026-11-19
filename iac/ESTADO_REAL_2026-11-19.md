@@ -22,6 +22,27 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
 - Gmail recibió los avisos de paso a respaldo y retorno al principal. También se observó la recepción de la prueba SNS, eventos de lanzamiento y terminación del ASG y un correo de Azure Monitor. La segunda suscripción SNS aún figura sin confirmar.
 - El controlador de respaldo usa una sesión persistente de AWS. Cada router reutiliza su sondeo HTTPS de Azure durante 30 segundos en condiciones normales y conserva el estado anterior ante un fallo transitorio único. La detección del proceso Tailscale sigue siendo inmediata en cada consulta local. CloudFormation conserva la ruta operativa y el paquete de reconstrucción actualizado ya está en el bucket de activos. La actualización del servicio en los nodos existentes se hizo de forma escalonada mediante Systems Manager.
 
+## Seguimiento por rol y colas WMS
+
+- **Seguimiento de pedidos** reutiliza los seis roles existentes. Cliente B2B
+  queda limitado a su empresa, Ventas registra pedidos, Almacén y Auditoría
+  consultan las etapas, y Operaciones y Administración gestionan los reintentos.
+  Se probaron estas vistas en navegador con base aislada y se verificó el
+  aislamiento entre empresas. [Flujo y permisos](../app/aws_release/PLATFORM_CONSOLE.md#seguimiento-de-pedidos-por-rol).
+- El pedido sintético `SEGUIMIENTO-DEMO-20261119-151352` se guardó en AWS con
+  HTTP 201 en 61 ms y siguió las etapas **pendiente → en cola → procesado**.
+  Azure conservó el evento y el resultado cifrados en Blob. Application Insights
+  registró la publicación en Queue y la escritura del resultado. El saldo
+  validado corresponde al inventario de demostración.
+  [Evidencia del portal](../evidence/current/aws/AWS-PORTAL-ORDER-TRACKING-2026-11-19.json)
+  · [Evidencia de Azure](../evidence/current/azure/AZURE-WMS-ORDER-TRACKING-2026-11-19.json).
+- La consulta privada de colas devolvió HTTP 200 con autenticación y 401 sin
+  clave. En la comprobación posterior al pedido, la cola de trabajo y la de
+  fallidos tenían cero mensajes. [Evidencia de colas](../evidence/current/azure/AZURE-WMS-QUEUE-STATUS-2026-11-19.json).
+- CloudFormation terminó en `UPDATE_COMPLETE` con dos destinos sanos. Por
+  el dominio público, la sesión de Administración abrió Seguimiento y volvió
+  a consultar el resultado procesado y el estado de las colas con HTTP 200.
+
 ## Respaldo y recuperación
 
 - Systems Manager ejecuta el respaldo a las **03:00 de Lima**. Crea un objeto diario en Azure y guarda los hashes en S3. La autorización de Blob permite crear objetos en el contenedor privado y dura 24 días desde el 19/11. Para operar más allá de ese período, hay que reemplazar esa autorización a tiempo. Azure conserva las copias bajo `postgres/` por 30 días.

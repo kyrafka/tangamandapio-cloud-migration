@@ -1,7 +1,8 @@
 (() => {
   const allowedRoles = new Set(["admin", "operations"]);
+  const trackingRoles = new Set(["admin", "operations", "warehouse", "auditor", "sales", "customer"]);
   let observer;
-  let verified = false;
+  let topbar;
   let currentRole = "";
 
   function addShortcut() {
@@ -48,23 +49,36 @@
   }
 
   function refreshNavigation() {
-    addShortcut();
+    if (allowedRoles.has(currentRole)) addShortcut();
     addAdministrationNavigation();
+    const nav = document.querySelector(".sidebar nav");
+    if (nav && !nav.querySelector(".order-tracking-link")) {
+      const link = document.createElement("a");
+      link.className = "admin-console-link order-tracking-link";
+      link.href = "/seguimiento";
+      const label = document.createElement("span");
+      label.className = "nav-label";
+      label.textContent = "Seguimiento de pedidos";
+      link.title = label.textContent;
+      link.append(label);
+      nav.insertBefore(link, nav.querySelector(".admin-nav-label") || null);
+    }
   }
 
   function verifyAfterPortalLoads() {
-    if (verified || !document.querySelector(".topbar-meta")) return;
-    verified = true;
-    observer?.disconnect();
+    const candidate = document.querySelector(".topbar-meta");
+    if (candidate === topbar) {
+      if (currentRole) refreshNavigation();
+      return;
+    }
+    topbar = candidate;
+    currentRole = "";
+    if (!topbar) return;
     fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" })
       .then((response) => response.ok ? response.json() : null)
       .then((session) => {
-        if (!session?.authenticated || !allowedRoles.has(session.user?.role)) return;
+        if (candidate !== topbar || !session?.authenticated || !trackingRoles.has(session.user?.role)) return;
         currentRole = session.user.role;
-        const root = document.getElementById("root");
-        if (!root) return;
-        observer = new MutationObserver(refreshNavigation);
-        observer.observe(root, { childList: true, subtree: true });
         refreshNavigation();
       })
       .catch(() => {});

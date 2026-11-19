@@ -299,6 +299,22 @@ class FulfillmentQueueTestCase(unittest.TestCase):
         self.assertFalse(body["payloads_exposed"])
         read_count.assert_called_once_with("fulfillment-events-poison", "managed-token")
 
+    def test_queue_health_keeps_zero_distinct_from_an_unavailable_queue(self):
+        req = func.HttpRequest(method="GET", url="http://localhost/api/wms/queue-status",
+                               headers={}, params={}, body=b"")
+        with (
+            patch.object(function_app, "_managed_identity_token", return_value="managed-token"),
+            patch.object(function_app, "_read_queue_approximate_message_count",
+                         side_effect=[0, HTTPError("https://storage.test/queue", 403, "denied", {}, None)]),
+        ):
+            response = function_app.queue_status._function(req)
+        self.assertEqual(response.status_code, 200)
+        body = json.loads(response.get_body())
+        self.assertEqual(body["pending"], 0)
+        self.assertIsNone(body["poison"])
+        self.assertEqual(body["status"], "degraded")
+        self.assertNotIn("storage.test", json.dumps(body))
+
     def test_poison_queue_status_sanitizes_access_denied(self):
         req = func.HttpRequest(
             method="GET",

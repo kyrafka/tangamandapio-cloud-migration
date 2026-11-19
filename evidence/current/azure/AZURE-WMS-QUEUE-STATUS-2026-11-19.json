@@ -1,0 +1,12 @@
+{
+  "azure_health_http": 200,
+  "queue_without_key_http": 401,
+  "queue_with_key_http": 200,
+  "queue": {
+    "status": "ok",
+    "pending": 0,
+    "poison": 0
+  },
+  "observed_utc": "2026-11-19T15:11:36.359070+00:00",
+  "private_function": true
+}

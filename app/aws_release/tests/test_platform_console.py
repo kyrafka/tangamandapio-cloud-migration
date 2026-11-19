@@ -190,14 +190,14 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.assertEqual(len(attempt_keys), 1)
         self.assertNotIn("admin@example.test", attempt_keys[0]["attempt_key"])
 
-    def create_user(self, username, role):
+    def create_user(self, username, role, company_id=None):
         response = self.admin.post(
             "/api/admin/users",
             json={
                 "username": username,
                 "password": "Temporary-Password-2026",
                 "role": role,
-                "company_id": self.company_id,
+                "company_id": self.company_id if company_id is None else company_id,
             },
             headers={"X-CSRF-Token": self.admin_csrf},
         )
@@ -428,6 +428,68 @@ class PlatformConsoleTestCase(unittest.TestCase):
         self.assertEqual(observed["event_id"], response.get_json()["fulfillment"]["event_id"])
         self.assertEqual(observed["status_before_dispatch"], "pending")
         dispatch.assert_called_once_with(self.app, self.app.config["DATABASE_PATH"], observed["event_id"])
+
+    def test_order_tracking_limits_customer_details_and_distinguishes_queue_from_completion(self):
+        self.create_user("tracking@example.test", "customer")
+        customer, _ = self.login("tracking@example.test", "Temporary-Password-2026")
+        response = self.admin.post("/api/orders", json={"customer": "Seguimiento", "total": 1},
+                                   headers={"X-CSRF-Token": self.admin_csrf})
+        order = response.get_json()
+        event_id = order["fulfillment"]["event_id"]
+        path = f"/api/orders/{order['id']}/tracking"
+        self.app.config.update(AZURE_FULFILLMENT_URL="https://wms.example.test/api/fulfillment/events",
+                               AZURE_FUNCTION_KEY="test-key")
+        with portal.connect(self.app.config["DATABASE_PATH"]) as connection:
+            connection.execute("UPDATE outbox_events SET status = 'delivered' WHERE event_id = ?", (event_id,))
+            connection.execute(
+                "INSERT INTO outbox_events(event_id,order_id,payload,status,attempts,created_at) VALUES(?,?,?,'pending',0,?)",
+                ("evt-erp-does-not-belong", order["id"], '{"source":"tangamandapio-erp"}', "2026-11-20T00:00:00Z"),
+            )
+            connection.commit()
+        final_result = {"event_id": event_id, "status": "demo_fulfillment_completed",
+                        "processed_at": "2026-11-19T16:30:00Z", "note": "Detalle reservado"}
+        with patch.object(portal, "urlopen", return_value=FakeJsonResponse(final_result)) as request:
+            initial = customer.get(path)
+            self.assertEqual(initial.status_code, 200)
+            self.assertEqual(initial.get_json()["stage"], "queued")
+            request.assert_not_called()
+            confirmed = customer.get(path + "?verify=1").get_json()
+            self.assertEqual(confirmed["stage"], "processed")
+            self.assertEqual(confirmed["processed_at"], final_result["processed_at"])
+            self.assertNotIn(event_id, json.dumps(confirmed))
+            self.assertNotIn("Detalle reservado", json.dumps(confirmed))
+            internal = self.admin.get(path).get_json()
+            self.assertEqual(internal["technical"]["event_id"], event_id)
+            self.assertEqual(confirmed["actions"]["retry"], False)
+        company = self.admin.post("/api/admin/companies", json={"name": "Otra empresa", "slug": "otra-empresa"},
+                                  headers={"X-CSRF-Token": self.admin_csrf}).get_json()
+        self.create_user("other-tracking@example.test", "customer", company["id"])
+        other, _ = self.login("other-tracking@example.test", "Temporary-Password-2026")
+        self.assertEqual(other.get(path + "?verify=1").status_code, 404)
+        self.assertEqual(self.app.test_client().get("/seguimiento").status_code, 303)
+        self.assertEqual(customer.get("/seguimiento").status_code, 200)
+        self.assertEqual(customer.get("/api/platform/fulfillment-health").status_code, 403)
+
+    def test_queue_health_reports_outbox_and_preserves_partial_azure_data(self):
+        self.app.config.update(AZURE_FULFILLMENT_URL="https://wms.example.test/api/fulfillment/events",
+                               AZURE_FUNCTION_KEY="test-key")
+        with patch.object(portal, "urlopen", return_value=FakeJsonResponse({"pending": 0, "poison": None})):
+            response = self.admin.get("/api/platform/fulfillment-health").get_json()
+        self.assertEqual(response["outbox"]["pending"], 0)
+        self.assertEqual(response["azure_queue"], {"status": "degraded", "pending": 0, "poison": None})
+
+    def test_async_order_ack_uses_existing_retry_worker_without_inline_azure_call(self):
+        self.app.config.update(AUTO_DISPATCH_EVENTS=True, ORDER_ASYNC_DISPATCH=True, OUTBOX_RETRY_INTERVAL=60)
+        with patch.object(portal, "dispatch_outbox_event") as dispatch:
+            response = self.admin.post("/api/orders", json={"customer": "Contingencia", "total": 1,
+                                                            "items": [{"sku": "SKU-ARROZ-001", "quantity": 2}]},
+                                       headers={"X-CSRF-Token": self.admin_csrf})
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["fulfillment"]["status"], "pending")
+        dispatch.assert_not_called()
+        with portal.connect(self.app.config["DATABASE_PATH"]) as connection:
+            event = json.loads(connection.execute("SELECT payload FROM outbox_events").fetchone()["payload"])
+        self.assertEqual(event["order"]["items"], [{"sku": "SKU-ARROZ-001", "quantity": 2}])
 
     def test_wms_inventory_is_proxied_server_side_and_role_protected(self):
         self.app.config.update(

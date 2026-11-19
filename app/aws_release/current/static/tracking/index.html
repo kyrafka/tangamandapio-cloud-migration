@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seguimiento de pedidos · Tangamandapio</title>
+  <link rel="stylesheet" href="/assets/order-tracking.css">
+  <script src="/assets/order-tracking.js" defer></script>
+</head>
+<body>
+  <header class="top"><a href="/">Tangamandapio <span>Portal B2B</span></a><nav aria-label="Accesos"><a href="/">Volver al portal</a><a href="/platform" id="operations-link" hidden>Centro de nube</a></nav></header>
+  <main>
+    <div class="heading"><div><h1>Seguimiento de pedidos</h1><p id="role-summary"></p></div><button id="refresh-list" type="button">Actualizar pedidos</button></div>
+    <p id="notice" role="status" class="notice" hidden></p>
+    <div class="layout">
+      <section class="panel inbox" aria-labelledby="list-title">
+        <h2 id="list-title">Pedidos recientes</h2>
+        <label for="search">Buscar por número, referencia o cliente</label>
+        <input id="search" type="search" autocomplete="off">
+        <div id="order-list" class="order-list" aria-busy="true"></div>
+      </section>
+      <div class="details">
+        <section class="panel" aria-labelledby="detail-title">
+          <h2 id="detail-title">Proceso del pedido</h2>
+          <div id="order-detail"><p>Selecciona un pedido para ver sus etapas.</p></div>
+          <div class="actions" id="detail-actions" hidden>
+            <button id="verify" class="primary" type="button" hidden>Verificar en almacén</button>
+            <button id="retry" type="button" hidden>Reintentar entrega</button>
+          </div>
+        </section>
+        <details id="new-order" class="panel" hidden>
+          <summary>Registrar pedido</summary>
+          <form id="order-form">
+            <div class="fields">
+              <label>Nombre del comprador <input name="customer" maxlength="120" required></label>
+              <label>Referencia <input name="reference" maxlength="80"></label>
+              <label>Total en soles <input name="total" type="number" step="0.01" min="0" max="1000000" required></label>
+            </div>
+            <fieldset><legend>Líneas del pedido</legend><div id="order-lines"></div><button id="add-line" type="button">Añadir línea</button></fieldset>
+            <button class="primary" type="submit">Guardar pedido</button>
+          </form>
+        </details>
+        <section id="health" class="panel" aria-labelledby="health-title" hidden>
+          <div class="heading"><h2 id="health-title">Colas de pedidos</h2><button id="check-health" type="button">Consultar</button></div>
+          <div id="health-details" aria-live="polite"><p>Consulta el outbox y las colas de Azure.</p></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <template id="line-template"><div class="line"><label>SKU <input name="sku" required minlength="3" maxlength="40" pattern="[A-Za-z0-9_\-]{3,40}"></label><label>Cantidad <input name="quantity" type="number" value="1" min="1" max="1000" required></label><button type="button" class="remove-line">Quitar línea</button></div></template>
+</body>
+</html>

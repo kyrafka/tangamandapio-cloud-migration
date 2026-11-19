@@ -916,3 +916,28 @@ def poison_queue_status(req: func.HttpRequest) -> func.HttpResponse:
         status_code=200,
         mimetype="application/json",
     )
+
+
+@app.route(route="wms/queue-status", methods=["GET"], auth_level=func.AuthLevel.FUNCTION)
+def queue_status(req: func.HttpRequest) -> func.HttpResponse:
+    """Read queue counts without dequeuing messages or exposing payloads."""
+    counts = {"pending": None, "poison": None}
+    try:
+        token = _managed_identity_token()
+    except (KeyError, OSError, RuntimeError, ValueError):
+        logging.warning("wms_queue_status_identity_unavailable")
+    else:
+        pending = os.getenv("WMS_QUEUE_NAME", "wms-fulfillment")
+        queues = {"pending": pending, "poison": os.getenv("WMS_POISON_QUEUE_NAME", DEFAULT_POISON_QUEUE_NAME)}
+        for name, queue_name in queues.items():
+            try:
+                counts[name] = _read_queue_approximate_message_count(queue_name, token)
+            except (KeyError, OSError, RuntimeError, ValueError):
+                logging.warning("wms_queue_status_unavailable queue_kind=%s", name)
+    available = sum(value is not None for value in counts.values())
+    return func.HttpResponse(
+        json.dumps({**counts, "status": {0: "unavailable", 1: "degraded", 2: "ok"}[available]}),
+        status_code=200 if available else 503,
+        headers={"Cache-Control": "no-store"},
+        mimetype="application/json",
+    )

@@ -832,6 +832,7 @@ Resources:
                 "APP_SESSION_SECRET": session["session_secret"],
                 "SESSION_COOKIE_SECURE": os.environ.get("SECURE_COOKIE", "false"),
                 "AUTO_DISPATCH_EVENTS": "true",
+                "ORDER_ASYNC_DISPATCH": "true",
                 "INTERNAL_ERP_ENABLED": os.environ.get("INTERNAL_ERP_ENABLED", "true"),
                 # Despacho fuera del ciclo HTTP: reintento programado con backoff.
                 "OUTBOX_RETRY_INTERVAL": "60",

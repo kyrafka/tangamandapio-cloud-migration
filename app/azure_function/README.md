@@ -15,6 +15,11 @@ Esta Function App recibe eventos sintéticos del portal, conserva evidencia y lo
    exceder el máximo, Azure Queue los mueve a `fulfillment-events-poison`.
    `GET /api/wms/poison-queue` requiere clave Function y devuelve solo el conteo
    aproximado, nunca cuerpos ni metadata personal del mensaje.
+9. `GET /api/wms/queue-status` usa la misma clave y consulta conjuntamente los
+   metadatos de la cola de trabajo y la de fallidos. Cero significa cola vacía
+   en la lectura aproximada. `null` indica que Azure no pudo leer esa cola y
+   conserva la lectura de la otra. Operaciones y Administración consultan este
+   estado bajo demanda en el portal.
 
 El catálogo seed trae 12 SKU de alimentos, con precios y saldos sintéticos de propósito académico. Administración y los roles con permiso `master:write` pueden mantenerlo en ERP → Maestros e importar CSV UTF-8 preparado con la plantilla Excel, hasta 500 SKU por carga. La validación completa sucede antes de guardar; el saldo inicial solo se usa para códigos nuevos. Ventas descuentan y recepciones incrementan este ledger sintético una vez por evento. No representa existencias físicas ni un WMS externo.
 

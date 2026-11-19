@@ -71,6 +71,7 @@
                     <label>Correo o usuario<input name="username" type="text" autocomplete="off" maxlength="160" required /></label>
                     <label>Contraseña temporal<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /><small>12 caracteres como mínimo; se exigirá cambiarla al ingresar.</small></label>
                     <label>Rol<select name="role" id="new-user-role" required></select></label>
+                    <p class="admin-form-hint">Cliente y Ventas registran pedidos. Almacén revisa el resultado, Operaciones reintenta entregas y Auditoría consulta el historial.</p>
                     <label>Empresa<select name="company_id" id="new-user-company" required></select></label>
                     <button class="admin-button primary" type="submit">Crear cuenta</button>
                   </form>

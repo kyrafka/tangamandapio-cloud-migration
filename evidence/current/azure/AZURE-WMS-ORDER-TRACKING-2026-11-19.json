@@ -1,0 +1,26 @@
+{
+  "event_id": "evt-dce8944d04a64ea78484bf226ca876ef",
+  "objects": [
+    {
+      "encrypted": true,
+      "length": 592,
+      "name": "evt-dce8944d04a64ea78484bf226ca876ef.json"
+    },
+    {
+      "encrypted": true,
+      "length": 449,
+      "name": "fulfillment/evt-dce8944d04a64ea78484bf226ca876ef.json"
+    }
+  ],
+  "insights": [
+    [
+      "2026-11-19T15:14:28.3299881Z",
+      "queued"
+    ],
+    [
+      "2026-11-19T15:14:36.9223259Z",
+      "result_written"
+    ]
+  ],
+  "checked_at": "2026-11-19T15:16:40.988025+00:00"
+}

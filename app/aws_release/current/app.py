@@ -40,6 +40,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import admin_cloud_tools
 from cloud_observability import collect_cloudwatch_metrics
 from erp_service import (
+    SKU_PATTERN,
     grant_default_erp_roles,
     initialize_erp_database,
     register_erp_routes,
@@ -341,6 +342,7 @@ def create_app(test_config=None):
         ERP_SMTP_RECIPIENT_DOMAIN=os.getenv("ERP_SMTP_RECIPIENT_DOMAIN", "").strip().lower(),
         AUTO_DISPATCH_EVENTS=os.getenv("AUTO_DISPATCH_EVENTS", "true").lower()
         in {"1", "true", "yes"},
+        ORDER_ASYNC_DISPATCH=os.getenv("ORDER_ASYNC_DISPATCH", "false").lower() in {"1", "true", "yes"},
         # Las cuentas provisionadas pueden usar la clave entregada y cambiarla
         # después desde su cuenta; no se fuerza una rotación en el primer acceso.
         FORCE_INITIAL_PASSWORD_CHANGE=os.getenv(
@@ -845,6 +847,8 @@ def create_app(test_config=None):
     @require_roles("customer", "sales", "admin")
     def create_order():
         payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return jsonify(error="invalid_order"), 400
         customer = str(payload.get("customer", "")).strip()
         reference = str(payload.get("reference", "")).strip()
         user = g.portal_user
@@ -869,15 +873,19 @@ def create_app(test_config=None):
                 400,
             )
 
+        try:
+            items = normalize_portal_order_items(payload.get("items"))
+        except ValueError:
+            return jsonify(error="invalid_order_items"), 400
         created_at = datetime.now(timezone.utc).isoformat()
         with connect(database_path) as connection:
             order_id = insert_and_return_id(
                 connection,
                 """
-                INSERT INTO orders (customer, total, created_at, company_id, created_by, reference, status)
-                VALUES (?, ?, ?, ?, ?, ?, 'created')
+                INSERT INTO orders (customer, total, created_at, company_id, created_by, reference, status, items_json)
+                VALUES (?, ?, ?, ?, ?, ?, 'created', ?)
                 """,
-                (customer, total, created_at, user["company_id"], user["id"], reference or None),
+                (customer, total, created_at, user["company_id"], user["id"], reference or None, json.dumps(items)),
             )
             event_id = f"evt-{uuid.uuid4().hex}"
             event_payload = {
@@ -893,6 +901,8 @@ def create_app(test_config=None):
                     "created_at": created_at,
                 },
             }
+            if items:
+                event_payload["order"]["items"] = items
             connection.execute(
                 """
                 INSERT INTO outbox_events(event_id, order_id, payload, status, attempts, created_at)
@@ -912,7 +922,8 @@ def create_app(test_config=None):
             {"company_id": user["company_id"], "reference": reference},
         )
         delivery = {"status": "pending", "event_id": event_id}
-        if app.config["AUTO_DISPATCH_EVENTS"]:
+        async_dispatch = app.config["ORDER_ASYNC_DISPATCH"] and app.config["OUTBOX_RETRY_INTERVAL"] > 0
+        if app.config["AUTO_DISPATCH_EVENTS"] and not async_dispatch:
             delivery = dispatch_outbox_event(app, database_path, event_id)
 
         return (
@@ -929,17 +940,7 @@ def create_app(test_config=None):
             201,
         )
 
-    @app.get("/api/orders/<int:order_id>")
-    @require_roles("customer", "sales", "warehouse", "operations", "admin", "auditor")
-    def order_detail(order_id):
-        """Detalle de un pedido con su línea de tiempo WMS.
-
-        La lista responde con las filas de la tabla; aquí se añaden los
-        eventos del outbox y las entradas de auditoría del mismo pedido, que
-        es lo que hace falta para entender por qué está en ese estado. Un
-        cliente solo ve los pedidos de su empresa, igual que en la lista.
-        """
-        user = g.portal_user
+    def load_portal_order(order_id, user):
         company_filter = " AND o.company_id = ?" if user["role"] == "customer" else ""
         params = [order_id]
         if company_filter:
@@ -947,7 +948,7 @@ def create_app(test_config=None):
         with connect(database_path) as connection:
             order = connection.execute(
                 """
-                SELECT o.id, o.customer, o.total, o.reference, o.status, o.created_at,
+                SELECT o.id, o.customer, o.total, o.reference, o.status, o.created_at, o.items_json,
                        c.name AS company, creator.username AS created_by
                 FROM orders AS o
                 LEFT JOIN companies AS c ON c.id = o.company_id
@@ -958,14 +959,37 @@ def create_app(test_config=None):
                 tuple(params),
             ).fetchone()
             if order is None:
-                return jsonify(error="order_not_found"), 404
-            events = connection.execute(
+                return None, []
+            candidates = connection.execute(
                 """
-                SELECT event_id, status, attempts, last_error, created_at, delivered_at
-                FROM outbox_events WHERE order_id = ? ORDER BY created_at
+                SELECT event_id, status, attempts, last_error, created_at, delivered_at, payload
+                FROM outbox_events WHERE order_id = ? ORDER BY created_at, event_id
                 """,
                 (order_id,),
             ).fetchall()
+        events = []
+        for candidate in candidates:
+            event = dict(candidate)
+            try:
+                payload = json.loads(event.pop("payload"))
+            except (TypeError, ValueError):
+                continue
+            # ERP ventas/compras y pedidos del portal tienen secuencias de IDs propias.
+            if isinstance(payload, dict) and payload.get("source") in ("aws-order-core", "aws-wms-demo-console"):
+                events.append(event)
+        return dict(order), events
+
+    @app.get("/api/orders/<int:order_id>")
+    @require_roles("customer", "sales", "warehouse", "operations", "admin", "auditor")
+    def order_detail(order_id):
+        order, events = load_portal_order(order_id, g.portal_user)
+        if order is None:
+            return jsonify(error="order_not_found"), 404
+        order.pop("items_json")
+        if g.portal_user["role"] in {"customer", "sales"}:
+            return jsonify(order=order, timeline=[{"kind": "order", "at": order["created_at"], "title": "Pedido creado"}],
+                           events=[{"status": event["status"], "delivered_at": event["delivered_at"]} for event in events])
+        with connect(database_path) as connection:
             audits = connection.execute(
                 """
                 SELECT action, created_at FROM audit_log
@@ -1026,6 +1050,45 @@ def create_app(test_config=None):
             timeline=timeline,
             events=[dict(event) for event in events],
         )
+
+    @app.get("/api/orders/<int:order_id>/tracking")
+    @require_roles("customer", "sales", "warehouse", "operations", "admin", "auditor")
+    def order_tracking(order_id):
+        role = g.portal_user["role"]
+        order, events = load_portal_order(order_id, g.portal_user)
+        if order is None:
+            return jsonify(error="order_not_found"), 404
+        try:
+            items = json.loads(order.pop("items_json") or "[]")
+        except (TypeError, ValueError):
+            items = []
+        if not isinstance(items, list):
+            items = []
+        event = events[-1] if events else None
+        queued = bool(event and event["status"] == "delivered")
+        exhausted = bool(event and event["attempts"] >= app.config["OUTBOX_RETRY_MAX_ATTEMPTS"] and not queued)
+        stage = "queued" if queued else "review" if exhausted else "pending" if event else "received"
+        record = {"order": order, "items": items, "stage": stage, "queued_at": event["delivered_at"] if queued else None,
+                  "processed_at": None, "verification": "not_requested", "simulated": False,
+                  "actions": {"verify": queued, "retry": bool(event and not queued and role in {"operations", "admin"})}}
+        internal = role in {"warehouse", "operations", "admin", "auditor"}
+        if internal and event:
+            record["technical"] = {name: event[name] for name in ("event_id", "status", "attempts", "last_error")}
+        if queued and request.args.get("verify") == "1":
+            outcome, code = read_azure_event_status(app.config, event["event_id"])
+            record["verification"] = "checked" if code == 200 else "unavailable"
+            if code == 200:
+                status = outcome["fulfillment_status"]
+                record["simulated"] = outcome["simulated"]
+                record["processed_at"] = outcome["processed_at"]
+                record["stage"] = {"demo_fulfillment_completed": "processed", "awaiting_items": "needs_items"}.get(
+                    status, "review" if status.startswith("rejected_") else "queued",
+                )
+                if internal:
+                    record["technical"]["wms_status"] = status
+        if not internal:
+            order.pop("created_by", None)
+        return jsonify(record)
 
     @app.get("/api/outbox")
     @require_roles("operations", "admin", "auditor", "warehouse")
@@ -1213,44 +1276,8 @@ def create_app(test_config=None):
             ).fetchone()
         if event is None:
             return jsonify(error="event_not_found"), 404
-
-        service_url = str(app.config.get("AZURE_FULFILLMENT_URL", "")).strip()
-        function_key = str(app.config.get("AZURE_FUNCTION_KEY", "")).strip()
-        if not service_url or not function_key:
-            return jsonify(status="not_configured", provider="Azure"), 503
-
-        upstream_request = Request(
-            azure_event_status_url(service_url, event_id),
-            headers={"Accept": "application/json", "x-functions-key": function_key},
-        )
-        try:
-            with urlopen(upstream_request, timeout=3) as response:
-                upstream_body = json.loads(response.read().decode("utf-8"))
-            if (
-                not isinstance(upstream_body, dict)
-                or upstream_body.get("event_id") != event_id
-                or not isinstance(upstream_body.get("status"), str)
-            ):
-                return jsonify(error="invalid_azure_response"), 502
-
-            fulfillment_status = upstream_body["status"]
-            return jsonify(
-                provider="Azure",
-                event_id=event_id,
-                fulfillment_status=fulfillment_status,
-                simulated=(
-                    upstream_body.get("mode") == "demo-only"
-                    or str(upstream_body.get("mode", "")).startswith("demo-")
-                    or fulfillment_status.startswith("simulated_")
-                ),
-                note=upstream_body.get("note"),
-            )
-        except HTTPError as error:
-            if error.code == 404:
-                return jsonify(error="azure_event_not_found", event_id=event_id), 404
-            return jsonify(status="unavailable", provider="Azure", error="upstream_http_error"), 502
-        except (URLError, TimeoutError, json.JSONDecodeError, ValueError):
-            return jsonify(status="unavailable", provider="Azure", error="upstream_error"), 502
+        outcome, code = read_azure_event_status(app.config, event_id)
+        return jsonify(outcome), code
 
     @app.post("/api/outbox/<event_id>/retry")
     @require_roles("operations", "admin")
@@ -1313,6 +1340,40 @@ def create_app(test_config=None):
         if user["role"] not in {"admin", "operations"}:
             return "Acceso restringido a Administración y Operaciones TI.", 403
         return send_from_directory(static_folder / "platform", "index.html")
+
+    @app.get("/seguimiento")
+    def order_tracking_console():
+        if current_portal_user(database_path) is None:
+            return redirect("/", code=303)
+        return send_from_directory(static_folder / "tracking", "index.html")
+
+    @app.get("/api/platform/fulfillment-health")
+    @require_roles("admin", "operations")
+    def platform_fulfillment_health():
+        with connect(database_path) as connection:
+            counts = connection.execute(
+                "SELECT COUNT(*) AS pending, MIN(created_at) AS oldest, "
+                "COUNT(CASE WHEN attempts >= ? THEN 1 END) AS exhausted FROM outbox_events WHERE status != 'delivered'",
+                (app.config["OUTBOX_RETRY_MAX_ATTEMPTS"],),
+            ).fetchone()
+        queue = {"status": "unavailable", "pending": None, "poison": None}
+        service_url = app.config["AZURE_FULFILLMENT_URL"]
+        key = app.config["AZURE_FUNCTION_KEY"]
+        if service_url and key:
+            try:
+                upstream = Request(azure_inventory_url(service_url).removesuffix("inventory") + "queue-status",
+                                   headers={"Accept": "application/json", "x-functions-key": key})
+                with urlopen(upstream, timeout=3) as response:
+                    data = json.loads(response.read())
+                if isinstance(data, dict):
+                    for name in ("pending", "poison"):
+                        if type(data.get(name)) is int and data[name] >= 0:
+                            queue[name] = data[name]
+                    available = sum(queue[name] is not None for name in ("pending", "poison"))
+                    queue["status"] = {0: "unavailable", 1: "degraded", 2: "ok"}[available]
+            except (OSError, ValueError):
+                pass
+        return jsonify(outbox=dict(counts), azure_queue=queue, checked_at=datetime.now(timezone.utc).isoformat())
 
     @app.get("/administracion")
     def administration_console():
@@ -3441,6 +3502,50 @@ def initialize_database(database_path):
         ensure_column(connection, "orders", "reference", "TEXT")
         ensure_column(connection, "orders", "status", "TEXT NOT NULL DEFAULT 'created'")
         connection.commit()
+
+
+def normalize_portal_order_items(raw):
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or not 1 <= len(raw) <= 20:
+        raise ValueError("invalid_order_items")
+    result, seen = [], set()
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError("invalid_order_items")
+        sku = str(item.get("sku", "")).strip().upper()
+        quantity = item.get("quantity")
+        if not SKU_PATTERN.fullmatch(sku) or sku in seen or type(quantity) is not int or not 1 <= quantity <= 1000:
+            raise ValueError("invalid_order_items")
+        seen.add(sku)
+        result.append({"sku": sku, "quantity": quantity})
+    return result
+
+
+def read_azure_event_status(config, event_id):
+    service_url = str(config.get("AZURE_FULFILLMENT_URL", "")).strip()
+    key = str(config.get("AZURE_FUNCTION_KEY", "")).strip()
+    if not service_url or not key:
+        return {"status": "not_configured", "provider": "Azure"}, 503
+    upstream = Request(azure_event_status_url(service_url, event_id), headers={"Accept": "application/json", "x-functions-key": key})
+    try:
+        with urlopen(upstream, timeout=3) as response:
+            body = json.loads(response.read())
+        if not isinstance(body, dict) or body.get("event_id") != event_id or not isinstance(body.get("status"), str):
+            return {"error": "invalid_azure_response"}, 502
+        status = body["status"]
+        processed_at = body.get("processed_at")
+        if not isinstance(processed_at, str) or len(processed_at) > 40:
+            processed_at = None
+        return {"provider": "Azure", "event_id": event_id, "fulfillment_status": status,
+                "simulated": str(body.get("mode", "")).startswith("demo-") or status.startswith("simulated_"),
+                "note": body.get("note"), "processed_at": processed_at}, 200
+    except HTTPError as error:
+        if error.code == 404:
+            return {"error": "azure_event_not_found", "event_id": event_id}, 404
+        return {"status": "unavailable", "provider": "Azure", "error": "upstream_http_error"}, 502
+    except (OSError, ValueError):
+        return {"status": "unavailable", "provider": "Azure", "error": "upstream_error"}, 502
 
 
 def azure_event_url(service_url):
