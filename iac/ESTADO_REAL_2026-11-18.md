@@ -59,7 +59,9 @@ Cuenta AWS `481056890449` en `us-east-2` y suscripción `Azure for Students`.
   las 600 respuestas HTTP 200 de la prueba, desde el ALB y desde el destino. La primera
   actualización se revirtió por una política S3 demasiado restrictiva. El
   segundo cambio dejó al rol EC2 acceso a cuatro secretos de aplicación y
-  activó una renovación gradual de las instancias.
+  activó una renovación gradual. CloudFormation cerró `UPDATE_COMPLETE` con
+  dos EC2 `InService` en zonas distintas y ambos destinos nuevos `healthy`.
+  Los destinos salientes seguían drenando al comprobar `/ready` HTTP 200.
 - La prueba anterior de 300.000 peticiones registró 4.399 fallos de transporte
   y 8 respuestas 502 del ALB. Faltan los registros de esa ventana: el ALB aún
   no los guardaba y la retención de logs de aplicación era de un día.
