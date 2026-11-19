@@ -70,8 +70,8 @@ Cuenta AWS `481056890449` en `us-east-2` y suscripción `Azure for Students`.
   la próxima prueba sostenida.
 - AWS muestra **USD 151,71 de crédito restante**. Azure tiene el presupuesto
   `tangamandapio-demo-usd25` por **USD 25 al mes** con avisos a USD 12,50, 20 y 25.
-  El último gasto Azure verificable sigue siendo USD 6,84 en noviembre al 16/11.
-  Cost Management devolvió HTTP 429 al pedir el corte nuevo.
+  Tras un HTTP 429 inicial, la reconsulta de Cost Management confirmó
+  **USD 8,414894** de costo acumulado en noviembre.
 
 ## Cierre de la rúbrica
 
