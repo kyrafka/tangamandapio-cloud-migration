@@ -18,7 +18,7 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
 
 - Dos EC2 privadas `t3.micro` se enrolaron en Tailscale. Ambas EC2 de aplicación resolvieron y alcanzaron la Function por HTTPS 200 en `10.20.1.4` con TLS verificado. La ruta `/32` y el DNS privado están activos. [Prueba desde las dos aplicaciones](../evidence/current/aws/AWS-AZURE-PRIVATE-WMS-2026-11-18.json).
 - El pedido ficticio `WMS-DEMO-20261119-AF9E52` salió del portal con HTTP 201. El evento `evt-a56553941e9747e6bbd1ff5637ff9f4c` pasó por Function y Queue. Application Insights registró la publicación y finalización del mismo evento, y Blob devolvió el evento original y su resultado cifrados. [Prueba de extremo a extremo](../evidence/current/azure/AZURE-WMS-PRIVATE-ORDER-2026-11-18.json).
-- Al detener Tailscale en el router principal AWS, el respaldo tomó la ruta automáticamente. La última prueba observó la ENI de respaldo a los **4,598 s**. El primer HTTP 200 completo tras iniciar el corte llegó a los **4,68 s** y **5,57 s** en las dos EC2. El programa devolvió después la ruta al principal. [Cronología y muestras de recuperación](../evidence/current/aws/AWS-AZURE-WMS-FAILOVER-2026-11-19.json).
+- El controlador confirma un apagado explícito de Tailscale y comprueba en paralelo la ruta vigente y la salud HTTPS del destino antes de cambiar la ENI. En dos pruebas después del ajuste el respaldo tomó el tráfico y el principal recuperó la ruta. El cambio se observó a los **3,21 s** y **8,20 s**. El primer HTTP 200 completo desde las EC2 llegó a **4,59 s y 6,59 s** en la primera prueba, y a **9,88 s y 9,92 s** en la segunda. La meta de 3 s queda abierta. La medición anterior fue 4,68 s y 5,57 s para el primer HTTP 200. [Medición inicial](../evidence/current/aws/AWS-AZURE-WMS-FAILOVER-2026-11-19.json) · [Primera prueba ajustada](../evidence/current/aws/AWS-AZURE-WMS-FAILOVER-FAST-2026-11-19.json) · [Repetición](../evidence/current/aws/AWS-AZURE-WMS-FAILOVER-RETEST-2026-11-19.json).
 - Gmail recibió los avisos de paso a respaldo y retorno al principal. También se observó la recepción de la prueba SNS, eventos de lanzamiento y terminación del ASG y un correo de Azure Monitor. La segunda suscripción SNS aún figura sin confirmar.
 - El controlador de respaldo usa una sesión persistente de AWS. Cada router reutiliza su sondeo HTTPS de Azure durante 30 segundos en condiciones normales y conserva el estado anterior ante un fallo transitorio único. La detección del proceso Tailscale sigue siendo inmediata en cada consulta local. CloudFormation conserva la ruta operativa y el paquete de reconstrucción actualizado ya está en el bucket de activos. La actualización del servicio en los nodos existentes se hizo de forma escalonada mediante Systems Manager.
 
@@ -28,13 +28,51 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
 - `postgres/20261119-daily.json` fue exportado por la asociación y devuelto por Azure Blob con una coincidencia del hash. El segundo nodo fue rechazado al intentar reutilizar el mismo nombre. Se agregó el manifiesto diario en S3 y una reejecución de la asociación dio `Success` en ambos nodos, que reconocieron esa copia.
 - La restauración actual validó las huellas, descifró la copia y levantó un PostgreSQL 18.6 temporal en RAM con socket local. Recuperó 20 tablas, un usuario, un pedido y un evento outbox en **35,108 s** de extremo a extremo. El respaldo diario define la frecuencia prevista. Medir el RPO requiere una prueba de pérdida de transacciones con marcas conocidas. [Prueba de exportación y restauración](../evidence/current/aws/AWS-AZURE-POSTGRES-SCHEDULE-2026-11-19.json).
 
+## Administración y escalado
+
+- En **Administración → Respaldos** se consultaron tres archivos de Azure Blob.
+  La descarga de la copia diaria devolvió 84.654 bytes. **Ejecutar respaldo**
+  guardó un pedido y su evento outbox en S3 con AES256. Se descargó esa copia
+  desde el portal y su SHA-256 coincidió. Se usó el rol de aplicación de una
+  EC2 con la revisión `20261119-admin-backup-and-scaling`. [Evidencia autenticada](../evidence/current/aws/AWS-PORTAL-ADMIN-BACKUP-2026-11-19.json).
+- **Administración → Prueba de escalado** consulta capacidad deseada y sana.
+  Admite 3, 4 y 5 instancias y programa el regreso antes de modificar el ASG.
+  En Moto se verificaron las tres solicitudes y los valores de regreso a 2.
+  El ciclo de espera y ejecución por reloj corresponde a AWS real.
+  [Procedimiento del portal](../app/aws_release/PLATFORM_CONSOLE.md).
+- k6 sostuvo 25 usuarios virtuales durante 120 s después de la rampa. El ALB
+  respondió correctamente a las 3.013 peticiones HTTPS a `/ready`, con p95 de
+  **189,86 ms**. No se enviaron pedidos ni solicitudes al WMS. La prueba anterior
+  envió 300.000 peticiones a `/` con 50 clientes concurrentes y registró 4.399
+  fallos de transporte (4.276 `URLError`, 102 timeouts y 21 conexiones
+  reiniciadas) más 8 respuestas 502. CloudWatch registró 7 respuestas 502
+  agregadas en la ventana histórica revisada. Los datos no identifican el
+  origen específico de cada fallo de transporte. La prueba acotada usa otra
+  ruta, concurrencia y protocolo, por lo que el escenario histórico queda como
+  antecedente abierto. [Nueva carga](../evidence/current/aws/AWS-ALB-SUSTAINED-2026-11-19.json)
+  · [Métricas históricas](../evidence/current/aws/AWS-ALB-HISTORICAL-ERRORS-2026-11-16.json).
+
+## Reconstrucción aislada
+
+- **Terraform** creó y retiró 17 recursos usando el módulo de red existente.
+  Se verificaron seis subredes en dos zonas, las seis asociaciones de ruta y
+  la salida por Internet Gateway. Los entornos reales de VPN AWS y reconstrucción
+  Azure pasaron `terraform validate`.
+- **CloudFormation** levantó un subconjunto extraído de `aws-lab.yaml`. Moto
+  identificó 21 recursos, entre ellos la red, la ruta pública y los dos
+  buckets. La versión 5.2.5 no reprodujo todas las asociaciones de las subredes,
+  las políticas de bucket ni el borrado ordenado de la VPC. La plantilla
+  completa también pasó `ValidateTemplate` en AWS. El emulador no acredita
+  NAT, WAF, ALB, RDS ni la VPN real. [Resultado reproducible](../evidence/current/aws/AWS-IAC-EMULATOR-2026-11-19.json)
+  · [Comandos para repetir](local-emulator/README.md).
+
 ## Costos y restricciones
 
 | Medición | Resultado |
 | --- | --- |
 | Crédito AWS Free Plan | USD 150,59 restantes. |
-| AWS Budgets | USD 9,407 de gasto registrado en el presupuesto de USD 200. Las mediciones de crédito y presupuesto tienen cortes distintos. |
-| Azure Cost Management | USD 8,4963 acumulados en el mes. Presupuesto mensual de USD 25. |
+| AWS Budgets | USD 10,469 de gasto registrado en el presupuesto de USD 200. Las mediciones de crédito y presupuesto tienen cortes distintos. |
+| Azure Cost Management | USD 8,7973 acumulados en el mes. Presupuesto mensual de USD 25. |
 | Cambios de capacidad | Dos routers AWS `t3.micro` con crédito de CPU estándar. Se reutilizaron las VM, el Private Endpoint y el almacenamiento de Azure. El respaldo usa las EC2 de aplicación existentes. |
 
 RDS está disponible en una sola zona y conserva su respaldo administrado de un día. El plan gratuito admite el despliegue Single-AZ. Una segunda región de recuperación, el escalado sostenido por debajo del umbral de errores y el audio entre redes restrictivas quedan por validar. La sustitución de una EC2 completa en cinco segundos no forma parte del resultado medido por el cambio entre routers.

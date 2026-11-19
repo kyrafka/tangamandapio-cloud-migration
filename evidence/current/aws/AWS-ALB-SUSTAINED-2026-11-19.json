@@ -1,0 +1,260 @@
+{
+  "metrics": {
+    "http_req_waiting": {
+      "contains": "time",
+      "values": {
+        "min": 132.1778,
+        "med": 141.3593,
+        "max": 1770.1325,
+        "p(90)": 164.89838,
+        "p(95)": 189.4722,
+        "avg": 156.41897222037844
+      },
+      "type": "trend"
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1159.115272841963,
+        "min": 1133.2195,
+        "med": 1142.21345,
+        "max": 2771.5092,
+        "p(90)": 1167.4103,
+        "p(95)": 1194.9102599999999
+      }
+    },
+    "http_req_blocked": {
+      "values": {
+        "avg": 2.029969266511782,
+        "min": 0,
+        "med": 0,
+        "max": 306.0746,
+        "p(90)": 0,
+        "p(95)": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0.3829600000000005,
+        "p(95)": 1.00674,
+        "avg": 0.09049940258878196,
+        "min": 0,
+        "med": 0,
+        "max": 3.6002
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 157995,
+        "rate": 922.0176275834649
+      }
+    },
+    "portal_transport_failures": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 3012,
+        "rate": 17.57724671211998
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0.4022800000000001,
+        "p(95)": 0.5157400000000001,
+        "avg": 0.10789243279123797,
+        "min": 0,
+        "med": 0,
+        "max": 1.1024
+      }
+    },
+    "vus": {
+      "values": {
+        "value": 2,
+        "min": 0,
+        "max": 25
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "http_req_failed": {
+      "values": {
+        "passes": 0,
+        "fails": 3013,
+        "rate": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "portal_http_502": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 116.3785,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.9915487222037835
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 25,
+        "min": 25,
+        "max": 25
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 3013,
+        "rate": 17.58308245140023
+      }
+    },
+    "portal_other_non_200": {
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_duration": {
+      "thresholds": {
+        "p(95)<2000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 132.3154,
+        "med": 141.5496,
+        "max": 1770.1325,
+        "p(90)": 165.06222,
+        "p(95)": 189.85904000000002,
+        "avg": 156.6173640557585
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 156.6173640557585,
+        "min": 132.3154,
+        "med": 141.5496,
+        "max": 1770.1325,
+        "p(90)": 165.06222,
+        "p(95)": 189.85904000000002
+      }
+    },
+    "http_req_tls_handshaking": {
+      "contains": "time",
+      "values": {
+        "max": 187.112,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 1.0364100896116824,
+        "min": 0,
+        "med": 0
+      },
+      "type": "trend"
+    },
+    "data_received": {
+      "values": {
+        "count": 1652918,
+        "rate": 9645.9984996361
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 3013,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate>0.99": {
+          "ok": true
+        }
+      }
+    }
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "setup",
+        "path": "::setup",
+        "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+        "groups": [],
+        "checks": [
+          {
+            "name": "setup endpoint is HTTP 200",
+            "path": "::setup::setup endpoint is HTTP 200",
+            "id": "ff8b2c684bc59ba8c3463797ab1ca32a",
+            "passes": 1,
+            "fails": 0
+          }
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "fails": 0,
+        "name": "portal endpoint returns HTTP 200",
+        "path": "::portal endpoint returns HTTP 200",
+        "id": "fd9fb08f5a34b00e5e11974b02f46c70",
+        "passes": 3012
+      }
+    ]
+  },
+  "configuration": {
+    "route": "/ready",
+    "entry": "ALB HTTPS con SNI del portal",
+    "ramp": "10s x 4",
+    "plateau_seconds": 120,
+    "ramp_down_seconds": 10,
+    "max_virtual_users": 25,
+    "writes_performed": false,
+    "did_not_target_azure": true
+  }
+}

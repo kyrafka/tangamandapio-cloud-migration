@@ -1,5 +1,10 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { Counter } from 'k6/metrics';
+
+const transportFailures = new Counter('portal_transport_failures');
+const alb502Responses = new Counter('portal_http_502');
+const otherFailures = new Counter('portal_other_non_200');
 
 const baseUrl = (__ENV.PORTAL_BASE_URL || '').replace(/\/+$/, '');
 const portalHost = __ENV.PORTAL_HOST || '';
@@ -71,6 +76,9 @@ export default function () {
     tags: { endpoint: 'alb_request_scale' },
   });
   check(response, { 'portal endpoint returns HTTP 200': (res) => res.status === 200 });
+  transportFailures.add(Number(response.status === 0));
+  alb502Responses.add(Number(response.status === 502));
+  otherFailures.add(Number(response.status !== 0 && response.status !== 200 && response.status !== 502));
   sleep(thinkTimeSeconds);
 }
 

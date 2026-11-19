@@ -30,6 +30,7 @@ trap cleanup EXIT
 
 test -f "$application_root/app.py"
 test -f "$application_root/erp_service.py"
+test -f "$application_root/admin_cloud_tools.py"
 test -f "$application_root/requirements.txt"
 test -f "$application_root/requirements.lock"
 test -f "$application_root/BUILD_REVISION"
@@ -38,6 +39,7 @@ test -d "$application_root/migrations"
 
 cp "$application_root/app.py" "$staging_directory/app.py"
 cp "$application_root/erp_service.py" "$staging_directory/erp_service.py"
+cp "$application_root/admin_cloud_tools.py" "$staging_directory/admin_cloud_tools.py"
 cp "$application_root/requirements.txt" "$staging_directory/requirements.txt"
 cp "$application_root/requirements.lock" "$staging_directory/requirements.lock"
 cp "$application_root/BUILD_REVISION" "$staging_directory/BUILD_REVISION"
@@ -49,7 +51,7 @@ rm -f "$staging_directory/static/audio/sweet-dove-ambient.mp3"
 if [[ -d "$staging_directory/static/images" ]]; then
   find "$staging_directory/static/images" -maxdepth 1 -type f -name 'walpurgis-*.png' -delete
 fi
-artifact_files=(app.py erp_service.py requirements.txt requirements.lock static migrations BUILD_REVISION)
+artifact_files=(app.py erp_service.py admin_cloud_tools.py requirements.txt requirements.lock static migrations BUILD_REVISION)
 if [[ -f "$application_root/cloud_observability.py" ]]; then
   cp "$application_root/cloud_observability.py" "$staging_directory/cloud_observability.py"
   artifact_files+=(cloud_observability.py)

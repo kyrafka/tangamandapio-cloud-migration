@@ -25,6 +25,49 @@ pantalla. Si el endpoint de cumplimiento está en modo `demo-only`, se marca
 visiblemente como demostración. Los reintentos requieren confirmación y solo
 Operaciones TI o Administración pueden ejecutarlos.
 
+## Respaldos y pruebas de capacidad
+
+Entra a `/administracion` con una cuenta administradora. **Respaldos** muestra
+las copias de Azure Blob y de S3 por separado, con fecha, tamaño, descarga y
+distintivo para la última de cada almacén. La descarga pasa por el portal con
+sesión activa y se registra en la auditoría.
+
+- **Ejecutar respaldo** toma una lectura consistente de pedidos, sus líneas
+  (`items_json`) y todos los estados del outbox. Guarda un JSON con SHA-256 en el
+  prefijo privado `dr/postgres/manual-outbox/` de S3 con cifrado SSE-S3 y retención
+  de 30 días. El botón funciona sin Azure y no reenvía ni cambia eventos. El
+  límite por copia es de 5.000 filas por tabla y 16 MiB. Este archivo sirve para
+  conservar y analizar el registro operativo. Para recuperar toda la base se
+  usa el respaldo programado de PostgreSQL y el procedimiento de restauración.
+- **Azure Blob** muestra las copias del contenedor privado
+  `tangama-postgres-backups`. La descarga conserva su cifrado original. El portal
+  lee la autorización HTTPS de solo lectura y listado desde el `SecureString`
+  `/<proyecto>/dr/blob-read/portal`. La autorización actual vence el 12 de
+  diciembre de 2026. Renueva ese parámetro antes de su vencimiento. La
+  autorización de escritura del respaldo diario se renueva por separado.
+- **Prueba de escalado** permite pedir 3, 4 o 5 instancias y seguir la capacidad
+  sana del ASG. El sistema programa primero el regreso a la capacidad anterior
+  y luego sube el mínimo y el objetivo durante unos diez minutos. Completa una
+  prueba antes de iniciar otra. Un ajuste manual de capacidad resulta visible
+  en el panel. El comportamiento de la política bajo tráfico se mide con k6.
+
+CloudFormation administra los permisos del rol de instancia limitados al ASG
+del proyecto, al prefijo de respaldos y al parámetro de lectura. El listado de
+grupos y acciones programadas usa los permisos de consulta que admite AWS para
+esas APIs. La plantilla configura el almacenamiento de Azure mediante
+`AdminAzureBackupAccount` y `AdminAzureBackupContainer`. Si el primero está vacío,
+el resto del módulo sigue disponible.
+
+Para repetir el tramo sostenido, configura `PORTAL_BASE_URL` con el HTTPS del
+portal, `PORTAL_HOST` con ese mismo dominio y `ORIGIN_IP` con una IP actual del
+ALB. `tests/performance/aws_autoscaling_alb_requests.js` verifica HTTPS con el
+nombre del portal. En el ensayo acotado se usó `TARGET_PATH=/ready`,
+`TARGET_VUS=25`, `RAMP_UNIT=10s`, `HOLD_DURATION=120s` y
+`RAMP_DOWN_DURATION=10s`. `SUMMARY_EXPORT_PATH` guarda las latencias y los tres
+contadores de errores. La prueba de capacidad manual y esta carga miden
+cosas diferentes. Ejecuta una cada vez para poder atribuir el cambio al
+mecanismo que estás comprobando.
+
 ## Qué enseña sobre la nube y qué queda por activar
 
 - **Balanceo y escalabilidad:** el ALB recibe tráfico y distribuye solicitudes

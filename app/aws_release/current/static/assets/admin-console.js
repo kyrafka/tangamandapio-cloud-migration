@@ -42,6 +42,12 @@
         company_slug_already_exists: "Ya existe una empresa con ese identificador.",
         cannot_remove_last_admin: "No puedes quitar el último administrador activo.",
         cannot_remove_own_admin_access: "No puedes quitar tu propia cuenta administradora.",
+        backup_too_large: "La copia excede el límite del panel. Usa el respaldo completo de PostgreSQL.",
+        backup_storage_unavailable: "No se pudo acceder al almacenamiento del respaldo.",
+        scaling_not_configured: "Este entorno no tiene un grupo de escalado configurado.",
+        scaling_restore_pending: "Hay una prueba pendiente de restauración o el grupo tiene suspendida la programación.",
+        invalid_capacity: "Elige una capacidad válida dentro del rango del grupo.",
+        scaling_unavailable: "AWS no pudo completar la solicitud de escalado.",
       };
       const code = body?.error || `HTTP ${response.status}`;
       throw Object.assign(new Error(labels[code] || code), { status: response.status, code });
@@ -173,7 +179,51 @@
     </tr>`).join("");
   }
 
+  function friendlyDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("es-PE");
+  }
+
+  async function loadBackups() {
+    const backups = await api("/api/admin/backups");
+    $("#backup-create").disabled = !backups.aws.configured;
+    for (const [source, listing] of Object.entries(backups)) {
+      const target = $(`#backup-${source}`);
+      if (!listing.items.length) {
+        target.textContent = listing.error ? "Almacenamiento temporalmente inaccesible." :
+          listing.configured ? "Aún no hay copias guardadas." : "Almacenamiento sin configurar.";
+        continue;
+      }
+      target.innerHTML = `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Copia</th><th>Fecha</th><th>Tamaño</th><th>Archivo</th></tr></thead><tbody>${listing.items.map((item, index) =>
+        `<tr><td><strong>${escapeHtml(item.name)}</strong>${index === 0 ? " · Última copia" : ""}</td><td>${escapeHtml(friendlyDate(item.date))}</td><td>${Number(item.bytes).toLocaleString("es-PE")} B</td><td><a class="admin-button secondary" href="/api/admin/backups/${source}/${encodeURIComponent(item.name)}">Descargar</a></td></tr>`
+      ).join("")}</tbody></table></div>`;
+    }
+  }
+
+  let scalingRefresh;
+  async function loadScaling() {
+    const form = $("#scaling-form");
+    const status = $("#scaling-status");
+    const submit = form.querySelector("button[type=submit]");
+    submit.disabled = true;
+    try {
+      const group = await api("/api/admin/scaling");
+      status.textContent = `${group.healthy} sanas de ${group.desired} solicitadas. Capacidad mínima ${group.minimum}, máxima ${group.maximum}.` +
+        (group.restore_at ? ` Regreso programado para ${friendlyDate(group.restore_at)}.` : "");
+      for (const option of form.elements.capacity.options) {
+        option.disabled = Number(option.value) < Math.max(group.minimum, group.desired) || Number(option.value) > group.maximum;
+      }
+      const selected = form.elements.capacity.selectedOptions[0];
+      if (!selected || selected.disabled) form.elements.capacity.value = Array.from(form.elements.capacity.options).find((option) => !option.disabled)?.value || "";
+      submit.disabled = Boolean(group.restore_at || !group.restore_enabled || !form.elements.capacity.value);
+      if (state.section === "scaling" && group.restore_at) scalingRefresh = setTimeout(() => loadScaling().catch(() => {}), 10000);
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  }
+
   async function loadSection(section) {
+    clearTimeout(scalingRefresh);
     hideNotice();
     state.section = section;
     $$("[data-section]").forEach((button) => button.setAttribute("aria-current", button.dataset.section === section ? "page" : "false"));
@@ -185,6 +235,8 @@
         renderCompanies();
       }
       if (section === "alerts") await loadAlerts();
+      if (section === "backups") await loadBackups();
+      if (section === "scaling") await loadScaling();
       if (section === "audit") await loadAudit();
     } catch (error) {
       if (error.status === 401) { window.location.replace("/"); return; }
@@ -272,6 +324,33 @@
       $("#users-rows").addEventListener("click", handleUserAction);
       $("#temporary-credential").addEventListener("click", handleAlertAction);
       $("#alerts-rows").addEventListener("click", handleAlertAction);
+      $("#backup-create").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        setBusy(button, true, "Guardando…");
+        try {
+          const result = await api("/api/admin/backups", { method: "POST" });
+          notice(`Copia guardada en AWS con ${result.events} eventos outbox.`);
+          await loadBackups();
+        } catch (error) { notice(error.message, "error"); }
+        finally { setBusy(button, false); }
+      });
+      $("#scaling-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const capacity = Number(form.elements.capacity.value);
+        if (!window.confirm(`¿Solicitar ${capacity} instancias durante unos diez minutos?`)) return;
+        const button = form.querySelector("button[type=submit]");
+        setBusy(button, true);
+        try {
+          await api("/api/admin/scaling", { method: "POST", body: JSON.stringify({ capacity }) });
+          notice(`AWS recibió la solicitud de ${capacity} instancias.`);
+        } catch (error) { notice(error.message, "error"); }
+        finally {
+          setBusy(button, false);
+          clearTimeout(scalingRefresh);
+          await loadScaling();
+        }
+      });
       $("#user-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const button = event.currentTarget.querySelector("button[type=submit]");

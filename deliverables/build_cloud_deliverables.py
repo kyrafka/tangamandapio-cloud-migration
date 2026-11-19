@@ -64,10 +64,12 @@ def insert_current_verification(document, before_text: str) -> None:
     for lead, body in (
         ("Portal y permisos. ", "Se recuperó el administrador y se corrigió el destino DNS del portal. Hubo 32 lecturas HTTP 200, 42 comprobaciones de acceso del portal y 48 comprobaciones del ERP. El correo interno llegó y se marcó como leído."),
         ("Pedido privado. ", "Las dos EC2 de aplicación llegaron a la Function en 10.20.1.4 con TLS verificado. Un pedido ficticio se procesó en Function y Queue. Azure conservó y cifró ambos objetos en Blob. Application Insights permitió seguir el mismo identificador de evento."),
-        ("Conmutación. ", "El respaldo AWS tomó la ruta en 4,598 s. Los dos clientes recibieron HTTP 200 en 4,68 y 5,57 s. El principal recuperó la ruta automáticamente. Gmail recibió ambos avisos y el aviso de prueba de Azure Monitor."),
+        ("Conmutación. ", "En dos ensayos tras ajustar el monitor, el respaldo tomó la ruta en 3,21 y 8,20 s. El primer HTTP 200 completo llegó a 4,59 y 6,59 s en el primer ensayo y a 9,88 y 9,92 s en el segundo. El principal recuperó la ruta automáticamente en los dos casos. La meta de 3 s sigue pendiente."),
         ("Recuperación. ", "Systems Manager programa un respaldo cifrado diario a las 03:00 de Lima. La restauración de la copia actual en PostgreSQL aislado recuperó 20 tablas, un pedido y un evento en 35,108 s. La autorización de Blob debe renovarse al vencimiento."),
+        ("Administración. ", "El administrador puede listar y descargar las copias cifradas de Azure, crear y descargar una copia de pedidos y outbox en S3 y solicitar temporalmente 3, 4 o 5 instancias. La copia manual comprobada conservó el pedido y el evento con SHA-256 coincidente."),
+        ("Carga y reconstrucción. ", "La prueba acotada al ALB sostuvo 25 usuarios virtuales durante dos minutos, con 3.013 solicitudes sin fallos y p95 de 190 ms. El 1,47 % anterior se desglosó en 4.399 fallos de transporte y ocho 502. En Moto, Terraform creó y eliminó 17 recursos y CloudFormation identificó 21 recursos de red y S3. Moto registró las tres capacidades solicitadas y sus acciones de regreso."),
         ("Telefonía. ", "Dos clientes locales intercambiaron audio WebRTC sintético en ambos sentidos. Falta validar el audio entre redes restrictivas. TURN aún no está configurado."),
-        ("Costos y defensa. ", "AWS reportó USD 150,59 de crédito restante. Azure registró USD 8,50 en el mes frente al presupuesto de USD 25. RDS permanece en Single-AZ. Queda medir RPO, demostrar recuperación regional y presentar las fotos y la constancia docente para AWS–Azure."),
+        ("Costos y defensa. ", "Los presupuestos registraron USD 10,47 de USD 200 en AWS y USD 8,80 de USD 25 en Azure. RDS permanece en Single-AZ. Queda medir RPO, demostrar recuperación regional y presentar las fotos y la constancia docente para AWS–Azure."),
     ):
         paragraph = document.add_paragraph()
         paragraph.add_run(lead).bold = True
@@ -653,23 +655,24 @@ def create_manual() -> None:
         "Enviar evento sintético autenticado a `/api/fulfillment/events` con event_id único y clave específica `receive_fulfillment_event`; comprobar Function, mensaje de Queue, Blob/ledger e Insights. No usar la clave de Function para `/api/wms/inventory`.",
         "Solo tras demostrar ambas rutas, probar failover en ventana: captura estado/ruta; detener un router AWS de forma reversible; observar recuperación; medir RTO con timestamps; restaurar router principal y confirmar ruta final. No declarar 5 s antes de medir.",
     ])
-    document.add_paragraph("El controlador nuevo `iac/scripts/tailscale_ha_controller.py` requiere los dos routers enrolados y sanos y que se habilite la ruta /32 protegida. El RTO objetivo de 5 s no se puede afirmar hasta medir caída y recuperación; los routers AWS aún no existen.")
+    document.add_paragraph("El controlador `iac/scripts/tailscale_ha_controller.py` opera con los dos routers AWS enrolados y la ruta 10.20.1.4/32 habilitada. Antes de reemplazar la ENI comprueba en paralelo la ruta actual y un HTTPS fresco del destino. Para medir la recuperación, captura el primer HTTP 200 completo de cada EC2 y confirma el retorno al principal. El objetivo de tres segundos queda pendiente.")
 
     document.add_heading("5. Backup y restauración PostgreSQL→Azure Blob", level=1)
-    document.add_paragraph("Estado: RDS tiene recuperación automática de un día. Azure Blob contiene un artefacto manual del 05/11, no un dump actual de la RDS de esta cuenta. `postgres_dr_pilot.py` crea dump custom, manifiesto SHA-256 y restauración aislada; por diseño no cifra, no sube ni agenda. `postgres_backup_crypto.py` protege un payload AES-256-GCM y envuelve la clave de datos con RSA-OAEP-SHA256 usando una clave pública versionada de Key Vault; descifrar requiere acceso autorizado a la clave privada de Key Vault. No usar estos scripts para producción sin cerrar el job y los controles.")
+    document.add_paragraph("RDS conserva un día de recuperación automática. Systems Manager ejecuta la copia día a día a las 03:00 de Lima. La copia vigente se guarda en Blob y se verificó al restaurarla en PostgreSQL aislado. El cifrado usa AES-256-GCM con una clave envuelta mediante RSA-OAEP-SHA256. El descifrado requiere permiso sobre la clave de Key Vault.")
     add_bullets(document, [
         "Precondición de red: job debe alcanzar RDS privado por TLS verify-full y Blob por HTTPS; usar egress existente con costo medido.",
         "Autenticación de escritura: identidad de workload de mínimo privilegio para Blob y permiso de uso de clave pública de Key Vault. No usar SAS perpetuo ni account key en texto plano.",
         "Backup: `pg_dump --format=custom --no-owner --no-privileges`; validar versión y cluster identity; generar manifiesto y hashes; cifrar antes de subir; subir a contenedor privado con versioning/retención.",
-        "Programación: EventBridge Scheduler + tarea contenedorizada en subred app o mecanismo equivalente. CloudWatch alarmará fallo de job, antigüedad de backup y objeto ausente. Requiere diseño/estimación y no está desplegado.",
+        "Programación: la asociación de Systems Manager reutiliza las EC2 de aplicación y registra el manifiesto diario en S3. La escritura a Blob usa una autorización de creación que se rota por separado.",
         "Restore: descargar una copia concreta, validar hash autenticado, descifrar vía Key Vault, restaurar a RDS aislada distinta a producción, verificar tablas y consultas; registrar tiempo de recuperación y punto de datos.",
         "Retención: Blob lifecycle de 30 días existe para la ruta postgres; asegurar que no elimine la última copia válida y almacenar hashes/manifest independiente.",
     ])
-    document.add_paragraph("RPO y RTO deben medirse con timestamps del backup y restore. Retención de 1 día no prueba que exista un restore de Blob. No ejecutar restore sobre producción.")
+    document.add_paragraph("En Administración → Respaldos, descarga la copia cifrada de Azure o pulsa Ejecutar respaldo para exportar pedidos, líneas y outbox a S3. La copia de S3 se cifra, conserva durante 30 días y no despacha eventos. Para una restauración completa, usa la copia de Blob y un PostgreSQL aislado. Mide RPO con transacciones marcadas; el RTO de la restauración ya se observó en 35,108 s.")
 
     document.add_heading("6. Auto Scaling, alarmas y prueba", level=1)
     document.add_paragraph("Configuración comprobada: ASG min 2 / desired 2 / max 5, CPU objetivo 60%, solicitudes por destino 2.500/min. El 16/11, 300.000 solicitudes con concurrencia 50 duraron 1.645,443 s; p95 315,47 ms; 1,47% errores (8 respuestas 502 y 4.399 errores de red). Auto Scaling llegó 2→4→5 y bajó automáticamente 5→4→3→2. Postcheck 3.000 solicitudes, concurrencia 30: cero errores, p95 263,86 ms. No es prueba de 3.000 usuarios concurrentes.")
     add_bullets(document, [
+        "Administración → Prueba de escalado permite elegir 3, 4 o 5 instancias. AWS programa primero el regreso a la capacidad anterior. Durante la ventana de unos diez minutos comprueba los destinos sanos, registra la latencia y espera el retorno al nivel base.",
         "Antes de repetir: limitar tasa y duración, revisar acceso logs del ALB/WAF y métricas TargetResponseTime/HTTPCode_Target_5XX, CPU, RDS connections/CPU, cliente de carga y errores URLError detallados.",
         "Ejecutar escalones conservadores, no saltar directamente a 300.000; conservar hora UTC, p50/p95/p99, HTTP 2xx/4xx/5xx, errores cliente, DesiredCapacity y scaling activities.",
         "Dejar que scaling policies reduzcan capacidad; no cambiar DesiredCapacity durante la fase de medición.",
@@ -681,7 +684,7 @@ def create_manual() -> None:
     document.add_heading("7. Terraform, CloudFormation y emulación", level=1)
     document.add_paragraph("CloudFormation es la fuente actual de verdad para AWS. La pila viva quedó IN_SYNC. Terraform se organiza en varias raíces independientes; `azure-rebuild` pasó `init -backend=false` y `validate` y las raíces se formatearon, pero no se aplicaron. Importar recursos Azure existentes a la raíz correcta antes de plan/apply. No ejecutar `iac/environments/demo` sobre esta cuenta: puede duplicar la VPC/CIDR.")
     document.add_paragraph("En este cambio local, `aws-lab.yaml` y `rebuild.sh` alinean por defecto RDS Multi-AZ=false y retención=1 con el estado vivo. CloudFormation linter pasó; cinco pruebas locales pasan. Esto no altera la pila AWS. Multi-AZ y retención mayor se deben habilitar explícitamente solo después de revisar costo, cuotas y change set.")
-    document.add_paragraph("Moto/emulador valida lógica compatible de APIs y no simula precios, límites reales, RDS Multi-AZ, WAF gestionado, Tailscale, DNS/ACM ni latencia del servicio en vivo.")
+    document.add_paragraph("En Moto 5.2.5, Terraform creó y retiró 17 recursos de red con seis subredes y sus asociaciones. CloudFormation levantó un subconjunto de la plantilla real con 21 recursos identificados; algunas propiedades y el orden de eliminación dependen de la implementación del emulador. También se verificó la programación de regreso para las opciones 3, 4 y 5. Las pruebas no simulan precios, EC2 real, WAF, RDS Multi-AZ ni conectividad privada entre nubes.")
 
     document.add_heading("8. Costos y control del crédito", level=1)
     document.add_paragraph("Corte 16/11/2026 21:00 UTC: AWS Free Plan ACTIVE, USD 158,62 restantes de USD 200; la diferencia consumida de crédito es USD 41,38. Cost Explorer devolvió USD 0 en octubre y noviembre, pero el saldo del plan bajó; GetCredits fue denegado por SCP, sin desglose por servicio. El budget AWS de USD 200 solo notifica. Azure for Students: USD 92,95 de saldo cerrado de USD 100 y USD 6,842993 de costo MTD en noviembre; los cortes difieren y Cost Management puede retrasarse. No hay budget Azure. Evidencia: `evidence/current/COST-CREDIT-RECHECK-2026-11-16-2100.json`.")
@@ -699,16 +702,16 @@ def create_manual() -> None:
         ["Portal", "`/`, `/health`, `/ready` HTTP 200 en corte anterior.", "Revalidar tras listener TLS."],
         ["Scale-out/in", "2→4→5→4→3→2; 1,47% error larga.", "Investigar errores; repetir bajo 1% y guardar evidencia."],
         ["Postcheck", "3.000 req, 0 errores, p95 263,86 ms.", "No equivale a 3.000 usuarios."],
-        ["Ruta privada AWS→Azure", "No existe pila/router AWS ni route /32 a 10.20.1.4; faltan las dos claves Tailscale.", "Enrolar los routers, activar ruta segura y verificar pedido en Function, Queue, Blob e Insights."],
-        ["Failover routers", "No se ejecutó en AWS nuevo.", "Prueba reversible; medir con timestamps; no suponer 5 s."],
-        ["Backup/restore", "No automatizado; archivo manual antiguo.", "Copia reciente cifrada en Blob y restore aislado."],
+        ["Ruta privada AWS→Azure", "Pedido correlacionado en Function, Queue, Blob e Insights.", "Mostrar HTTPS privado y seguir el identificador de evento."],
+        ["Failover routers", "Ambos ensayos retornaron al principal. El primer HTTP 200 fue mayor a 3 s.", "Medir HTTP completo desde las dos EC2."],
+        ["Backup/restore", "Copia diaria de Blob restaurada en 35,108 s. Copia manual en S3 con descarga comprobada.", "Medir RPO con transacciones marcadas."],
         ["Alarmas", "5 AWS OK; 2 Azure habilitadas; Gmail SNS confirmado.", "Confirmar UPeU, disparar alarma controlada y comprobar recepción Azure."],
         ["TLS", "ACM ISSUED; ALB 443 y redirect 80; regla Full strict reportada.", "Repetir HTTPS público y adjuntar captura/cadena TLS."],
     ])
 
     document.add_heading("10. Anexos y fuentes", level=1)
     add_bullets(document, [
-        "Estado e inventario: `iac/ESTADO_REAL_2026-11-16.md`.",
+        "Estado e inventario vigente en iac/ESTADO_REAL_2026-11-19.md.",
         "Matriz por criterio: `core/04_matriz_rubrica.md`.",
         "Pruebas ASG: `evidence/current/aws/AWS-ASG-SCALE-2-5-2026-11-16-http.json`, `AWS-ASG-SCALE-POSTCHECK-2026-11-16-http.json` y evidencia cloud consolidada.",
         "Código DR local: `iac/scripts/postgres_dr_pilot.py` y `iac/scripts/postgres_backup_crypto.py`; no son aún un scheduler/cloud deployment.",

@@ -18,9 +18,9 @@ from urllib.request import urlopen
 
 def decide(state, route, primary, backup, failover_checks=3, failback_checks=10):
     """Return guarded counters and an optional route action."""
-    if primary not in {"healthy", "unhealthy", "unknown"}:
+    if primary not in {"healthy", "unhealthy", "unknown", "stopped"}:
         raise ValueError("invalid primary health")
-    if backup not in {"healthy", "unhealthy", "unknown"}:
+    if backup not in {"healthy", "unhealthy", "unknown", "stopped"}:
         raise ValueError("invalid backup health")
     if route not in {"primary", "backup", "other"}:
         raise ValueError("invalid route owner")
@@ -38,7 +38,7 @@ def decide(state, route, primary, backup, failover_checks=3, failback_checks=10)
         if primary == "unknown":
             current["primary_failures"] = 0
             return current, None
-        current["primary_failures"] = min(current["primary_failures"] + 1, failover_checks)
+        current["primary_failures"] = failover_checks if primary == "stopped" else min(current["primary_failures"] + 1, failover_checks)
         if current["primary_failures"] >= failover_checks and backup == "healthy":
             return current, "switch_to_backup"
         return current, None
@@ -113,7 +113,14 @@ def probe(url, timeout=0.8):
         with urlopen(url, timeout=timeout) as response:
             return "healthy" if response.status == 200 else "unhealthy"
     except HTTPError as error:
-        return "unhealthy" if error.code else "unknown"
+        with error:
+            if error.code == 503 and url.endswith("/route-health"):
+                try:
+                    if json.loads(error.read(1024)).get("tailscale") in {"Stopped", "NeedsLogin"}:
+                        return "stopped"
+                except (ValueError, OSError, AttributeError):
+                    pass
+            return "unhealthy" if error.code else "unknown"
     except (URLError, TimeoutError, OSError):
         return "unhealthy"
 
@@ -156,10 +163,13 @@ class AWSRouteControl:
             raise ValueError("route target must be a known router")
         address = "127.0.0.1" if target == "backup" else self.config.primary_private_ip
         interface = self.config.backup_eni if target == "backup" else self.config.primary_eni
-        if probe(f"http://{address}:9797/health", timeout=2.4) != "healthy":
+        target_health, route = probe_health_pair(
+            lambda: probe(f"http://{address}:9797/health", timeout=2.4), self.current_route,
+        )
+        if target_health != "healthy":
             raise RuntimeError("target did not pass a fresh HTTPS check")
         expected = "primary" if target == "backup" else "backup"
-        if self.current_route() != expected:
+        if route != expected:
             raise RuntimeError("route changed or is unknown; refusing to overwrite it")
         self.ec2.replace_route(RouteTableId=self.config.route_table_id,
                                DestinationCidrBlock=self.config.destination, NetworkInterfaceId=interface)

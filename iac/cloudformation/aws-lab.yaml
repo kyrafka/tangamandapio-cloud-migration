@@ -165,6 +165,15 @@ Parameters:
     AllowedValues: ['true', 'false']
     Description: Crea un vault y plan AWS Backup para RDS/S3. Tiene costo y requiere aprobaci??n expl??cita.
 
+  AdminAzureBackupAccount:
+    Type: String
+    Default: ''
+    AllowedPattern: '(^$|^[a-z0-9]{3,24}$)'
+  AdminAzureBackupContainer:
+    Type: String
+    Default: tangama-postgres-backups
+    AllowedPattern: '[a-z0-9-]{3,63}'
+
 Mappings:
   Network:
     Cidrs:
@@ -177,6 +186,7 @@ Mappings:
       DBB: 10.10.21.0/24
 
 Conditions:
+  HasAdminAzureBackup: !Not [!Equals [!Ref AdminAzureBackupAccount, '']]
   UseAlbAccessLogs: !Equals [!Ref EnableAlbAccessLogs, 'true']
   HasAzureFunctionKey: !Not [!Equals [!Ref AzureFunctionKeySecret, '']]
   ExistingDatabaseSecretIsArn: !Equals [!Select [0, !Split [':', !Ref ExistingDatabaseSecretArn]], 'arn']
@@ -479,6 +489,11 @@ Resources:
             Prefix: alb-access/
             ExpirationInDays: 7
             NoncurrentVersionExpiration: {NoncurrentDays: 1}
+          - Id: ExpireManualPostgresCheckpoints
+            Status: Enabled
+            Prefix: dr/postgres/manual-outbox/
+            ExpirationInDays: 30
+            NoncurrentVersionExpiration: {NoncurrentDays: 1}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -525,6 +540,32 @@ Resources:
                 Effect: Allow
                 Action: s3:GetObject
                 Resource: !Sub '${AssetBucket.Arn}/${ApplicationArtifactKey}'
+              - Sid: ListManualPostgresCheckpoints
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt AssetBucket.Arn
+                Condition:
+                  StringEquals:
+                    s3:prefix: dr/postgres/manual-outbox/
+              - Sid: WriteAndReadManualPostgresCheckpoints
+                Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub '${AssetBucket.Arn}/dr/postgres/manual-outbox/*'
+              - !If
+                - HasAdminAzureBackup
+                - Sid: ReadAzureBackupViewingCredential
+                  Effect: Allow
+                  Action: ssm:GetParameter
+                  Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ProjectName}/dr/blob-read/portal'
+                - !Ref 'AWS::NoValue'
+              - Sid: ReadScalingTestStatus
+                Effect: Allow
+                Action: [autoscaling:DescribeAutoScalingGroups, autoscaling:DescribeScheduledActions]
+                Resource: '*'
+              - Sid: RunScalingTestOnProjectGroup
+                Effect: Allow
+                Action: [autoscaling:PutScheduledUpdateGroupAction, autoscaling:UpdateAutoScalingGroup]
+                Resource: !Sub 'arn:${AWS::Partition}:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${ProjectName}-asg'
               - Sid: ReadProjectSecrets
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
@@ -821,6 +862,11 @@ Resources:
             Type=simple
             Environment=AWS_REGION_NAME=${AWS::Region}
             Environment=AWS_DEFAULT_REGION=${AWS::Region}
+            Environment=ADMIN_BACKUP_BUCKET=${AssetBucket}
+            Environment=ADMIN_SCALING_GROUP=${ProjectName}-asg
+            Environment=ADMIN_AZURE_BACKUP_ACCOUNT=${AdminAzureBackupAccount}
+            Environment=ADMIN_AZURE_BACKUP_CONTAINER=${AdminAzureBackupContainer}
+            Environment=ADMIN_AZURE_BACKUP_PARAMETER=/${ProjectName}/dr/blob-read/portal
             Environment=DB_SECRET_ARN=$DB_SECRET_REF
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env

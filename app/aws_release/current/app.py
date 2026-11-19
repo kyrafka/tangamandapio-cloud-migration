@@ -37,6 +37,7 @@ from flask import (
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import admin_cloud_tools
 from cloud_observability import collect_cloudwatch_metrics
 from erp_service import (
     grant_default_erp_roles,
@@ -373,6 +374,11 @@ def create_app(test_config=None):
         # SQLite conserva el almacén local para pruebas aisladas.
         DB_SECRET_ARN=os.getenv("DB_SECRET_ARN", "").strip(),
         AWS_REGION_NAME=os.getenv("AWS_REGION_NAME", "").strip(),
+        ADMIN_BACKUP_BUCKET=os.getenv("ADMIN_BACKUP_BUCKET", "").strip(),
+        ADMIN_AZURE_BACKUP_ACCOUNT=os.getenv("ADMIN_AZURE_BACKUP_ACCOUNT", "").strip(),
+        ADMIN_AZURE_BACKUP_CONTAINER=os.getenv("ADMIN_AZURE_BACKUP_CONTAINER", "").strip(),
+        ADMIN_AZURE_BACKUP_PARAMETER=os.getenv("ADMIN_AZURE_BACKUP_PARAMETER", "").strip(),
+        ADMIN_SCALING_GROUP=os.getenv("ADMIN_SCALING_GROUP", "").strip(),
         ALARM_NOTIFICATION_TOPIC_ARN=os.getenv(
             "ALARM_NOTIFICATION_TOPIC_ARN", ""
         ).strip(),
@@ -1346,6 +1352,99 @@ def create_app(test_config=None):
                 "database": "postgresql" if is_postgresql(configured_database_target(app.config)) else "sqlite_demo",
             },
         )
+
+    @app.get("/api/admin/backups")
+    @require_roles("admin")
+    def admin_backups():
+        result = {}
+        for source, setting, load in (
+            ("aws", "ADMIN_BACKUP_BUCKET", admin_cloud_tools.aws_backups),
+            ("azure", "ADMIN_AZURE_BACKUP_PARAMETER", admin_cloud_tools.azure_backups),
+        ):
+            configured = bool(app.config[setting] and (source == "aws" or app.config["ADMIN_AZURE_BACKUP_ACCOUNT"]))
+            listing = {"configured": configured, "items": []}
+            if configured:
+                try:
+                    listing["items"] = load(app.config)
+                except Exception as error:
+                    app.logger.warning("Backup listing unavailable for %s (%s)", source, type(error).__name__)
+                    listing["error"] = "backup_storage_unavailable"
+            result[source] = listing
+        return jsonify(result), 200, {"Cache-Control": "no-store"}
+
+    @app.post("/api/admin/backups")
+    @require_roles("admin")
+    def create_admin_backup():
+        if not app.config["ADMIN_BACKUP_BUCKET"]:
+            return jsonify(error="backup_storage_unavailable"), 503
+        try:
+            with connect(database_path) as connection:
+                name, data, events = admin_cloud_tools.take_checkpoint(connection, is_postgresql(database_path))
+            checksum = admin_cloud_tools.save_checkpoint(app.config, name, data)
+        except admin_cloud_tools.BackupTooLarge:
+            return jsonify(error="backup_too_large"), 413
+        except Exception as error:
+            app.logger.warning("Manual backup unavailable (%s)", type(error).__name__)
+            return jsonify(error="backup_storage_unavailable"), 503
+        write_audit(database_path, g.portal_user["id"], "backup_checkpoint_created", "backup", name,
+                    {"events": events, "sha256": checksum})
+        return jsonify(name=name, events=events, sha256=checksum, download=f"/api/admin/backups/aws/{name}"), 201
+
+    @app.get("/api/admin/backups/<source>/<name>")
+    @require_roles("admin")
+    def download_admin_backup(source, name):
+        try:
+            stream = admin_cloud_tools.open_backup(app.config, source, name)
+        except FileNotFoundError:
+            return jsonify(error="backup_not_found"), 404
+        except Exception as error:
+            if getattr(error, "code", None) == 404 or getattr(error, "response", {}).get("Error", {}).get("Code") in {"NoSuchKey", "404"}:
+                return jsonify(error="backup_not_found"), 404
+            app.logger.warning("Backup download unavailable (%s)", type(error).__name__)
+            return jsonify(error="backup_storage_unavailable"), 503
+        try:
+            write_audit(database_path, g.portal_user["id"], "backup_download_requested", "backup", name, {"source": source})
+        except Exception:
+            stream.close()
+            raise
+        response = app.response_class(iter(lambda: stream.read(64 * 1024), b""), mimetype="application/octet-stream")
+        response.call_on_close(stream.close)
+        response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
+
+    @app.route("/api/admin/scaling", methods=["GET", "POST"])
+    @require_roles("admin")
+    def admin_scaling():
+        group = app.config["ADMIN_SCALING_GROUP"]
+        if not group:
+            return jsonify(error="scaling_not_configured"), 503
+        if request.method == "POST":
+            payload = request.get_json(silent=True)
+            capacity = payload.get("capacity") if isinstance(payload, dict) else None
+            if type(capacity) is not int or capacity not in {3, 4, 5}:
+                return jsonify(error="invalid_capacity"), 400
+        try:
+            client = admin_cloud_tools.aws_client("autoscaling", app.config)
+            if request.method == "GET":
+                return jsonify(admin_cloud_tools.read_scaling_group(client, group)), 200, {"Cache-Control": "no-store"}
+            with connect(database_path) as connection:
+                if is_postgresql(database_path):
+                    if not connection.execute("SELECT pg_try_advisory_xact_lock(2026111901) AS locked").fetchone()["locked"]:
+                        raise admin_cloud_tools.ScalingConflict
+                else:
+                    connection.execute("BEGIN IMMEDIATE")
+                result = admin_cloud_tools.hold_scaling_capacity(client, group, capacity)
+                insert_audit(connection, g.portal_user["id"], "scaling_test_requested", "auto_scaling_group", group, result)
+                connection.commit()
+        except admin_cloud_tools.ScalingConflict:
+            return jsonify(error="scaling_restore_pending"), 409
+        except ValueError:
+            return jsonify(error="invalid_capacity"), 400
+        except Exception as error:
+            app.logger.warning("Scaling test unavailable (%s)", type(error).__name__)
+            return jsonify(error="scaling_unavailable"), 503
+        return jsonify(result), 202
 
     @app.get("/api/admin/users")
     @require_roles("admin")

@@ -31,9 +31,19 @@ def read_tailscale_state():
         result = subprocess.run(["tailscale", "status", "--json"], capture_output=True,
                                 text=True, timeout=1.0, check=True)
         state = json.loads(result.stdout).get("BackendState", "Unknown")
-        return state if state in {"Running", "Starting", "NeedsLogin", "Stopped", "NoState"} else "Unknown"
+        if state in {"Running", "Starting", "NeedsLogin", "Stopped"}:
+            return state
     except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
-        return "Unknown"
+        pass
+    # A stopped daemon may return a valid NoState response or fail to open its socket.
+    try:
+        service = subprocess.run(["systemctl", "show", "--property=ActiveState", "--value", "tailscaled.service"],
+                                 capture_output=True, text=True, timeout=0.25, check=True)
+        if service.stdout.strip() in {"inactive", "failed"}:
+            return "Stopped"
+    except (subprocess.SubprocessError, OSError):
+        pass
+    return "Unknown"
 
 
 def probe_private_wms(private_ip, hostname, path="/api/health", timeout=1.5):

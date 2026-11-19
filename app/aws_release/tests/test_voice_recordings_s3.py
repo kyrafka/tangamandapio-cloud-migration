@@ -358,7 +358,7 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
         self.assertEqual(self_block.status_code, 409)
         self.assertEqual(self_block.get_json()["error"], "cannot_remove_own_admin_access")
 
-    def test_admin_password_reset_requires_rotation_and_revokes_sessions(self):
+    def test_admin_password_reset_replaces_password_and_revokes_sessions(self):
         old_session, _ = self.login("sales@example.test", "Temporary-Password-2026")
         response = self.admin.post(
             f"/api/admin/users/{self.sales_id}/reset-password",
@@ -366,25 +366,25 @@ class VoiceRecordingsS3TestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200, response.get_json())
         temporary_password = response.get_json()["temporary_password"]
-        self.assertEqual(response.get_json()["user"]["must_change_password"], True)
+        self.assertFalse(response.get_json()["user"]["must_change_password"])
         self.assertTrue(response.get_json()["reveal_once"])
         self.assertFalse(old_session.get("/api/auth/session").get_json()["authenticated"])
 
-        forced_user, forced_csrf = self.login("sales@example.test", temporary_password)
+        reset_user, reset_csrf = self.login("sales@example.test", temporary_password)
         self.assertEqual(
-            forced_user.get("/api/dashboard").status_code,
-            428,
+            reset_user.get("/api/dashboard").status_code,
+            200,
         )
-        changed = forced_user.post(
+        changed = reset_user.post(
             "/api/auth/password",
             json={
                 "current_password": temporary_password,
                 "new_password": "New-Long-Password-2026!",
             },
-            headers={"X-CSRF-Token": forced_csrf},
+            headers={"X-CSRF-Token": reset_csrf},
         )
         self.assertEqual(changed.status_code, 200, changed.get_json())
-        self.assertFalse(forced_user.get("/api/auth/session").get_json()["authenticated"])
+        self.assertFalse(reset_user.get("/api/auth/session").get_json()["authenticated"])
         new_user, _ = self.login("sales@example.test", "New-Long-Password-2026!")
         self.assertFalse(new_user.get("/api/auth/session").get_json()["user"]["must_change_password"])
 

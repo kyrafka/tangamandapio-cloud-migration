@@ -1,0 +1,27 @@
+{
+  "start_utc": "2026-11-16T11:38:00Z",
+  "end_utc": "2026-11-16T12:21:00Z",
+  "scope": "Ventana de métricas agregadas del ALB que contiene la prueba anterior",
+  "metrics": [
+    {
+      "metric": "HTTPCode_ELB_502_Count",
+      "datapoints": 4,
+      "sum": 7.0
+    },
+    {
+      "metric": "TargetConnectionErrorCount",
+      "datapoints": 0,
+      "sum": null
+    },
+    {
+      "metric": "HTTPCode_Target_5XX_Count",
+      "datapoints": 0,
+      "sum": null
+    },
+    {
+      "metric": "RequestCount",
+      "datapoints": 43,
+      "sum": 267818.0
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "admin_view_http": 200,
+  "azure": {
+    "count": 3,
+    "latest": "20261119-daily.json",
+    "downloaded_bytes": 84654
+  },
+  "aws": {
+    "object": "20261119T134903Z-e327485ad8ee.json",
+    "orders": 1,
+    "outbox": 1,
+    "download_sha256_matches": true,
+    "encryption": "AES256"
+  },
+  "scaling": {
+    "desired": 3,
+    "healthy": 3,
+    "maximum": 5,
+    "minimum": 3,
+    "restore_at": null,
+    "restore_enabled": true
+  },
+  "instance": "i-0b7e56b4b3bc6c3fd",
+  "stack_status_during_validation": "UPDATE_IN_PROGRESS"
+}

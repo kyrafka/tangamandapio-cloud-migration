@@ -1,0 +1,103 @@
+{
+  "endpoint": "http://127.0.0.1:5000",
+  "cloudformation": {
+    "declared_resources": [
+      "AppRouteAssociationA",
+      "AppRouteAssociationB",
+      "AppRouteTable",
+      "AppSubnetA",
+      "AppSubnetB",
+      "AssetBucket",
+      "AssetBucketAccessLogPolicy",
+      "AttachGateway",
+      "DBRouteAssociationA",
+      "DBRouteAssociationB",
+      "DBRouteTable",
+      "DBSubnetA",
+      "DBSubnetB",
+      "FilesBucket",
+      "FilesBucketPolicy",
+      "InternetGateway",
+      "PublicDefaultRoute",
+      "PublicRouteAssociationA",
+      "PublicRouteAssociationB",
+      "PublicRouteTable",
+      "PublicSubnetA",
+      "PublicSubnetB",
+      "VPC"
+    ],
+    "identified_resources": [
+      "AppRouteAssociationA",
+      "AppRouteAssociationB",
+      "AppRouteTable",
+      "AppSubnetA",
+      "AppSubnetB",
+      "AssetBucket",
+      "AttachGateway",
+      "DBRouteAssociationA",
+      "DBRouteAssociationB",
+      "DBRouteTable",
+      "DBSubnetA",
+      "DBSubnetB",
+      "FilesBucket",
+      "InternetGateway",
+      "PublicDefaultRoute",
+      "PublicRouteAssociationA",
+      "PublicRouteAssociationB",
+      "PublicRouteTable",
+      "PublicSubnetA",
+      "PublicSubnetB",
+      "VPC"
+    ],
+    "bucket_policies_observed": [],
+    "network": {
+      "subnets": 6,
+      "zones": 2,
+      "explicit_route_associations": 0,
+      "internet_route": true,
+      "auto_assign_public_ip_observed": 0
+    },
+    "bucket_encryption": "AES256",
+    "block_public_access_observed": null,
+    "manual_backup_retention_days_observed": null,
+    "created": true,
+    "deleted": false,
+    "emulator_delete_error": "DependencyViolation"
+  },
+  "terraform": {
+    "aws_provider_version": "6.73.0",
+    "managed_resource_count": 17,
+    "network": {
+      "subnets": 6,
+      "zones": 2,
+      "explicit_route_associations": 6,
+      "internet_route": true,
+      "auto_assign_public_ip_observed": 2
+    },
+    "created": true,
+    "deleted": true
+  },
+  "scaling": {
+    "cases": [
+      {
+        "requested": 3,
+        "desired_observed": 3,
+        "restore_minimum": 2,
+        "restore_desired": 2
+      },
+      {
+        "requested": 4,
+        "desired_observed": 4,
+        "restore_minimum": 2,
+        "restore_desired": 2
+      },
+      {
+        "requested": 5,
+        "desired_observed": 5,
+        "restore_minimum": 2,
+        "restore_desired": 2
+      }
+    ],
+    "automatic_execution_observed": false
+  }
+}

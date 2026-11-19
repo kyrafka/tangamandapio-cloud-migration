@@ -1,14 +1,19 @@
 # Túnel overlay AWS–Azure con Tailscale (propuesta controlada)
 
-> **Corte vigente 16/11/2026:** la red AWS del despliegue nuevo está en la
-> cuenta `481056890449`, no en AWS Academy. Los IDs, rutas y mediciones históricas
-> de este archivo describen ensayos anteriores y no prueban el estado actual.
-> Los dos routers Azure actuales siguen anunciando `10.20.1.0/24`; se fijó
-> `accept-routes=false` en ambos para evitar que lleguen al Private Endpoint por
-> el propio overlay. Desde ambos routers, la salud de `tangama-flex-261104`
-> volvió a HTTP 200. En AWS todavía faltan el secreto de alta Tailscale, los
-> routers/ruta/DNS privados y la prueba de pedido de extremo a extremo. Ver
-> [estado real del 16/11](../../ESTADO_REAL_2026-11-16.md).
+> **Corte vigente 19/11/2026.** La cuenta AWS `481056890449` tiene dos routers
+> activos, ruta privada `10.20.1.4/32` y resolución privada para la Function.
+> El pedido de prueba llegó a Function, Queue, Blob y Application Insights.
+> Las EC2 recuperaron el HTTPS privado tras la caída del túnel principal. Las
+> mediciones más recientes todavía superan la meta de tres segundos.
+> [Estado real y evidencias](../../ESTADO_REAL_2026-11-19.md).
+
+Para reconstrucción, usa el paquete de `package_tailscale_ha.sh` con los
+valores `router_artifact_key` y `router_artifact_sha256` que imprime. El
+paquete contiene el monitor systemd que comprueba en paralelo la salud del
+destino y la ENI vigente. Los cambios de los dos routers encendidos se
+distribuyeron de forma escalonada por Systems Manager. Genera un change set
+antes de cambiar esos parámetros en una pila activa, porque el cambio de
+user data puede requerir reiniciar routers existentes.
 
 ## Registro histórico: pruebas desde el ERP — 05/11/2026
 

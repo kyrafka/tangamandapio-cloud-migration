@@ -50,6 +50,7 @@ archive_contents="$(tar -tzf "$artifact_path")"
 for required_path in \
   app.py \
   erp_service.py \
+  admin_cloud_tools.py \
   requirements.txt \
   requirements.lock \
   BUILD_REVISION \

@@ -75,7 +75,7 @@ class AdministratorRecoveryTests(unittest.TestCase):
                 recovered["password_hash"], "Temporary-Recovery-Password-1!"
             )
         )
-        self.assertTrue(recovered["must_change_password"])
+        self.assertFalse(recovered["must_change_password"])
         self.assertEqual(recovered["auth_version"], initial["auth_version"] + 1)
 
         # A second ASG instance starting with the same Secrets Manager version

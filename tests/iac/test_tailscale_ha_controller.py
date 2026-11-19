@@ -15,6 +15,11 @@ spec.loader.exec_module(controller)
 
 
 class TailscaleHaDecisionTests(unittest.TestCase):
+    def test_confirmed_stop_switches_in_one_poll_only_with_a_healthy_backup(self):
+        initial = {"primary_failures": 0, "primary_recoveries": 0}
+        self.assertEqual(controller.decide(initial, "primary", "stopped", "healthy")[1], "switch_to_backup")
+        self.assertIsNone(controller.decide(initial, "primary", "stopped", "unhealthy")[1])
+
     def test_continuous_checks_reuse_reads_but_replacement_checks_the_latest_route(self):
         config = controller.Config("us-east-2", "rtb-0123456789abcdef0", "10.20.1.4/32",
                                    "eni-0123456789abcdef0", "eni-abcdef0123456789", "10.10.10.149",

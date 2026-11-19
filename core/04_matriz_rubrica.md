@@ -9,10 +9,10 @@ restaurada. Las tablas de fechas anteriores son históricas.
 | Criterios | Verificado | Falta para la defensa |
 | --- | --- | --- |
 | 2, 3, 10 | TLS, DNS privado AWS–Azure y pedido correlacionado en Function, Queue, Blob e Insights. | Adjuntar aprobación escrita de AWS–Azure y explicar el alcance de la VPN. |
-| 4, 9 | Respaldo diario cifrado y restauración aislada de 20 tablas en 35,108 s. | Medir RPO de transacciones, renovar la autorización de Blob al vencimiento y validar recuperación regional. |
+| 4, 9 | Respaldo diario cifrado y restauración aislada de 20 tablas en 35,108 s. Administración lista y descarga las copias en Azure y genera un respaldo independiente de pedidos y outbox en S3. | Medir RPO de transacciones, renovar las autorizaciones de Blob al vencimiento y validar recuperación regional. |
 | 5, 7 | Administrador recuperado. 42 comprobaciones de permisos del portal y 48 del ERP. Gmail recibió AWS SNS y Azure Monitor. | Completar revisión de credenciales históricas y confirmar el correo UPeU. |
-| 6, 12 | Conmutación AWS en 4,598 s y recuperación HTTP en 4,68 y 5,57 s. Llamada WebRTC con audio bidireccional y correo interno verificados. | Demostrar recuperación HTTP dentro de 5 s en ambas EC2, repetir carga sostenida y validar WebRTC entre redes restrictivas. |
-| 8, 11 | Pilas CloudFormation de VPN y respaldo activas. Terraform validado. AWS USD 150,59 de crédito y Azure USD 8,50 de costo mensual observado. | Validar reconstrucción completa en una cuenta o entorno aparte. RDS continúa en Single-AZ bajo el plan gratuito. |
+| 6, 12 | Conmutación AWS con regreso automático. Nueva carga acotada de 3.013 peticiones sin fallos, 25 usuarios virtuales y p95 de 190 ms. Las opciones 3, 4 y 5 registraron capacidad y regreso en el emulador. Llamada WebRTC con audio bidireccional y correo interno verificados. | Demostrar recuperación HTTP dentro de 3 s en ambas EC2, reproducir la carga histórica de 300.000 peticiones y validar WebRTC entre redes restrictivas. |
+| 8, 11 | Terraform creó y eliminó 17 recursos de red en Moto. CloudFormation desplegó el subconjunto de red y S3 con 21 recursos identificados. Presupuesto AWS registró USD 10,47. | EC2, ALB, WAF, RDS y VPN requieren evidencia de aprovisionamiento fuera del emulador. RDS continúa en Single-AZ bajo el plan gratuito. |
 | 1, 13, 14 | Integrante, docente y ciclo registrados. Hay evidencia con fecha para el recorrido en vivo. | Adjuntar fotos, aprobación docente y ejecutar la defensa. |
 
 ## Verificación del 18/11/2026
