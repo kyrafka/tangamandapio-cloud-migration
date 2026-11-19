@@ -15,6 +15,9 @@ distribuyeron de forma escalonada por Systems Manager. Genera un change set
 antes de cambiar esos parámetros en una pila activa, porque el cambio de
 user data puede requerir reiniciar routers existentes.
 
+El paquete de reconstrucción verificado del 19/11 quedó publicado bajo
+`releases/tangamandapio/tailscale-ha-5fc6f1af5730fd121ef28038326ecb782ae6d3da0ff0c59b9274738197c12578.tar.gz`.
+
 ## Registro histórico: pruebas desde el ERP — 05/11/2026
 
 > Estas pruebas corresponden a la huella anterior. La cuenta nueva se revalidó

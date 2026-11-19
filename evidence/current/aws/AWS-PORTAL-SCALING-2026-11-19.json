@@ -1,0 +1,154 @@
+{
+  "stack_status": "UPDATE_COMPLETE",
+  "portal_http": 200,
+  "private_module_without_session_http": 401,
+  "backup_totals_public_authenticated": {
+    "aws": 1,
+    "azure": 3
+  },
+  "requested_healthy_target": 3,
+  "panel_response": {
+    "desired": 3,
+    "restore_at": "2026-11-19T14:12:00+00:00"
+  },
+  "baseline": {
+    "at": "2026-11-19T13:59:52.111815+00:00",
+    "minimum": 2,
+    "desired": 2,
+    "maximum": 5,
+    "instance_count": 3,
+    "healthy_instances": [
+      "i-0abc3ffd43cdeb84d",
+      "i-0b7e56b4b3bc6c3fd"
+    ],
+    "healthy_alb": [
+      "i-0abc3ffd43cdeb84d",
+      "i-0b7e56b4b3bc6c3fd"
+    ]
+  },
+  "restore_config": {
+    "minimum": 2,
+    "desired": 2,
+    "at": "2026-11-19T14:12:00+00:00"
+  },
+  "observations": [
+    {
+      "at": "2026-11-19T14:01:04.006718+00:00",
+      "minimum": 3,
+      "desired": 3,
+      "maximum": 5,
+      "instance_count": 3,
+      "healthy_instances": [
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ],
+      "healthy_alb": [
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:01:20.144027+00:00",
+      "minimum": 3,
+      "desired": 3,
+      "maximum": 5,
+      "instance_count": 4,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ],
+      "healthy_alb": [
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:02:57.558968+00:00",
+      "minimum": 3,
+      "desired": 3,
+      "maximum": 5,
+      "instance_count": 4,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ],
+      "healthy_alb": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:04:18.500391+00:00",
+      "minimum": 3,
+      "desired": 3,
+      "maximum": 5,
+      "instance_count": 3,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ],
+      "healthy_alb": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:12:07.823844+00:00",
+      "minimum": 2,
+      "desired": 2,
+      "maximum": 5,
+      "instance_count": 3,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ],
+      "healthy_alb": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d",
+        "i-0b7e56b4b3bc6c3fd"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:12:23.965519+00:00",
+      "minimum": 2,
+      "desired": 2,
+      "maximum": 5,
+      "instance_count": 3,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d"
+      ],
+      "healthy_alb": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d"
+      ]
+    },
+    {
+      "at": "2026-11-19T14:17:53.497000+00:00",
+      "minimum": 2,
+      "desired": 2,
+      "maximum": 5,
+      "instance_count": 2,
+      "healthy_instances": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d"
+      ],
+      "healthy_alb": [
+        "i-00306883526796641",
+        "i-0abc3ffd43cdeb84d"
+      ]
+    }
+  ],
+  "saw_three_healthy": true,
+  "automatic_restore": true,
+  "restore_action_removed": true,
+  "restore_activity_status": [
+    "Successful"
+  ]
+}

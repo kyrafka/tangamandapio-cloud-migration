@@ -1,0 +1,17 @@
+{
+  "validated_instance_count": 3,
+  "observations": {
+    "i-00306883526796641": {
+      "status": "Success",
+      "private_wms": "200 10.20.1.4 0.322232"
+    },
+    "i-0abc3ffd43cdeb84d": {
+      "status": "Success",
+      "private_wms": "200 10.20.1.4 0.270050"
+    },
+    "i-0b7e56b4b3bc6c3fd": {
+      "status": "Success",
+      "private_wms": "200 10.20.1.4 0.259875"
+    }
+  }
+}

@@ -10,7 +10,9 @@
     "orders": 1,
     "outbox": 1,
     "download_sha256_matches": true,
-    "encryption": "AES256"
+    "encryption": "AES256",
+    "retention_days": 30,
+    "public_access_blocked": true
   },
   "scaling": {
     "desired": 3,

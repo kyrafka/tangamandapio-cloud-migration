@@ -38,8 +38,16 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
 - **Administración → Prueba de escalado** consulta capacidad deseada y sana.
   Admite 3, 4 y 5 instancias y programa el regreso antes de modificar el ASG.
   En Moto se verificaron las tres solicitudes y los valores de regreso a 2.
-  El ciclo de espera y ejecución por reloj corresponde a AWS real.
-  [Procedimiento del portal](../app/aws_release/PLATFORM_CONSOLE.md).
+  Desde el portal público, la solicitud de tres instancias obtuvo HTTP 202.
+  El ALB marcó tres destinos sanos y la acción de las 09:12 de Lima devolvió
+  automáticamente la capacidad a dos. El balanceador volvió a dos destinos
+  sanos. A las 09:17 terminaron el drenaje y la retirada de la tercera EC2.
+  [Ciclo en AWS](../evidence/current/aws/AWS-PORTAL-SCALING-2026-11-19.json)
+  · [Procedimiento del portal](../app/aws_release/PLATFORM_CONSOLE.md).
+- Después de publicar la revisión, las tres EC2 activas durante la prueba de
+  capacidad resolvieron `10.20.1.4` e hicieron HTTPS 200 contra el WMS. Sus
+  consultas tardaron entre 270 y 322 ms, con la ruta de vuelta en el principal.
+  [Comprobación desde las instancias actualizadas](../evidence/current/aws/AWS-PORTAL-RENEWAL-PRIVATE-WMS-2026-11-19.json).
 - k6 sostuvo 25 usuarios virtuales durante 120 s después de la rampa. El ALB
   respondió correctamente a las 3.013 peticiones HTTPS a `/ready`, con p95 de
   **189,86 ms**. No se enviaron pedidos ni solicitudes al WMS. La prueba anterior
@@ -51,6 +59,10 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
   ruta, concurrencia y protocolo, por lo que el escenario histórico queda como
   antecedente abierto. [Nueva carga](../evidence/current/aws/AWS-ALB-SUSTAINED-2026-11-19.json)
   · [Métricas históricas](../evidence/current/aws/AWS-ALB-HISTORICAL-ERRORS-2026-11-16.json).
+- La prueba transaccional aislada ejecutó 180 pedidos sintéticos con 20
+  concurrentes. Recuperó los 180 pedidos y conservó los 180 eventos outbox
+  pendientes, sin dependencias externas. El p95 local fue 1,91 s.
+  [Prueba de pedidos y outbox](../evidence/current/aws/LOCAL-PORTAL-ORDER-LOAD-2026-11-19.json).
 
 ## Reconstrucción aislada
 
