@@ -29,7 +29,19 @@ El script conserva parámetros existentes con `UsePreviousValue` y tiene preflig
 
 ## Reconstruir
 
-`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias; publica el paquete versionado antes de habilitar la capacidad de EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en un bucket cuando se le proporcionan parámetros explícitos. Para evitar un aumento involuntario de costo, el default local queda alineado con el estado vivo: **Single-AZ y 1 día**. Multi-AZ y más días son opciones explícitas (`DATABASE_MULTI_AZ=true`, `DATABASE_BACKUP_RETENTION_DAYS=N`) tras comprobar permisos, precio y saldo. Esta edición es local: no cambia el stack AWS ni la facturación.
+`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias. Publica el paquete versionado antes de habilitar EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en el bucket indicado. Los valores predeterminados coinciden con RDS vivo, **Single-AZ y 1 día**. Para ampliar la cobertura, revisa permisos, precio y saldo antes de pasar `DATABASE_MULTI_AZ=true` o `DATABASE_BACKUP_RETENTION_DAYS=N`.
+
+Para recuperar **Administración → Respaldos**, pasa
+`ADMIN_AZURE_BACKUP_ACCOUNT=sttangama261030r` y, si cambia el nombre por
+defecto, `ADMIN_AZURE_BACKUP_CONTAINER=tangama-postgres-backups`. Restaura el
+permiso de lectura fuera de CloudFormation en el parámetro cifrado
+`/tangamandapio/dr/blob-read/portal`. La escritura diaria usa otra
+autorización y la [pila de respaldo programado](aws-azure-postgres-backup.yaml).
+
+La revisión activa registrada es `20261119-order-tracking-and-contingency`.
+El [registro operativo](../ESTADO_REAL_2026-11-19.md) enlaza el paquete y la
+prueba del pedido privado. La reconstrucción empaqueta el código versionado
+del repositorio y calcula el SHA-256 antes de habilitar EC2.
 
 La IaC no contiene datos ni todos los insumos de recuperación. Antes de reconstruir:
 

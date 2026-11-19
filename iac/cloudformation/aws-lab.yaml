@@ -12,7 +12,7 @@ Metadata:
       - Mantener secretos fuera de la plantilla y usar Secrets Manager.
       - Revisar cambios que puedan reemplazar o borrar RDS y buckets con datos.
     ref:
-      - at: iac/ESTADO_REAL_2026-11-16.md
+      - at: iac/ESTADO_REAL_2026-11-19.md
         has: estado observado del despliegue y pendientes de nube
         scope: proyecto
 
@@ -169,10 +169,12 @@ Parameters:
     Type: String
     Default: ''
     AllowedPattern: '(^$|^[a-z0-9]{3,24}$)'
+    Description: Nombre de Storage para consultar copias en el portal. El permiso de lectura se obtiene de un parámetro cifrado de SSM.
   AdminAzureBackupContainer:
     Type: String
     Default: tangama-postgres-backups
     AllowedPattern: '[a-z0-9-]{3,63}'
+    Description: Contenedor privado de las copias de PostgreSQL consultadas desde Administración.
 
 Mappings:
   Network:

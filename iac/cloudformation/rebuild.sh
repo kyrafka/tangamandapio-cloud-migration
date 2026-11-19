@@ -33,6 +33,8 @@ PROJECT_NAME="${PROJECT_NAME:-tangamandapio}"
 TEMPLATE="${TEMPLATE:-$SCRIPT_DIR/aws-lab.yaml}"
 FUNCTION_URL="${AZURE_FULFILLMENT_URL:-}"
 FUNCTION_KEY_SECRET="${AZURE_FUNCTION_KEY_SECRET:-}"
+ADMIN_BACKUP_ACCOUNT="${ADMIN_AZURE_BACKUP_ACCOUNT:-}"
+ADMIN_BACKUP_CONTAINER="${ADMIN_AZURE_BACKUP_CONTAINER:-}"
 CERTIFICATE_ARN="${CERTIFICATE_ARN:-}"
 PORTAL_DOMAIN_NAME="${PORTAL_DOMAIN_NAME:-}"
 SNAPSHOT_IDENTIFIER="${RDS_SNAPSHOT_IDENTIFIER:-}"
@@ -65,6 +67,20 @@ fi
 if [[ -z "$FUNCTION_URL" || -z "$FUNCTION_KEY_SECRET" ]]; then
   echo "Define AZURE_FULFILLMENT_URL y AZURE_FUNCTION_KEY_SECRET con la Function ya publicada y su clave sincronizada en Secrets Manager." >&2
   exit 2
+fi
+if [[ -n "$ADMIN_BACKUP_ACCOUNT" && ! "$ADMIN_BACKUP_ACCOUNT" =~ ^[a-z0-9]{3,24}$ ]]; then
+  echo "ADMIN_AZURE_BACKUP_ACCOUNT debe tener entre 3 y 24 letras minúsculas o dígitos." >&2
+  exit 2
+fi
+if [[ -n "$ADMIN_BACKUP_CONTAINER" ]]; then
+  if [[ -z "$ADMIN_BACKUP_ACCOUNT" ]]; then
+    echo "Define ADMIN_AZURE_BACKUP_ACCOUNT junto con ADMIN_AZURE_BACKUP_CONTAINER." >&2
+    exit 2
+  fi
+  if [[ ! "$ADMIN_BACKUP_CONTAINER" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ || "$ADMIN_BACKUP_CONTAINER" == *--* ]]; then
+    echo "ADMIN_AZURE_BACKUP_CONTAINER requiere 3 a 63 caracteres, con letras minúsculas, dígitos y guiones simples entre ellos." >&2
+    exit 2
+  fi
 fi
 if [[ -n "$CERTIFICATE_ARN" || -n "$PORTAL_DOMAIN_NAME" ]]; then
   if [[ -z "$CERTIFICATE_ARN" || -z "$PORTAL_DOMAIN_NAME" ]]; then
@@ -309,6 +325,12 @@ PARAMETERS=(
 if [[ -n "$CERTIFICATE_ARN" ]]; then
   PARAMETERS+=("ParameterKey=CertificateArn,ParameterValue=$CERTIFICATE_ARN")
   PARAMETERS+=("ParameterKey=PortalDomainName,ParameterValue=$PORTAL_DOMAIN_NAME")
+fi
+if [[ -n "$ADMIN_BACKUP_ACCOUNT" ]]; then
+  PARAMETERS+=("ParameterKey=AdminAzureBackupAccount,ParameterValue=$ADMIN_BACKUP_ACCOUNT")
+fi
+if [[ -n "$ADMIN_BACKUP_CONTAINER" ]]; then
+  PARAMETERS+=("ParameterKey=AdminAzureBackupContainer,ParameterValue=$ADMIN_BACKUP_CONTAINER")
 fi
 if [[ -n "${ALARM_NOTIFICATION_EMAIL_PRIMARY:-}" ]]; then
   PARAMETERS+=("ParameterKey=AlarmNotificationEmailPrimary,ParameterValue=$ALARM_NOTIFICATION_EMAIL_PRIMARY")

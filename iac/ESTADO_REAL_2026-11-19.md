@@ -99,6 +99,17 @@ El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME
   NAT, WAF, ALB, RDS ni la VPN real. [Resultado reproducible](../evidence/current/aws/AWS-IAC-EMULATOR-2026-11-19.json)
   · [Comandos para repetir](local-emulator/README.md).
 
+## Referencias para reconstruir
+
+| Servicio | Revisión y artefacto |
+| --- | --- |
+| Portal AWS | `20261119-order-tracking-and-contingency`, objeto `releases/tangamandapio/portal-b2b-seguimiento-da9a3ea37b1b.tar.gz`, SHA-256 `da9a3ea37b1bd5e82da6e6a31a1dd473538f57551cd5ae235d5d8467b937a104`. |
+| WMS Flex | OneDeploy `seguimiento-9295b4146422`, objeto `function-flex-deployments/source/seguimiento-9295b4146422/released-package.zip`, SHA-256 `9295b4146422973cf61ac7da1e55ba30dfd088a27d772e9382e1018facd2287a`. |
+
+La receta de [OneDeploy](environments/azure-flex-private#publicar-en-la-function-privada)
+mantiene cerrado el ingreso público. El ZIP llega por ARM con una autorización
+temporal de lectura; el token queda fuera de Git y del estado Terraform.
+
 ## Costos y restricciones
 
 | Medición | Resultado |

@@ -42,9 +42,9 @@ variable "private_endpoint_subnet_name" {
 }
 
 variable "function_app_name" {
-  description = "Blue-green Flex app name; must be globally unique and <=32 characters. Keep the current Y1 app until cutover is verified."
+  description = "Private Flex app name. Choose a new globally unique name, up to 32 characters, for isolated rebuilds."
   type        = string
-  default     = "tangama-wms-flex-261013"
+  default     = "tangama-flex-261104"
 
   validation {
     condition     = length(var.function_app_name) <= 32 && can(regex("^[a-zA-Z0-9-]+$", var.function_app_name))
@@ -55,7 +55,7 @@ variable "function_app_name" {
 variable "storage_account_name" {
   description = "Existing private-project data account. The app uses managed identity; no storage key is placed in settings."
   type        = string
-  default     = "sttangama261008r"
+  default     = "sttangama261030r"
 }
 
 variable "deployment_container_name" {
@@ -112,7 +112,7 @@ variable "deployment_approved" {
 }
 
 variable "bootstrap_public_access_enabled" {
-  description = "Temporary first-deployment exception so Azure CLI can publish the package before private routing is available. Final state must be false."
+  description = "Legacy temporary exception for direct SCM publishing. ARM OneDeploy can publish with public access disabled."
   type        = bool
   default     = false
 }

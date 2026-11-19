@@ -2,7 +2,17 @@
 
 Esta carpeta conserva capturas y resultados con fecha. Cada archivo acredita solo lo que describe y el entorno donde se tomó; una captura antigua no demuestra el estado actual de una nube.
 
-## Último corte vivo — 16/11/2026
+## Corte vigente — 19/11/2026
+
+El [registro operativo](../iac/ESTADO_REAL_2026-11-19.md) reúne TLS, permisos,
+conmutación, respaldo, escalado y costos. Para la defensa del flujo de pedidos,
+abre el [resultado del portal](current/aws/AWS-PORTAL-ORDER-TRACKING-2026-11-19.json)
+y busca el mismo identificador de evento en la
+[evidencia de Azure](current/azure/AZURE-WMS-ORDER-TRACKING-2026-11-19.json).
+La [consulta privada de colas](current/azure/AZURE-WMS-QUEUE-STATUS-2026-11-19.json)
+registra el resultado autenticado, el rechazo sin clave y los conteos.
+
+## Corte histórico — 16/11/2026
 
 La reconsulta de las 18:12 UTC quedó en
 [`current/CLOUD-RECHECK-2026-11-16-1812.json`](current/CLOUD-RECHECK-2026-11-16-1812.json).

@@ -16,6 +16,64 @@ parámetro cifrado `/tangamandapio/dr/blob-write/scheduled-demo` y debe renovars
 al vencimiento. El [entorno Terraform](environments/aws-azure-tailscale)
 puede administrar esa pila y la de los routers a través de CloudFormation.
 
+### Topología comprobada
+
+```mermaid
+flowchart LR
+    User["Usuarios por rol"] --> CF["Cloudflare · HTTPS"]
+    subgraph AWS["AWS Ohio · VPC 10.10.0.0/16"]
+        ALB["WAF / ALB"] --> APP["ERP · ASG 2–5, dos zonas"]
+        APP --> DB["RDS PostgreSQL · pedidos y outbox"]
+        APP --> NAT["NAT Gateway compartido"]
+        APP --> RTR["Ruta /32 · router principal o respaldo"]
+        APP --> S3["S3 · respaldos manuales y manifiestos"]
+    end
+    subgraph AZ["Azure West US · VNet 10.20.0.0/16"]
+        AZRTR["Dos routers Tailscale"] --> PE["Private Endpoint 10.20.1.4"]
+        PE --> WMS["Function Flex privada"]
+        WMS --> Q["Queue · trabajo y fallidos"]
+        WMS --> B["Blob · eventos y resultados"]
+        WMS --> AI["Application Insights"]
+        BK["Blob · copia diaria cifrada"]
+    end
+    CF --> ALB
+    RTR --> AZRTR
+    DB -.->|Exportación diaria desde EC2| BK
+```
+
+AWS tiene un NAT Gateway zonal compartido por ambas subredes de aplicación.
+Azure opera sin NAT Gateway. Si falla el egreso compartido de AWS, la red
+privada depende de que el túnel conserve conectividad. El ejemplo ANDESLOG
+sirve de referencia para NAT por AZ, observabilidad y recuperación regional.
+Adoptar un segundo NAT, un gateway administrado o una región secundaria requiere
+presupuestar sus cargos continuos.
+
+### Orden de reconstrucción
+
+1. Verifica la cuenta AWS y la suscripción Azure. En un entorno aislado, asigna
+   nombres globalmente únicos a Storage y a la Function. Identifica el estado
+   Terraform ya existente antes de importar o planificar recursos vivos.
+2. Prepara [la base Azure](environments/azure-rebuild) y
+   [la red privada](environments/azure-private-network). Reutiliza las
+   dependencias existentes cuando recuperes el entorno actual.
+3. Aplica la raíz [Azure Flex privada](environments/azure-flex-private).
+   Empaqueta el WMS y publícalo con OneDeploy. Guarda la Function key en AWS
+   Secrets Manager fuera del estado Terraform.
+4. Reconstruye el portal con [CloudFormation](cloudformation). Pasa el hostname
+   de la Function, el nombre del secreto y, si se quiere recuperar el catálogo
+   de respaldos, los nombres de Storage y del contenedor. Valida HTTPS y las
+   dos instancias desde el ALB.
+5. Restablece los [routers](environments/aws-azure-tailscale) y el
+   [DNS privado](cloudformation/rebuild-private-wms-dns.sh) y
+   verifica la ruta HTTPS desde cada EC2. Usa un solo propietario para las
+   pilas auxiliares, Terraform o los lanzadores directos de CloudFormation.
+6. Conecta la copia diaria y las autorizaciones de Blob. Registra un pedido
+   sintético y comprueba su identificador en Queue, Blob e Insights. Restaura
+   una copia en un PostgreSQL aislado antes de dar por cerrada la recuperación.
+
+La prueba aislada disponible cubre red/S3 y una simulación de escalado.
+El ciclo completo entre nubes desde cuentas vacías sigue pendiente.
+
 ### Repetir el respaldo manual de PostgreSQL
 
 1. Verifica la sesión AWS de la cuenta y el inicio Azure de la suscripción del

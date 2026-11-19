@@ -3,16 +3,17 @@
 **Proyecto:** Diseño e implementación de un centro de datos cloud empresarial para Tangamandapio S.A.C.  
 **Alumno:** Jose Dario Zuñiga Medina — 202310610  
 **Docente:** Fernando Manuel Asin Gomez  
-**Corte operativo vigente:** 16/11/2026, 18:12 UTC — AWS/Azure reconsultados; portal y escala probados, con brechas abiertas
+**Ciclo:** 8
+
+**Corte operativo vigente:** 19/11/2026 — portal, flujo privado y recuperación verificados
 
 El estado comprobado de AWS/Azure, las pruebas y las acciones pendientes se
-mantienen en [ESTADO_REAL_2026-11-16](../iac/ESTADO_REAL_2026-11-16.md). Los
-cortes fechados desde el 16/10 en adelante son antecedentes; no deben usarse
-como inventario actual. Al último corte, AWS tiene la pila activa, dos
-instancias/destinos sanos y deriva `IN_SYNC`; el test largo de 300.000
-solicitudes registró 1,47% de error. La ruta privada AWS→Azure, el backup
-PostgreSQL→Blob, la entrega de alertas por correo y el TLS de origen continúan
-pendientes.
+mantienen en el [registro del 19/11](../iac/ESTADO_REAL_2026-11-19.md).
+Se comprobó un pedido privado con seguimiento por rol, la restauración aislada
+de la copia diaria cifrada, el cambio al router de respaldo y el HTTPS del
+portal. La entrega de avisos llegó a Gmail. La meta de recuperación de 3 s, la
+medición del RPO, la recuperación regional y la carga larga siguen abiertas.
+Para la defensa quedan las fotos y la conformidad del docente para AWS–Azure.
 
 La reconsulta de las 18:12 UTC está respaldada por
 [`evidence/current/CLOUD-RECHECK-2026-11-16-1812.json`](../evidence/current/CLOUD-RECHECK-2026-11-16-1812.json).

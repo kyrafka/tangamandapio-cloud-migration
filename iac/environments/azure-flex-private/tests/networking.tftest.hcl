@@ -61,9 +61,9 @@ run "plans_private_by_default_with_required_networking" {
   override_data {
     target = data.azurerm_storage_account.operations
     values = {
-      id                    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-tangamandapio-rebuild-wus/providers/Microsoft.Storage/storageAccounts/sttangama261008r"
-      name                  = "sttangama261008r"
-      primary_blob_endpoint = "https://sttangama261008r.blob.core.windows.net/"
+      id                    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-tangamandapio-rebuild-wus/providers/Microsoft.Storage/storageAccounts/sttangama261030r"
+      name                  = "sttangama261030r"
+      primary_blob_endpoint = "https://sttangama261030r.blob.core.windows.net/"
     }
   }
 
@@ -101,8 +101,13 @@ run "plans_private_by_default_with_required_networking" {
   }
 
   assert {
-    condition     = startswith(azurerm_function_app_flex_consumption.wms.storage_container_endpoint, "https://sttangama261008r.blob.core.windows.net/")
+    condition     = output.function_deployment_container_endpoint == "https://sttangama261030r.blob.core.windows.net/function-flex-deployments"
     error_message = "Flex requiere el endpoint HTTPS del contenedor de paquetes, no un ID ARM."
+  }
+
+  assert {
+    condition     = output.wms_queue_status_url == "https://tangama-flex-261104.azurewebsites.net/api/wms/queue-status" && output.fulfillment_event_url == "https://tangama-flex-261104.azurewebsites.net/api/fulfillment/events"
+    error_message = "La integración privada debe usar el hostname Azure de la Function para TLS y las rutas WMS vigentes."
   }
 
   assert {

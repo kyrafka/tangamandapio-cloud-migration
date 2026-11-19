@@ -2,35 +2,44 @@
 
 Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
 
-## Estado operativo vigente — 16/11/2026
+## Estado operativo vigente — 19/11/2026
 
-El portal responde HTTP 200. En AWS `us-east-2`, CloudFormation administra la
-pila activa; el ASG permite de 2 a 5 instancias y cerró en 2/2 saludables. La
-prueba automática real escaló 2→4→5 y descendió 5→4→3→2. Una carga larga de
-300.000 solicitudes tuvo 1,47% de errores y no pasó el umbral de 1%; una
-comprobación corta de 3.000 solicitudes GET terminó sin errores. Esto no
-demuestra capacidad para 3.000 usuarios.
+El portal público funciona por HTTPS. En AWS Ohio, el ASG mantiene dos destinos
+sanos en dos zonas y permite escalar hasta cinco. AWS usa un NAT Gateway
+compartido. Azure West US opera sin NAT Gateway.
 
-Azure conserva Function Flex privada, Queue, Blob, Application Insights y dos
-routers Tailscale en West US. **Aún falta la ruta privada desde AWS**, el
-respaldo automático de PostgreSQL a Blob, una restauración reciente aislada,
-la confirmación del correo SNS y la validación TLS del dominio. La evidencia y
-las acciones manuales concretas están en
-[estado real del 16/11](iac/ESTADO_REAL_2026-11-16.md) y la
-[matriz de rúbrica](core/04_matriz_rubrica.md). El proyecto no está cerrado
-hasta completar esos pasos.
+Un pedido sintético recorrió **pendiente → en cola → procesado** por la VPN
+privada AWS–Azure. El evento se verificó en Function, Queue, Blob y Application
+Insights. El portal muestra el avance según el rol. Operaciones y Administración
+pueden consultar las colas y reintentar envíos.
+
+La copia diaria cifrada de PostgreSQL se restauró de forma aislada en **35,108 s**.
+El cambio al router de respaldo y el retorno se probaron, con recuperaciones
+HTTPS entre 4,59 y 9,92 s en los dos ensayos ajustados. RDS sigue en una zona,
+con un día de retención administrada. La última carga sostuvo 25 usuarios
+virtuales y completó 3.013 solicitudes sin errores, con p95 de 190 ms.
+
+[Estado real y evidencias](iac/ESTADO_REAL_2026-11-19.md) ·
+[Matriz de rúbrica](core/04_matriz_rubrica.md) ·
+[Seguimiento y permisos](app/aws_release/PLATFORM_CONSOLE.md#seguimiento-de-pedidos-por-rol)
 
 ## Uso e infraestructura
 
-El portal y el WMS se despliegan por separado. AWS usa CloudFormation; Azure usa varias raíces Terraform. Las sesiones de AWS Academy caducan: antes de operar, inicia el laboratorio y verifica la cuenta con `aws sts get-caller-identity`. Para Azure, inicia sesión con `az login` y verifica la suscripción con `az account show`. Nunca incluyas credenciales, tokens, archivos de estado o planes en el repositorio.
+El portal y el WMS se despliegan por separado. Antes de operar, verifica
+la cuenta AWS con `aws sts get-caller-identity` y la suscripción Azure con
+`az account show`. Guarda las credenciales, el estado y los planes fuera de Git.
 
 Para preparar el entorno AWS, revisa primero [la guía de CloudFormation](iac/cloudformation/README.md). `iac/cloudformation/lifecycle.sh up` requiere cuenta y nombre de stack explícitos, los datos de la Function y su secreto ya provisionado; HTTPS necesita el certificado y el dominio. Una base nueva exige aceptación expresa y solo recrea datos sintéticos. El script solicita confirmación y genera recursos facturables.
 
-En Azure, configura una copia local de `iac/environments/azure-rebuild/rebuild.tfvars.example` y consulta [la guía de Azure](iac/environments/azure-rebuild/README.md). El lanzador PowerShell `lifecycle.ps1 up -ExpectedSubscriptionId <GUID>` revisa la suscripción, crea el paquete de la Function y presenta el plan antes de pedir confirmación. La VPN, la red privada y otras raíces se administran por separado.
+En Azure, [la raíz de servicios base](iac/environments/azure-rebuild/README.md)
+prepara Storage, Queue e Insights. [Azure Flex privada](iac/environments/azure-flex-private/README.md)
+define el WMS activo y publica su ZIP mediante ARM OneDeploy. Revisa también
+el [orden de reconstrucción](iac/README.md#orden-de-reconstrucción) para la red,
+la VPN, los secretos y el respaldo.
 
 **Borrado y reconstrucción integral: pendientes.** No se ha probado un ciclo completo entre ambas nubes desde cero, ni hay un solo comando que restaure todos los datos, secretos, DNS y VPN. Terraform protege contra destrucción el almacenamiento y el Key Vault usados para recuperación; el comando general de destrucción de Azure se detendrá hasta resolver su conservación. AWS puede eliminar datos y snapshots según las opciones elegidas: revisa el alcance y los respaldos antes de ejecutar cualquier borrado. No ejecutes los comandos destructivos únicamente para comprobarlos.
 
-El 05/11/2026 se guardó una copia manual cifrada de PostgreSQL en Azure Blob y se restauró en un entorno aislado, con 20 tablas y sus conteos verificados. **El envío automático sigue pendiente**; la clave y la copia necesitan conservarse independientemente del entorno de aplicación. Los registros fechados que siguen son históricos y no sustituyen una comprobación actual.
+Los registros que siguen corresponden a despliegues anteriores.
 
 ## Revalidación AWS–Azure — 03/11/2026, posterior a las 19:53 UTC
 
@@ -62,6 +71,8 @@ El portal reúne funciones B2B para distribuidores y módulos ERP para equipos i
 
 ## Documentación principal
 
+- [Entregable final — plantilla académica](deliverables/Proyecto_Final_Tangamandapio_2026-11-19.docx)
+- [Manual técnico](deliverables/Manual_Tecnico_Tangamandapio_2026-11-19.docx)
 - [Infraestructura y estado de AWS/Azure](iac/README.md)
 - [CloudFormation de AWS: despliegue y recuperación](iac/cloudformation/README.md)
 - [Terraform: entornos y módulos](iac/)
