@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "deliverables"
 TEMPLATE = Path(r"C:\Users\Diego\Downloads\plantilla_proyecto_cloud_z3lbe8bgxs (5).docx")
 EXPECTED_TEMPLATE_SHA256 = "e9adfcf1cf72be760c4f70a1aecc2d5a9833b5cde3d83dd6476543460a6cddce"
-REPORT = OUT / "Proyecto_Final_Tangamandapio_2026-11-16.docx"
-MANUAL = OUT / "Manual_Tecnico_Tangamandapio_2026-11-16.docx"
+REPORT = OUT / "Proyecto_Final_Tangamandapio_2026-11-19.docx"
+MANUAL = OUT / "Manual_Tecnico_Tangamandapio_2026-11-19.docx"
 
 
 def set_paragraph(paragraph, value: str) -> None:
@@ -55,6 +55,29 @@ def set_update_fields(document) -> None:
     existing.set(qn("w:val"), "true")
 
 
+def insert_current_verification(document, before_text: str) -> None:
+    """Keep the original design sections and lead with the current measurements."""
+    following = next(p for p in document.paragraphs if p.text == before_text)
+    heading = document.add_paragraph("Verificación operativa del 19 de noviembre de 2026")
+    heading.style = following.style
+    following._p.addprevious(heading._p)
+    for lead, body in (
+        ("Portal y permisos. ", "Se recuperó el administrador y se corrigió el destino DNS del portal. Hubo 32 lecturas HTTP 200, 42 comprobaciones de acceso del portal y 48 comprobaciones del ERP. El correo interno llegó y se marcó como leído."),
+        ("Pedido privado. ", "Las dos EC2 de aplicación llegaron a la Function en 10.20.1.4 con TLS verificado. Un pedido ficticio se procesó en Function y Queue. Azure conservó y cifró ambos objetos en Blob. Application Insights permitió seguir el mismo identificador de evento."),
+        ("Conmutación. ", "El respaldo AWS tomó la ruta en 4,598 s. Los dos clientes recibieron HTTP 200 en 4,68 y 5,57 s. El principal recuperó la ruta automáticamente. Gmail recibió ambos avisos y el aviso de prueba de Azure Monitor."),
+        ("Recuperación. ", "Systems Manager programa un respaldo cifrado diario a las 03:00 de Lima. La restauración de la copia actual en PostgreSQL aislado recuperó 20 tablas, un pedido y un evento en 35,108 s. La autorización de Blob debe renovarse al vencimiento."),
+        ("Telefonía. ", "Dos clientes locales intercambiaron audio WebRTC sintético en ambos sentidos. Falta validar el audio entre redes restrictivas. TURN aún no está configurado."),
+        ("Costos y defensa. ", "AWS reportó USD 150,59 de crédito restante. Azure registró USD 8,50 en el mes frente al presupuesto de USD 25. RDS permanece en Single-AZ. Queda medir RPO, demostrar recuperación regional y presentar las fotos y la constancia docente para AWS–Azure."),
+    ):
+        paragraph = document.add_paragraph()
+        paragraph.add_run(lead).bold = True
+        paragraph.add_run(body)
+        following._p.addprevious(paragraph._p)
+    sources = document.add_paragraph("Las secciones siguientes conservan el diseño y el inventario de referencia del 16/11. El registro iac/ESTADO_REAL_2026-11-19.md enlaza la evidencia vigente y la matriz de la rúbrica.")
+    following._p.addprevious(sources._p)
+    following.paragraph_format.page_break_before = True
+
+
 PARAGRAPHS = {
     1: "Universidad Peruana Unión",
     2: "Facultad de Ingeniería y Arquitectura · Escuela Profesional de Ingeniería de Sistemas",
@@ -63,8 +86,8 @@ PARAGRAPHS = {
     7: "INTEGRANTES: Jose Dario Zuñiga Medina",
     8: "DOCENTE: Fernando Manuel Asin Gomez",
     9: "CICLO ACADÉMICO: 8",
-    10: "FECHA: 16 de noviembre de 2026 · versión técnica de trabajo",
-    12: "Informe técnico basado en el despliegue y las pruebas verificadas al 16/11/2026. El equipo incorporará posteriormente fotografías y capturas de la demostración final; no se sustituyen por evidencias inventadas.",
+    10: "FECHA: 19 de noviembre de 2026 · versión técnica de trabajo",
+    12: "Informe técnico basado en el despliegue y las pruebas verificadas al 19/11/2026. El equipo incorporará fotografías y capturas de la demostración final.",
     15: "El índice se actualiza al abrir este archivo en Microsoft Word: Referencias → Actualizar tabla → Actualizar toda la tabla.",
     18: "Este proyecto modela una distribuidora ficticia con una operación de ventas, compras e inventario que requiere un portal B2B y un WMS integrado.",
     19: "La infraestructura desplegada combina componentes IaaS y PaaS. Se separa el estado observado del diseño deseado y de las pruebas aún pendientes.",
@@ -438,7 +461,7 @@ REPORT_TABLES = {
     25: [["EVIDENCIA · Para cada afirmación se cita la fecha, el archivo y el resultado observado. Los elementos sin registro reciente se marcan como pendientes; no se sustituyen con capturas antiguas ni resultados de laboratorio."]],
     26: [["REFERENCIAS · Se usa un formato autor-fecha simplificado con documentación oficial del proveedor y rutas a evidencia del repositorio. Completar las referencias del curso y los datos bibliográficos exigidos por el docente antes de entregar."]],
     27: [["Proyecto_Final_Tangamandapio/\n├── deliverables/\n│   ├── Proyecto_Final_Tangamandapio_2026-11-16.docx\n│   └── Manual_Tecnico_Tangamandapio_2026-11-16.docx\n├── iac/\n│   ├── cloudformation/ · aws-lab.yaml\n│   ├── environments/ · Terraform por proveedor\n│   ├── architecture/ · SVG y Draw.io actualizados\n│   └── scripts/ · operación y recuperación\n├── evidence/current/ · JSON fechado AWS/Azure\n└── core/ · bitácora y matriz de rúbrica\nNo almacenar claves, tokens ni valores de secretos en el repositorio."]],
-    28: [["ABIERTAS PARA CERRAR EL PROYECTO\n1. DNS/TLS: publicar el ACM ISSUED y listener 443 ya están desplegados; revalidar el portal HTTPS y guardar evidencia.\n2. Alertas: Gmail está confirmado; revisar las dos suscripciones UPeU pendientes y recibir una alarma controlada.\n3. VPN: crear dos claves Tailscale de un solo uso y guardarlas directamente como secretos aws-pilot y aws-backup; desplegar y enrolar los routers AWS.\n4. Pedido privado: agregar ruta y DNS; enviar un evento sintético y correlacionarlo en Function, Queue, Blob e Insights.\n5. Recuperación: programar dump cifrado hacia Blob y restaurar una copia actual en entorno aislado; medir RPO/RTO.\n6. Resiliencia: probar caída/conmutación, medir RTO real e investigar el 1,47% de errores de carga antes de repetirla.\n7. Rúbrica: adjuntar aprobación escrita para AWS–Azure en lugar de OCI, o implementar OCI si el docente no la acepta.\n8. Entrega: revisar saldo/costo final y insertar fotos autorizadas y completar la defensa; integrante, docente y ciclo ya están en el informe."]],
+    28: [["PENDIENTES PARA LA DEFENSA\n1. Adjuntar la constancia docente para AWS–Azure y las fotografías autorizadas.\n2. Medir RPO, verificar recuperación regional y repetir la carga sostenida con registros.\n3. Confirmar recepción en UPeU y verificar WebRTC entre redes restrictivas.\n4. Renovar a tiempo la autorización de respaldo y revisar el consumo antes de la defensa."]],
 }
 
 
@@ -466,6 +489,7 @@ def create_report() -> None:
     for paragraph in document.paragraphs:
         if paragraph.text == "22.6 Pruebas de monitoreo":
             paragraph.paragraph_format.keep_with_next = True
+    insert_current_verification(document, "2. Resumen ejecutivo")
     document.save(REPORT)
 
 
@@ -506,7 +530,7 @@ def configure_manual(document) -> None:
         style.paragraph_format.space_after = Pt(4)
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    header.add_run("TANGAMANDAPIO · MANUAL TÉCNICO · 16/11/2026").font.size = Pt(8)
+    header.add_run("TANGAMANDAPIO · MANUAL TÉCNICO · 19/11/2026").font.size = Pt(8)
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
     footer.add_run("Estado de trabajo · no contiene secretos · página ").font.size = Pt(8)
@@ -564,7 +588,7 @@ def create_manual() -> None:
     run.font.color.rgb = RGBColor(21, 61, 91)
     p = document.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run("AWS us-east-2 · Azure West US · corte 16 de noviembre de 2026").font.size = Pt(14)
+    p.add_run("AWS us-east-2 · Azure West US · validación del 19 de noviembre de 2026").font.size = Pt(14)
     p = document.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(30)
@@ -695,6 +719,7 @@ def create_manual() -> None:
     document.core_properties.subject = "Runbook de arquitectura, observabilidad, backup y cierre"
     document.core_properties.author = "Jose Dario Zuñiga Medina"
     set_update_fields(document)
+    insert_current_verification(document, "0. Cómo leer este manual")
     document.save(MANUAL)
 
 

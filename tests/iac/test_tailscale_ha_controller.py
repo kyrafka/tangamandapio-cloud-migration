@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 from threading import Barrier
 import unittest
+from unittest.mock import Mock, patch
 
 
 PATH = Path(__file__).resolve().parents[2] / "iac/scripts/tailscale_ha_controller.py"
@@ -14,6 +15,25 @@ spec.loader.exec_module(controller)
 
 
 class TailscaleHaDecisionTests(unittest.TestCase):
+    def test_continuous_checks_reuse_reads_but_replacement_checks_the_latest_route(self):
+        config = controller.Config("us-east-2", "rtb-0123456789abcdef0", "10.20.1.4/32",
+                                   "eni-0123456789abcdef0", "eni-abcdef0123456789", "10.10.10.149",
+                                   "tangama-flex-261104.azurewebsites.net")
+        match = {"DestinationCidrBlock": config.destination, "State": "active", "NetworkInterfaceId": config.primary_eni}
+        ec2 = Mock()
+        ec2.describe_route_tables.side_effect = [
+            {"RouteTables": [{"Routes": [match]}]},
+            {"RouteTables": [{"Routes": []}]},
+        ]
+        cloud = controller.AWSRouteControl(config, ec2, Mock())
+        self.assertEqual(cloud.current_route(cached=True), "primary")
+        self.assertEqual(cloud.current_route(cached=True), "primary")
+        ec2.describe_route_tables.assert_called_once()
+        with patch.object(controller, "probe", return_value="healthy"):
+            with self.assertRaisesRegex(RuntimeError, "route changed"):
+                cloud.switch("backup")
+        ec2.replace_route.assert_not_called()
+
     def test_router_health_probes_run_concurrently(self):
         barrier = Barrier(2)
 
@@ -66,15 +86,29 @@ class TailscaleHaDecisionTests(unittest.TestCase):
         table["Routes"].append(dict(table["Routes"][0]))
         self.assertEqual(controller.classify_route(table, "10.20.1.4/32", "eni-primary", "eni-backup"), "other")
 
-    def test_controller_configuration_restricts_destination_and_subprocess_arguments(self):
+    def test_controller_configuration_restricts_the_private_destination(self):
         config = controller.Config("us-east-2", "rtb-0123456789abcdef0", "10.20.1.4/32",
                                    "eni-0123456789abcdef0", "eni-abcdef0123456789", "10.10.10.149",
                                    "tangama-flex-261104.azurewebsites.net", "arn:aws:sns:us-east-2:123456789012:alarms")
         self.assertEqual(config.destination, "10.20.1.4/32")
-        self.assertIn("--network-interface-id", controller.replace_route_argv(config, "backup"))
         with self.assertRaises(ValueError):
             controller.Config("us-east-2", "rtb-invalid", "0.0.0.0/0", "eni-123", "eni-456",
                               "10.10.10.149", "bad.azurewebsites.net", "")
+
+
+    def test_standby_must_pass_a_fresh_https_check_before_replacing_the_route(self):
+        config = controller.Config("us-east-2", "rtb-0123456789abcdef0", "10.20.1.4/32",
+                                   "eni-0123456789abcdef0", "eni-abcdef0123456789", "10.10.10.149",
+                                   "tangama-flex-261104.azurewebsites.net")
+        ec2, sns = Mock(), Mock()
+        ec2.describe_route_tables.return_value = {"RouteTables": [{"Routes": [
+            {"DestinationCidrBlock": config.destination, "State": "active", "NetworkInterfaceId": config.primary_eni}
+        ]}]}
+        cloud = controller.AWSRouteControl(config, ec2, sns)
+        with patch.object(controller, "probe", return_value="unhealthy"):
+            with self.assertRaisesRegex(RuntimeError, "fresh HTTPS"):
+                cloud.switch("backup")
+        ec2.replace_route.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ Resources:
           - No añadir SSH ni entrada desde Internet.
           - Mantener la sonda 9797 limitada a miembros del mismo grupo.
     Properties:
-      GroupDescription: Tráfico reenviado al WMS privado y salud entre routers; sin entrada pública.
+      GroupDescription: Private WMS forwarding and router health. No public ingress.
       VpcId: !Ref VpcId
       SecurityGroupEgress:
         - IpProtocol: '-1'
@@ -109,7 +109,7 @@ Resources:
       FromPort: 443
       ToPort: 443
       CidrIp: !Ref AppCidr
-      Description: HTTPS reenviado desde las EC2 de aplicación.
+      Description: HTTPS forwarding from application instances.
 
   RouterPeerHealthIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -132,7 +132,7 @@ Resources:
           - No conceder permisos para crear o modificar redes, instancias, grupos de seguridad o bases de datos.
     Properties:
       RoleName: !Sub '${ProjectName}-vpn-router-role'
-      Description: Rol mínimo para enrolar y conmutar el par privado Tailscale.
+      Description: Scoped role for Tailscale enrollment and private route failover.
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -184,6 +184,22 @@ Resources:
       InstanceProfileName: !Sub '${ProjectName}-vpn-router-profile'
       Roles: [!Ref RouterInstanceRole]
 
+  PrimaryRouterInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: Primary private WMS router interface.
+      SubnetId: !Ref AppSubnetA
+      GroupSet: [!Ref RouterSecurityGroup]
+      SourceDestCheck: false
+
+  BackupRouterInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      Description: Backup private WMS router interface.
+      SubnetId: !Ref AppSubnetB
+      GroupSet: [!Ref RouterSecurityGroup]
+      SourceDestCheck: false
+
   PrimaryRouter:
     Type: AWS::EC2::Instance
     Metadata:
@@ -196,10 +212,11 @@ Resources:
     Properties:
       ImageId: !Ref AmazonLinuxAmiId
       InstanceType: !Ref InstanceType
+      CreditSpecification: {CPUCredits: standard}
       IamInstanceProfile: !Ref RouterInstanceProfile
-      SubnetId: !Ref AppSubnetA
-      SecurityGroupIds: [!Ref RouterSecurityGroup]
-      SourceDestCheck: false
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          NetworkInterfaceId: !Ref PrimaryRouterInterface
       MetadataOptions:
         HttpEndpoint: enabled
         HttpTokens: required
@@ -243,10 +260,11 @@ Resources:
     Properties:
       ImageId: !Ref AmazonLinuxAmiId
       InstanceType: !Ref InstanceType
+      CreditSpecification: {CPUCredits: standard}
       IamInstanceProfile: !Ref RouterInstanceProfile
-      SubnetId: !Ref AppSubnetB
-      SecurityGroupIds: [!Ref RouterSecurityGroup]
-      SourceDestCheck: false
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          NetworkInterfaceId: !Ref BackupRouterInterface
       MetadataOptions:
         HttpEndpoint: enabled
         HttpTokens: required
@@ -274,7 +292,7 @@ Resources:
           printf '%s  %s\n' '${RouterArtifactSha256}' /tmp/tangamandapio-router.tar.gz | sha256sum -c -
           tar -xzf /tmp/tangamandapio-router.tar.gz -C /opt/tangamandapio-router
           rm -f /tmp/tangamandapio-router.tar.gz
-          bash /opt/tangamandapio-router/bootstrap_tailscale_router.sh backup ${AWS::Region} '${BackupAuthKeySecretName}' tangamandapio-aws-backup '${AppRouteTableId}' '${PrimaryRouter.PrimaryNetworkInterfaceId}' '${PrimaryRouter.PrivateIp}' 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AlarmTopicName}'
+          bash /opt/tangamandapio-router/bootstrap_tailscale_router.sh backup ${AWS::Region} '${BackupAuthKeySecretName}' tangamandapio-aws-backup '${AppRouteTableId}' '${PrimaryRouterInterface}' '${PrimaryRouterInterface.PrimaryPrivateIpAddress}' 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${AlarmTopicName}'
 
   PrivateWmsRoute:
     Type: AWS::EC2::Route
@@ -290,7 +308,7 @@ Resources:
     Properties:
       RouteTableId: !Ref AppRouteTableId
       DestinationCidrBlock: 10.20.1.4/32
-      NetworkInterfaceId: !GetAtt PrimaryRouter.PrimaryNetworkInterfaceId
+      NetworkInterfaceId: !Ref PrimaryRouterInterface
 
   PrivateWmsHostedZone:
     Type: AWS::Route53::HostedZone
@@ -322,6 +340,10 @@ Outputs:
   BackupRouterInstanceId:
     Description: EC2 privada de respaldo y control de conmutación.
     Value: !Ref BackupRouter
+  PrimaryRouterInterfaceId:
+    Value: !Ref PrimaryRouterInterface
+  BackupRouterInterfaceId:
+    Value: !Ref BackupRouterInterface
   PrimaryRouterPrivateIp:
     Value: !GetAtt PrimaryRouter.PrivateIp
   BackupRouterPrivateIp:

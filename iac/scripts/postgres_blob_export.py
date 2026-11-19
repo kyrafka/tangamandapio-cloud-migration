@@ -1,7 +1,7 @@
 """Export the application PostgreSQL database to a new encrypted Azure blob.
 
 Run as root via SSM on an application host with PostgreSQL 18 client tools.
-An operator supplies a short-lived, create-only blob URL in Parameter Store.
+The application host reads create-only Blob authorization from Parameter Store.
 """
 
 import argparse
@@ -14,11 +14,9 @@ import re
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
-from urllib.parse import parse_qs, urlsplit
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
-
-from postgres_backup_crypto import MAX_ARCHIVE_BYTES, seal
-
 
 class RefuseRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -54,7 +52,28 @@ def source_environment(region, root_certificate):
     }
 
 
+def authorized_blob_url(sas, host, container, object_name, scheduled):
+    destination = urlsplit(sas)
+    query = parse_qs(destination.query)
+    container_path = f"/{container}"
+    object_path = f"{container_path}/{object_name}"
+    if scheduled and not re.fullmatch(r"postgres/\d{8}-daily\.json", object_name):
+        raise ValueError("Invalid scheduled backup object")
+    expected_path = container_path if scheduled else object_path
+    if (destination.scheme, destination.netloc, destination.path, query.get("sp")) != (
+        "https", host, expected_path, ["c"]
+    ) or destination.fragment:
+        raise ValueError("Storage URL does not match the designated create-only backup destination")
+    if scheduled and (query.get("sr") != ["c"] or query.get("spr") != ["https"] or not query.get("sig")):
+        raise ValueError("Scheduled authorization must be a create-only HTTPS SAS for the container")
+    return urlunsplit(("https", host, object_path, destination.query, ""))
+
+
 def export(args):
+    from postgres_backup_crypto import MAX_ARCHIVE_BYTES, seal
+
+    sas = aws_text(args.region, ["ssm", "get-parameter", "--name", args.parameter, "--with-decryption", "--query", "Parameter.Value"])
+    url = authorized_blob_url(sas, args.blob_host, args.container, args.object, args.scheduled_container_sas)
     started = datetime.now(timezone.utc)
     with TemporaryDirectory(prefix="tangama-export-", dir="/dev/shm") as directory:
         work = Path(directory)
@@ -69,23 +88,22 @@ def export(args):
         data = archive.read_bytes()
         dump_sha = hashlib.sha256(data).hexdigest()
         envelope = seal(data, args.public_key.read_bytes(), args.key_id)
-    sas = aws_text(args.region, ["ssm", "get-parameter", "--name", args.parameter, "--with-decryption", "--query", "Parameter.Value"])
-    dest = urlsplit(sas)
-    permissions = parse_qs(dest.query).get("sp", [])
-    if (dest.scheme, dest.netloc, dest.path, permissions) != (
-        "https", args.blob_host, f"/{args.container}/{args.object}", ["c"]
-    ) or dest.fragment:
-        raise RuntimeError("Storage URL does not match the designated create-only object")
-    request = Request(sas, data=envelope, method="PUT", headers={
+    request = Request(url, data=envelope, method="PUT", headers={
         "x-ms-blob-type": "BlockBlob", "If-None-Match": "*", "Content-Type": "application/json",
         "x-ms-meta-archive_sha256": dump_sha, "x-ms-meta-created_utc": started.isoformat(),
     })
-    with build_opener(RefuseRedirect()).open(request, timeout=60) as response:
-        if response.status != 201:
-            raise RuntimeError("Unexpected upload response")
-        return {"object": args.object, "source_started_utc": started.isoformat(),
-                "archive_sha256": dump_sha, "cipher_sha256": hashlib.sha256(envelope).hexdigest(),
-                "archive_bytes": len(data), "upload_http": response.status}
+    try:
+        with build_opener(RefuseRedirect()).open(request, timeout=60) as response:
+            if response.status != 201:
+                raise RuntimeError("Unexpected upload response")
+            return {"object": args.object, "source_started_utc": started.isoformat(),
+                    "archive_sha256": dump_sha, "cipher_sha256": hashlib.sha256(envelope).hexdigest(),
+                    "archive_bytes": len(data), "upload_http": response.status}
+    except HTTPError as error:
+        code = error.headers.get("x-ms-error-code")
+        if args.scheduled_container_sas and (error.code, code) in {(409, "BlobAlreadyExists"), (412, "ConditionNotMet")}:
+            return {"object": args.object, "status": "already_created", "upload_http": error.code}
+        raise
 
 
 def main():
@@ -93,6 +111,7 @@ def main():
     for name in ("region", "parameter", "blob-host", "container", "object", "key-id"):
         parser.add_argument(f"--{name}", required=True)
     parser.add_argument("--public-key", type=Path, required=True)
+    parser.add_argument("--scheduled-container-sas", action="store_true")
     args = parser.parse_args()
     try:
         print(json.dumps(export(args)))

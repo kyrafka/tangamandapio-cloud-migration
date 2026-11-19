@@ -34,7 +34,11 @@ class TailscaleHaTemplateTests(unittest.TestCase):
         self.assertEqual(len(instances), 2)
         for resource in instances:
             props = resource["Properties"]
-            self.assertFalse(props["SourceDestCheck"])
+            attachment = props["NetworkInterfaces"][0]
+            self.assertEqual(attachment["DeviceIndex"], "0")
+            interface = self.resources[attachment["NetworkInterfaceId"]["Fn::Ref"]]
+            self.assertEqual(interface["Type"], "AWS::EC2::NetworkInterface")
+            self.assertFalse(interface["Properties"]["SourceDestCheck"])
             metadata = props["MetadataOptions"]
             self.assertEqual(metadata["HttpTokens"], "required")
             self.assertNotIn("AssociatePublicIpAddress", props)
@@ -66,7 +70,10 @@ class TailscaleHaTemplateTests(unittest.TestCase):
         route = route_resources[0]
         self.assertEqual(route["Condition"], "EnablePrivateWmsRoute")
         self.assertEqual(route["Properties"]["DestinationCidrBlock"], "10.20.1.4/32")
-        self.assertEqual(route["Properties"]["NetworkInterfaceId"], {"Fn::GetAtt": "PrimaryRouter.PrimaryNetworkInterfaceId"})
+        self.assertEqual(route["Properties"]["NetworkInterfaceId"], {"Fn::Ref": "PrimaryRouterInterface"})
+        self.assertEqual(self.resources["PrimaryRouter"]["Properties"]["NetworkInterfaces"][0]["NetworkInterfaceId"],
+                         {"Fn::Ref": "PrimaryRouterInterface"})
+        self.assertIn("${PrimaryRouterInterface}", self.resources["BackupRouter"]["Properties"]["UserData"]["Fn::Base64"]["Fn::Sub"])
         condition = self.template["Conditions"]["EnablePrivateWmsRoute"]
         self.assertEqual(condition, {"Fn::Equals": [{"Fn::Ref": "EnablePrivateWmsRoute"}, "true"]})
         self.assertEqual(self.template["Parameters"]["EnablePrivateWmsRoute"]["Default"], "false")

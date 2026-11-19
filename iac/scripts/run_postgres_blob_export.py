@@ -47,7 +47,8 @@ def azure(*args):
 
 
 def aws(profile):
-    data = json.loads(command(["aws", "configure", "export-credentials", "--profile", profile, "--format", "process"]))
+    data = json.loads(command(["aws", "configure", "export-credentials", "--profile", profile,
+                               "--region", REGION, "--format", "process"]))
     session = botocore.session.get_session()
     session.set_credentials(data["AccessKeyId"], data["SecretAccessKey"], data.get("SessionToken"))
     if session.create_client("sts", region_name=REGION).get_caller_identity()["Account"] != ACCOUNT_ID:

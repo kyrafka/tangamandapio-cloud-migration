@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Daily encrypted Tangamandapio PostgreSQL export to the Azure backup container.
+
+Parameters:
+  ApplicationRoleName:
+    Type: String
+    Default: tangamandapio-app-role
+  ApplicationGroupName:
+    Type: String
+    Default: tangamandapio-asg
+  ArtifactsBucket:
+    Type: String
+  BackupArtifactKey:
+    Type: String
+    AllowedPattern: 'releases/tangamandapio/postgres-blob-[0-9a-f]{64}\.tar\.gz'
+  BackupArtifactSha256:
+    Type: String
+    AllowedPattern: '[0-9a-f]{64}'
+  AzureWrappingKeyId:
+    Type: String
+    AllowedPattern: 'https://[a-z0-9-]+\.vault\.azure\.net/keys/[a-z0-9-]+/[0-9a-f]{32}'
+  BlobAuthorizationParameter:
+    Type: String
+    Default: /tangamandapio/dr/blob-write/scheduled-demo
+    AllowedPattern: '/tangamandapio/dr/blob-write/scheduled-demo'
+
+Resources:
+  BackupRuntimePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: tangamandapio-scheduled-blob-backup
+      Roles: [!Ref ApplicationRoleName]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ExactBackupArtifact
+            Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactsBucket}/${BackupArtifactKey}'
+          - Sid: WriteBackupManifests
+            Effect: Allow
+            Action: [s3:GetObject, s3:PutObject]
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactsBucket}/dr/postgres/manifests/*'
+          - Sid: FindDailyManifests
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub 'arn:${AWS::Partition}:s3:::${ArtifactsBucket}'
+            Condition:
+              StringLike:
+                s3:prefix: dr/postgres/manifests/*
+          - Sid: ExactBlobAuthorization
+            Effect: Allow
+            Action: ssm:GetParameter
+            Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${BlobAuthorizationParameter}'
+
+  BackupDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      Name: tangamandapio-postgres-to-azure-blob
+      DocumentType: Command
+      DocumentFormat: YAML
+      UpdateMethod: NewVersion
+      Content:
+        schemaVersion: '2.2'
+        description: Export one daily encrypted copy to the designated Azure Blob container.
+        mainSteps:
+          - action: aws:runShellScript
+            name: EncryptedPostgresBackup
+            inputs:
+              timeoutSeconds: '270'
+              runCommand:
+                - !Sub |
+                    set -eu
+                    umask 077
+                    work=$(mktemp -d /dev/shm/tangama-scheduled-backup.XXXXXXXX)
+                    trap 'rm -f "$work/payload.tar.gz" "$work/postgres_blob_export.py" "$work/postgres_backup_crypto.py" "$work/public.pem" "$work/daily.json"; rmdir "$work"' EXIT
+                    export PYTHONDONTWRITEBYTECODE=1
+                    day=$(date -u +%Y%m%d)
+                    manifest="dr/postgres/manifests/$day.json"
+                    count=$(aws s3api list-objects-v2 --region '${AWS::Region}' --bucket '${ArtifactsBucket}' --prefix "$manifest" --max-keys 1 --query KeyCount --output text)
+                    if [ "$count" = 1 ]; then
+                      aws s3api get-object --region '${AWS::Region}' --bucket '${ArtifactsBucket}' --key "$manifest" "$work/daily.json" >/dev/null
+                      python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["upload_http"] == 201 and p["object"] == "postgres/"+sys.argv[2]+"-daily.json"; print(json.dumps({"object":p["object"],"status":"already_verified"}))' "$work/daily.json" "$day"
+                      exit 0
+                    fi
+                    aws s3 cp --only-show-errors --region ${AWS::Region} 's3://${ArtifactsBucket}/${BackupArtifactKey}' "$work/payload.tar.gz"
+                    printf '%s  %s\n' '${BackupArtifactSha256}' "$work/payload.tar.gz" | sha256sum -c -
+                    tar -xzf "$work/payload.tar.gz" -C "$work"
+                    command -v pg_dump >/dev/null || dnf -q install -y postgresql18
+                    python3 -c 'import cryptography' 2>/dev/null || dnf -q install -y python3-cryptography
+                    python3 "$work/postgres_blob_export.py" --public-key "$work/public.pem" --region '${AWS::Region}' \
+                      --parameter '${BlobAuthorizationParameter}' --scheduled-container-sas \
+                      --blob-host sttangama261030r.blob.core.windows.net --container tangama-postgres-backups \
+                      --object "postgres/$day-daily.json" --key-id '${AzureWrappingKeyId}' > "$work/daily.json"
+                    python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["upload_http"] == 201 and len(p["archive_sha256"]) == 64 and len(p["cipher_sha256"]) == 64' "$work/daily.json"
+                    aws s3api put-object --region '${AWS::Region}' --bucket '${ArtifactsBucket}' --key "$manifest" \
+                      --body "$work/daily.json" --content-type application/json --server-side-encryption AES256 --if-none-match '*' >/dev/null
+                    cat "$work/daily.json"
+
+  BackupDispatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ssm.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DispatchExactBackupDocument
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ssm:SendCommand
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${BackupDocument}'
+              - Effect: Allow
+                Action: ssm:SendCommand
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/*'
+                Condition:
+                  StringEquals:
+                    'ssm:resourceTag/aws:autoscaling:groupName': !Ref ApplicationGroupName
+
+  DailyBackup:
+    Type: AWS::SSM::Association
+    DependsOn: BackupRuntimePolicy
+    Properties:
+      AssociationName: tangamandapio-postgres-to-azure-daily
+      AssociationDispatchAssumeRole: !GetAtt BackupDispatchRole.Arn
+      Name: !Ref BackupDocument
+      DocumentVersion: '$LATEST'
+      ScheduleExpression: 'cron(0 8 * * ? *)'
+      ApplyOnlyAtCronInterval: true
+      MaxConcurrency: '1'
+      MaxErrors: '1'
+      Targets:
+        - Key: 'tag:aws:autoscaling:groupName'
+          Values: [!Ref ApplicationGroupName]
+
+Outputs:
+  AssociationId:
+    Value: !GetAtt DailyBackup.AssociationId

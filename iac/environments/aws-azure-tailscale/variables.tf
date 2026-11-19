@@ -60,3 +60,13 @@ variable "router_artifact_sha256" {
     error_message = "Indica el SHA-256 completo de 64 caracteres del paquete de routers."
   }
 }
+
+variable "backup_artifact" {
+  description = "Paquete del respaldo diario y URI versionada de la clave pública de Key Vault. El permiso de escritura se administra en SSM."
+  type = object({
+    key                   = string
+    sha256                = string
+    azure_wrapping_key_id = string
+  })
+  default = null
+}

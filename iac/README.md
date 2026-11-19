@@ -1,12 +1,20 @@
 # Infraestructura como código
 
-## Estado y recuperación verificados el 18/11/2026
+## Estado y recuperación vigentes
 
-Consulta el [corte vigente](ESTADO_REAL_2026-11-18.md) para el resultado de la
+Consulta el [corte del 19/11](ESTADO_REAL_2026-11-19.md) para el resultado de la
 restauración, el estado de la VPN, las alertas y el costo. CloudFormation
 administra los logs del ALB mediante `EnableAlbAccessLogs` y la retención del
 prefijo `alb-access/`. El [presupuesto ARM](azure-monitoring/subscription-budget.json)
 se despliega a nivel de suscripción, fuera de las raíces Terraform existentes.
+
+La [pila del respaldo diario](cloudformation/aws-azure-postgres-backup.yaml)
+usa Systems Manager a las 03:00 de Lima. Los manifiestos privados de S3 están
+en `dr/postgres/manifests/<fecha-UTC>.json`. Contienen el nombre de la copia
+y ambas huellas para restaurar. La autorización de solo creación vive en el
+parámetro cifrado `/tangamandapio/dr/blob-write/scheduled-demo` y debe renovarse
+al vencimiento. El [entorno Terraform](environments/aws-azure-tailscale)
+puede administrar esa pila y la de los routers a través de CloudFormation.
 
 ### Repetir el respaldo manual de PostgreSQL
 

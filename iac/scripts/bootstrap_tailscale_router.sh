@@ -39,7 +39,10 @@ else
   [[ "$SNS_TOPIC_ARN" =~ ^arn:aws:sns:us-east-2:[0-9]{12}:tangamandapio-alarms$ ]] || { echo 'Tema SNS inválido.' >&2; exit 2; }
 fi
 
-dnf install -y curl python3 tar iptables
+dnf install -y python3 tar iptables
+if ! command -v curl >/dev/null 2>&1; then
+  dnf install -y curl
+fi
 if ! command -v aws >/dev/null 2>&1; then
   dnf install -y awscli-2
 fi
@@ -55,6 +58,8 @@ bash "$INSTALLER"
 rm -f "$INSTALLER"
 systemctl enable --now tailscaled
 
+umask 077
+trap 'rm -f /run/tangamandapio/auth-key' EXIT
 aws secretsmanager get-secret-value \
   --region "$AWS_REGION" \
   --secret-id "$AUTH_SECRET_NAME" \
@@ -73,6 +78,8 @@ tailscale up \
   --advertise-tags=tag:tangama-aws-router \
   --accept-routes=true
 rm -f /run/tangamandapio/auth-key
+trap - EXIT
+umask 022
 
 install -m 0755 /opt/tangamandapio-router/tailscale_router_health.py /usr/local/sbin/tangamandapio-router-health.py
 install -m 0755 /opt/tangamandapio-router/tailscale_nat.py /usr/local/sbin/tangamandapio-router-nat.py
@@ -110,6 +117,9 @@ systemctl enable --now tangamandapio-wms-nat.service
 systemctl enable --now tangamandapio-router-health.service
 
 if [[ "$ROUTER_ROLE" == backup ]]; then
+  dnf install -y python3.11 python3.11-pip
+  /usr/bin/python3.11 -m venv /opt/tangamandapio-router/ha-venv
+  /opt/tangamandapio-router/ha-venv/bin/python -m pip install --disable-pip-version-check 'botocore==1.44.0'
   IMDS_TOKEN="$(curl -fsS --max-time 2 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' http://169.254.169.254/latest/api/token)"
   IMDS_MAC="$(curl -fsS --max-time 2 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/network/interfaces/macs/ | head -n1 | tr -d '/')"
   BACKUP_ENI="$(curl -fsS --max-time 2 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" "http://169.254.169.254/latest/meta-data/network/interfaces/macs/$IMDS_MAC/interface-id")"
@@ -121,10 +131,12 @@ Description=Conmutación comprobada de la ruta privada WMS
 After=network-online.target tailscaled.service tangamandapio-router-health.service
 Wants=network-online.target
 [Service]
-Type=oneshot
+Type=simple
 User=root
-ExecStart=/usr/bin/python3 /usr/local/sbin/tangamandapio-route-ha.py --region $AWS_REGION --route-table-id $ROUTE_TABLE_ID --destination $WMS_PRIVATE_IP/32 --primary-eni $PRIMARY_ENI --backup-eni $BACKUP_ENI --primary-private-ip $PRIMARY_PRIVATE_IP --hostname $WMS_HOSTNAME --sns-topic-arn $SNS_TOPIC_ARN --state-file /var/lib/tangamandapio/route-ha/state.json
-TimeoutStartSec=8
+ExecStart=/opt/tangamandapio-router/ha-venv/bin/python /usr/local/sbin/tangamandapio-route-ha.py --region $AWS_REGION --route-table-id $ROUTE_TABLE_ID --destination $WMS_PRIVATE_IP/32 --primary-eni $PRIMARY_ENI --backup-eni $BACKUP_ENI --primary-private-ip $PRIMARY_PRIVATE_IP --hostname $WMS_HOSTNAME --sns-topic-arn $SNS_TOPIC_ARN --state-file /var/lib/tangamandapio/route-ha/state.json --interval 0.3
+Environment=AWS_METADATA_SERVICE_TIMEOUT=2 AWS_METADATA_SERVICE_NUM_ATTEMPTS=2
+Restart=always
+RestartSec=1
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
@@ -133,24 +145,13 @@ ReadWritePaths=/var/lib/tangamandapio/route-ha
 [Install]
 WantedBy=multi-user.target
 EOF
-  cat > /etc/systemd/system/tangamandapio-route-ha.timer <<'EOF'
-[Unit]
-Description=Revisar la salud de la ruta privada WMS cada medio segundo
-[Timer]
-OnBootSec=15s
-OnUnitActiveSec=500ms
-AccuracySec=100ms
-Persistent=true
-[Install]
-WantedBy=timers.target
-EOF
   systemctl daemon-reload
-  systemctl enable --now tangamandapio-route-ha.timer
+  systemctl enable --now tangamandapio-route-ha.service
 fi
 
 systemctl is-active --quiet tailscaled
 systemctl is-active --quiet tangamandapio-router-health.service
 if [[ "$ROUTER_ROLE" == backup ]]; then
-  systemctl is-active --quiet tangamandapio-route-ha.timer
+  systemctl is-active --quiet tangamandapio-route-ha.service
 fi
 echo "Router $ROUTER_ROLE instalado; la clave se retiró del directorio temporal."

@@ -1,0 +1,48 @@
+{
+  "observed_utc": "2026-11-19T08:26:27.072573+00:00",
+  "target": "https://tangamandapio.kendellnm.me",
+  "role_sales": {
+    "admin_users_http": 403,
+    "wms_http": 403
+  },
+  "turn_configured": false,
+  "call_id": "call-9bb787d538854e9fb1e864e8fdf9f3b4",
+  "media": {
+    "connected": true,
+    "source": "synthetic AudioStreamTrack silence",
+    "same_test_host": true,
+    "endpoints": [
+      {
+        "connection_state": "connected",
+        "ice_state": "completed",
+        "audio": {
+          "frames": 12,
+          "samples": 11520
+        },
+        "packets_received": 16
+      },
+      {
+        "connection_state": "connected",
+        "ice_state": "completed",
+        "audio": {
+          "frames": 12,
+          "samples": 11520
+        },
+        "packets_received": 17
+      }
+    ],
+    "seconds": 13.688
+  },
+  "recordings_enabled": true,
+  "recording": {
+    "id": "rec-e4febb71b04643ce9182d86146995f0a",
+    "bytes": 238,
+    "decoded_samples": 19512,
+    "verified_hash": "e0afdc495bd6fdaf97c51141c26ee81fec273aaa7e7efe585896a2432668ba3e",
+    "access_before_consent": 409,
+    "playback_callee_http": 200,
+    "source": "synthetic generated silence"
+  },
+  "call_state": "ended",
+  "qa_account_disabled": true
+}

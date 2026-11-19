@@ -1,0 +1,95 @@
+{
+  "observed_utc": "2026-11-19T05:09:11.183511+00:00",
+  "target": "https://tangamandapio.kendellnm.me",
+  "dashboard": {
+    "order_count": 1,
+    "visible_orders": 1,
+    "orders_match_complete_list": true,
+    "outbox_pending": 0,
+    "outbox_delivered": 1,
+    "visible_outbox_rows": 1,
+    "outbox_total": 1,
+    "outbox_reconciliation": "complete_paginated"
+  },
+  "sns_subscriptions": {
+    "topic_configured": true,
+    "confirmation_required": true,
+    "subscription_count": 2,
+    "confirmed_count": 1,
+    "pending_confirmation_count": 1
+  },
+  "recording_catalog": {
+    "saved_recordings": 0,
+    "playback": "no_saved_recordings"
+  },
+  "erp_finance": {
+    "status": "paid",
+    "amount": 0.05
+  },
+  "erp_role_matrix": {
+    "roles": {
+      "erp_admin": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 400,
+        "GET /api/erp/sales/orders": 200,
+        "POST /api/erp/sales/orders": 400,
+        "GET /api/erp/purchases/orders": 200,
+        "POST /api/erp/purchases/orders": 400,
+        "GET /api/erp/finance/documents": 200,
+        "POST /api/erp/finance/expenses": 400
+      },
+      "erp_sales": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 403,
+        "GET /api/erp/sales/orders": 200,
+        "POST /api/erp/sales/orders": 400,
+        "GET /api/erp/purchases/orders": 403,
+        "POST /api/erp/purchases/orders": 403,
+        "GET /api/erp/finance/documents": 403,
+        "POST /api/erp/finance/expenses": 403
+      },
+      "erp_finance": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 403,
+        "GET /api/erp/sales/orders": 200,
+        "POST /api/erp/sales/orders": 403,
+        "GET /api/erp/purchases/orders": 200,
+        "POST /api/erp/purchases/orders": 403,
+        "GET /api/erp/finance/documents": 200,
+        "POST /api/erp/finance/expenses": 400
+      },
+      "erp_purchasing": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 400,
+        "GET /api/erp/sales/orders": 403,
+        "POST /api/erp/sales/orders": 403,
+        "GET /api/erp/purchases/orders": 200,
+        "POST /api/erp/purchases/orders": 400,
+        "GET /api/erp/finance/documents": 403,
+        "POST /api/erp/finance/expenses": 403
+      },
+      "erp_master_data": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 400,
+        "GET /api/erp/sales/orders": 403,
+        "POST /api/erp/sales/orders": 403,
+        "GET /api/erp/purchases/orders": 403,
+        "POST /api/erp/purchases/orders": 403,
+        "GET /api/erp/finance/documents": 403,
+        "POST /api/erp/finance/expenses": 403
+      },
+      "erp_auditor": {
+        "GET /api/erp/partners": 200,
+        "POST /api/erp/partners": 403,
+        "GET /api/erp/sales/orders": 200,
+        "POST /api/erp/sales/orders": 403,
+        "GET /api/erp/purchases/orders": 200,
+        "POST /api/erp/purchases/orders": 403,
+        "GET /api/erp/finance/documents": 200,
+        "POST /api/erp/finance/expenses": 403
+      }
+    },
+    "probe_count": 48,
+    "temporary_account_count": 5
+  }
+}

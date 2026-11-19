@@ -1,0 +1,208 @@
+{
+  "observed_utc": "2026-11-19T04:54:16.818802+00:00",
+  "base": "https://tangamandapio.kendellnm.me",
+  "role": "admin",
+  "checks": {
+    "/api/auth/login": {
+      "http": 200,
+      "ms": 1120.2,
+      "request_id": "aea09c92-1a48-4bb9-8b6c-972d437f97d6"
+    },
+    "/health": {
+      "http": 200,
+      "ms": 614.1,
+      "request_id": "d18b55ea-0238-47b9-b3c2-df44c651661c"
+    },
+    "/ready": {
+      "http": 200,
+      "ms": 873.9,
+      "request_id": "337e563d-e5c6-4801-a7b9-3954bf6b35ad"
+    },
+    "/": {
+      "http": 200,
+      "ms": 901.4,
+      "request_id": "c2364025-314c-4840-a29e-3713ab94865a"
+    },
+    "/administracion": {
+      "http": 200,
+      "ms": 612.2,
+      "request_id": "d607d4e9-b510-48ab-96cd-c6adfcbccb4c"
+    },
+    "/platform": {
+      "http": 200,
+      "ms": 641.9,
+      "request_id": "1e99dce1-2dd6-4c96-afe5-d3caa4175f55"
+    },
+    "/erp": {
+      "http": 200,
+      "ms": 580.6,
+      "request_id": "4dad25eb-1a6f-4cd2-a87e-751aeffefdbd"
+    },
+    "/api/auth/session": {
+      "http": 200,
+      "ms": 925.6,
+      "request_id": "602db635-ec86-4b8c-ac46-16b73458a613"
+    },
+    "/api/dashboard": {
+      "http": 200,
+      "ms": 912.7,
+      "request_id": "040545ff-5533-4ca2-be53-9f7ca14a658f"
+    },
+    "/api/platform/overview": {
+      "http": 200,
+      "ms": 827.5,
+      "request_id": "7736e9e2-bf15-46c4-ab67-6bdea65a3cb2"
+    },
+    "/api/admin/users": {
+      "http": 200,
+      "ms": 651.6,
+      "request_id": "875628d5-0f8d-4c0e-9272-75f07f2027f4"
+    },
+    "/api/admin/companies": {
+      "http": 200,
+      "ms": 625.0,
+      "request_id": "05c8eac9-6d4e-4356-a860-9ad5837be2f6"
+    },
+    "/api/admin/alarm-subscriptions": {
+      "http": 200,
+      "ms": 669.4,
+      "request_id": "f4b88a16-be2f-4924-95d1-1fb960e3ff4b"
+    },
+    "/api/audit": {
+      "http": 200,
+      "ms": 624.7,
+      "request_id": "0b7a3d77-ae52-418b-a5ea-b5b1330f7aff"
+    },
+    "/api/orders": {
+      "http": 200,
+      "ms": 631.8,
+      "request_id": "20e0cd07-4b05-475e-b90e-167c4fe9f748"
+    },
+    "/api/outbox": {
+      "http": 200,
+      "ms": 937.7,
+      "request_id": "bc78cc03-ad96-4220-bccf-31be435a7855"
+    },
+    "/api/voice/directory": {
+      "http": 200,
+      "ms": 621.1,
+      "request_id": "83ecbbf7-5e2e-4e46-a107-48db0489e7b3"
+    },
+    "/api/voice/ice-config": {
+      "http": 200,
+      "ms": 628.9,
+      "request_id": "54be888e-54fb-4a96-9bd8-6313dccfedbf"
+    },
+    "/api/voice/calls": {
+      "http": 200,
+      "ms": 639.4,
+      "request_id": "4742ce67-3a3b-4bae-b1ce-a6d85403cdcb"
+    },
+    "/api/voice/recordings": {
+      "http": 200,
+      "ms": 652.1,
+      "request_id": "82e751b7-55fe-4211-a3db-c456ae81ec3d"
+    },
+    "/api/erp/access": {
+      "http": 200,
+      "ms": 633.8,
+      "request_id": "e986a544-fe91-4831-888f-f1922f0cf0c3"
+    },
+    "/api/erp/users": {
+      "http": 200,
+      "ms": 950.7,
+      "request_id": "b328ccd0-ab31-44da-9d79-7e7f9a75f103"
+    },
+    "/api/erp/overview": {
+      "http": 200,
+      "ms": 1084.4,
+      "request_id": "e5c8c5e4-929d-4d84-98b7-ee75afa305ca"
+    },
+    "/api/erp/partners": {
+      "http": 200,
+      "ms": 645.3,
+      "request_id": "4f21542f-e7a1-4326-b008-492aa2a4ea34"
+    },
+    "/api/erp/products": {
+      "http": 200,
+      "ms": 1363.4,
+      "request_id": "5b201b8e-8e42-47dd-b252-43fb7b85cd3a"
+    },
+    "/api/erp/sales/orders": {
+      "http": 200,
+      "ms": 680.5,
+      "request_id": "fe343cd7-9608-41f1-945f-1c012582a84b"
+    },
+    "/api/erp/purchases/orders": {
+      "http": 200,
+      "ms": 615.1,
+      "request_id": "0204b30d-85fe-4728-88b0-07ef400cc0d5"
+    },
+    "/api/erp/finance/documents": {
+      "http": 200,
+      "ms": 620.7,
+      "request_id": "282fbc4a-2572-42d8-bb6a-70ad7a022a6e"
+    },
+    "/api/erp/mail/users": {
+      "http": 200,
+      "ms": 628.7,
+      "request_id": "01bb0f24-e0bb-4a22-8ee6-fa957ae6d264"
+    },
+    "/api/erp/mail/status": {
+      "http": 200,
+      "ms": 593.0,
+      "request_id": "9e02b172-fe8a-49e1-9204-690d5e4a9fb6"
+    },
+    "/api/erp/mail": {
+      "http": 200,
+      "ms": 641.1,
+      "request_id": "b1bbb1dd-6f7a-4afe-9ea1-bfcd72764740"
+    },
+    "/api/multicloud": {
+      "http": 200,
+      "ms": 943.2,
+      "request_id": "5d499343-42a3-4bef-9de0-b24ec2b34476"
+    },
+    "/api/wms/inventory": {
+      "http": 200,
+      "ms": 1075.8,
+      "request_id": "00cd3eac-60ea-483b-b835-bfa3d6daf7b6"
+    },
+    "/api/auth/logout": {
+      "http": 204,
+      "ms": 620.6,
+      "request_id": "e9fc0055-4795-431e-83ca-fa1f373750b1"
+    },
+    "/api/auth/session after logout": {
+      "http": 200,
+      "ms": 596.7,
+      "request_id": "ff2d32ce-e39b-48e7-a588-c61844699034"
+    }
+  },
+  "erp_roles": [
+    "erp_admin"
+  ],
+  "azure_status": "connected",
+  "wms_inventory": {
+    "mode": "demo-inventory-ledger",
+    "available_skus": 17
+  },
+  "wms_order": {
+    "http": 201,
+    "ms": 1809.3,
+    "request_id": "b525fd76-b42e-4f30-9f58-d72654943f87",
+    "order_id": 1,
+    "sku": "SKU-ARROZ-001",
+    "reference": "WMS-DEMO-20261119-AF9E52",
+    "event_id": "evt-a56553941e9747e6bbd1ff5637ff9f4c",
+    "delivery": "delivered",
+    "result": {
+      "http": 200,
+      "ms": 1259.3,
+      "request_id": "30f83083-9384-40d5-bf1e-7b95c0dbd435",
+      "fulfillment_status": "demo_fulfillment_completed",
+      "provider": "Azure"
+    }
+  },
+  "logout_confirmed": true
+}

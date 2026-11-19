@@ -11,7 +11,6 @@ import json
 import os
 from pathlib import Path
 import re
-import subprocess
 import time
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -109,20 +108,6 @@ def classify_route(table, destination, primary_eni, backup_eni):
     return "other"
 
 
-def replace_route_argv(config: Config, target: str):
-    if target not in {"primary", "backup"}:
-        raise ValueError("route target must be a known router")
-    interface = config.primary_eni if target == "primary" else config.backup_eni
-    return ["aws", "ec2", "replace-route", "--region", config.region,
-            "--route-table-id", config.route_table_id,
-            "--destination-cidr-block", config.destination,
-            "--network-interface-id", interface]
-
-
-def parse_aws_json(output):
-    return json.loads(output) if output.strip() else {}
-
-
 def probe(url, timeout=0.8):
     try:
         with urlopen(url, timeout=timeout) as response:
@@ -142,40 +127,46 @@ def probe_health_pair(primary_probe, backup_probe):
 
 
 class AWSRouteControl:
-    def __init__(self, config: Config, command_timeout=1.5, verify_timeout=1.0):
+    def __init__(self, config: Config, ec2, sns, verify_timeout=2.0):
         self.config = config
-        self.command_timeout = command_timeout
+        self.ec2 = ec2
+        self.sns = sns
         self.verify_timeout = verify_timeout
+        self.last_route = "other"
+        self.read_route_after = 0.0
 
-    def aws(self, args, timeout=None):
-        result = subprocess.run([*args, "--output", "json"], capture_output=True, text=True,
-                                timeout=timeout or self.command_timeout, check=True)
-        return parse_aws_json(result.stdout)
-
-    def current_route(self):
-        data = self.aws(["aws", "ec2", "describe-route-tables", "--region", self.config.region,
-                         "--route-table-ids", self.config.route_table_id])
+    def current_route(self, *, cached=False):
+        if cached and time.monotonic() < self.read_route_after:
+            return self.last_route
+        data = self.ec2.describe_route_tables(RouteTableIds=[self.config.route_table_id])
         tables = data.get("RouteTables", [])
-        if len(tables) != 1:
-            return "other"
-        return classify_route(tables[0], self.config.destination,
-                              self.config.primary_eni, self.config.backup_eni)
+        self.last_route = classify_route(tables[0], self.config.destination, self.config.primary_eni,
+                                         self.config.backup_eni) if len(tables) == 1 else "other"
+        self.read_route_after = time.monotonic() + 3.0
+        return self.last_route
 
     def primary_health(self):
-        return probe(f"http://{self.config.primary_private_ip}:9797/health")
+        return probe(f"http://{self.config.primary_private_ip}:9797/route-health")
 
     def backup_health(self):
-        return probe("http://127.0.0.1:9797/health")
+        return probe("http://127.0.0.1:9797/route-health")
 
     def switch(self, target):
+        if target not in {"primary", "backup"}:
+            raise ValueError("route target must be a known router")
+        address = "127.0.0.1" if target == "backup" else self.config.primary_private_ip
+        interface = self.config.backup_eni if target == "backup" else self.config.primary_eni
+        if probe(f"http://{address}:9797/health", timeout=2.4) != "healthy":
+            raise RuntimeError("target did not pass a fresh HTTPS check")
         expected = "primary" if target == "backup" else "backup"
         if self.current_route() != expected:
             raise RuntimeError("route changed or is unknown; refusing to overwrite it")
-        self.aws(replace_route_argv(self.config, target))
+        self.ec2.replace_route(RouteTableId=self.config.route_table_id,
+                               DestinationCidrBlock=self.config.destination, NetworkInterfaceId=interface)
+        self.read_route_after = 0.0
         deadline = time.monotonic() + self.verify_timeout
         while time.monotonic() < deadline:
             if self.current_route() == target:
-                self.publish(target)
                 return
             time.sleep(0.1)
         raise RuntimeError("route replacement was not observed before the verification deadline")
@@ -190,15 +181,14 @@ class AWSRouteControl:
             "destination": self.config.destination,
             "observed_at_utc": datetime.now(timezone.utc).isoformat(),
         }
-        self.aws(["aws", "sns", "publish", "--region", self.config.region,
-                  "--topic-arn", self.config.sns_topic_arn,
-                  "--subject", "Conmutación de la ruta privada WMS",
-                  "--message", json.dumps(message, ensure_ascii=False)])
+        self.sns.publish(TopicArn=self.config.sns_topic_arn, Subject="Conmutación de la ruta privada WMS",
+                         Message=json.dumps(message, ensure_ascii=False))
 
 
-def run_once(cloud: AWSRouteControl, state):
+def run_once(cloud: AWSRouteControl, state, sdk_errors=()):
+    observation_errors = (OSError, RuntimeError) + sdk_errors
     try:
-        route = cloud.current_route()
+        route = cloud.current_route(cached=True)
         primary, backup = probe_health_pair(cloud.primary_health, cloud.backup_health)
         new_state, action = decide(state, route, primary, backup)
         if action:
@@ -212,7 +202,7 @@ def run_once(cloud: AWSRouteControl, state):
             "route_after": target if action else route,
             "observed_at_utc": datetime.now(timezone.utc).isoformat(),
         }
-    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, RuntimeError, KeyError, IndexError) as error:
+    except observation_errors as error:
         return {"primary_failures": 0, "primary_recoveries": 0}, {
             "action": "observation_error",
             "error_type": type(error).__name__,
@@ -236,6 +226,7 @@ def main():
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--sns-topic-arn", default="")
     parser.add_argument("--state-file", default="/var/lib/tangamandapio/route-ha/state.json")
+    parser.add_argument("--interval", type=float)
     args = parser.parse_args()
     try:
         config = Config(args.region, args.route_table_id, args.destination, args.primary_eni,
@@ -244,11 +235,36 @@ def main():
             state = json.loads(Path(args.state_file).read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError):
             state = {"primary_failures": 0, "primary_recoveries": 0}
-        cloud = AWSRouteControl(config)
-        state, result = run_once(cloud, state)
-        write_state(args.state_file, state)
-        print(json.dumps({**state, **result}, ensure_ascii=False))
-        return 0 if result.get("action") != "observation_error" else 1
+        if args.interval is not None and args.interval < 0.3:
+            raise ValueError("polling interval must be at least 0.3 seconds")
+        from botocore.config import Config as SDKConfig
+        from botocore.exceptions import BotoCoreError, ClientError
+        from botocore.session import get_session
+
+        errors = (BotoCoreError, ClientError)
+        session = get_session()
+        sdk_config = SDKConfig(connect_timeout=2, read_timeout=2, retries={"total_max_attempts": 1})
+        ec2 = session.create_client("ec2", region_name=config.region, config=sdk_config)
+        sns = session.create_client("sns", region_name=config.region, config=sdk_config)
+        cloud = AWSRouteControl(config, ec2, sns)
+        previous_observation = None
+        while True:
+            new_state, result = run_once(cloud, state, errors)
+            if state != new_state or previous_observation is None:
+                write_state(args.state_file, new_state)
+            state = new_state
+            observation = {key: value for key, value in result.items() if key != "observed_at_utc"}
+            if previous_observation != observation or args.interval is None:
+                print(json.dumps({**state, **result}, ensure_ascii=False), flush=True)
+                previous_observation = observation
+            if result.get("action") in {"switch_to_backup", "switch_to_primary"}:
+                try:
+                    cloud.publish(result["route_after"])
+                except errors as error:
+                    print(json.dumps({"action": "sns_publish_error", "error_type": type(error).__name__}), flush=True)
+            if args.interval is None:
+                return 0 if result.get("action") != "observation_error" else 1
+            time.sleep(args.interval)
     except ValueError as error:
         print(json.dumps({"action": "invalid_configuration", "error": str(error)}, ensure_ascii=False))
         return 2

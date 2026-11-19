@@ -8,10 +8,10 @@ import ipaddress
 import json
 import logging
 import re
-import socket
-import ssl
 import subprocess
 import sys
+from threading import Lock
+from time import monotonic
 
 
 def is_ready(tailscale_state, wms_status):
@@ -44,34 +44,37 @@ def probe_private_wms(private_ip, hostname, path="/api/health", timeout=1.5):
         raise ValueError("invalid Function hostname")
     if not re.fullmatch(r"/[A-Za-z0-9_/-]*", path):
         raise ValueError("invalid health path")
-    context = ssl.create_default_context()
-    with socket.create_connection((str(address), 443), timeout=timeout) as raw:
-        raw.settimeout(timeout)
-        with context.wrap_socket(raw, server_hostname=hostname) as tls:
-            tls.sendall((f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\n"
-                         "Connection: close\r\nUser-Agent: tangama-router-health/1\r\n\r\n").encode("ascii"))
-            response_line = tls.makefile("rb").readline(4096).decode("ascii", errors="replace")
-    parts = response_line.split()
-    if len(parts) < 2 or not parts[1].isdigit():
+    result = subprocess.run(
+        ["curl", "--silent", "--noproxy", "*", "--output", "/dev/null", "--write-out", "%{http_code}",
+         "--connect-timeout", str(timeout), "--max-time", str(timeout),
+         "--resolve", f"{hostname}:443:{address}", f"https://{hostname}{path}"],
+        capture_output=True, text=True, timeout=timeout + 0.3, check=True,
+    )
+    return int(result.stdout)
+
+
+def wms_status(private_ip, hostname):
+    try:
+        return probe_private_wms(private_ip, hostname)
+    except (OSError, subprocess.SubprocessError, ValueError):
         return None
-    return int(parts[1])
 
 
 def check_components(private_ip, hostname):
     tailscale_state = read_tailscale_state()
-    try:
-        wms_status = probe_private_wms(private_ip, hostname)
-    except (OSError, ssl.SSLError, TimeoutError, ValueError):
-        wms_status = None
-    return health_payload(tailscale_state, wms_status)
+    status = wms_status(private_ip, hostname) if tailscale_state == "Running" else None
+    return health_payload(tailscale_state, status)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path != "/health":
+        if self.path == "/route-health":
+            result = self.server.route_health()
+        elif self.path == "/health":
+            result = check_components(self.server.wms_private_ip, self.server.wms_hostname)
+        else:
             self.send_error(404)
             return
-        result = check_components(self.server.wms_private_ip, self.server.wms_hostname)
         body = json.dumps(result, separators=(",", ":")).encode("utf-8")
         self.send_response(200 if result["ready"] else 503)
         self.send_header("Content-Type", "application/json")
@@ -81,12 +84,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, format, *args):
-        logging.info("router-health %s", format % args)
+        if self.path != "/route-health":
+            logging.info("router-health %s", format % args)
 
 
 class HealthServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+
+    def __init__(self, *args):
+        self.probe_lock = Lock()
+        self.last_http = None
+        self.next_probe = 0.0
+        self.failed_probes = 0
+        super().__init__(*args)
+
+    def route_health(self):
+        state = read_tailscale_state()
+        with self.probe_lock:
+            if state != "Running":
+                self.next_probe = 0.0
+                self.last_http = None
+                self.failed_probes = 0
+                return health_payload(state, None)
+            if monotonic() >= self.next_probe:
+                status = wms_status(self.wms_private_ip, self.wms_hostname)
+                self.failed_probes = 0 if status == 200 else self.failed_probes + 1
+                if status == 200 or self.last_http != 200 or self.failed_probes >= 2:
+                    self.last_http = status
+                self.next_probe = monotonic() + (30 if status == 200 else 5)
+            return health_payload(state, self.last_http)
 
 
 def main():

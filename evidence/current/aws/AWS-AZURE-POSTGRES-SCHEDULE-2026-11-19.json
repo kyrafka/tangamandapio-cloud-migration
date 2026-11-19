@@ -1,0 +1,43 @@
+{
+  "association_id": "cbfdc5b1-26b7-4577-8adc-8391c51bf564",
+  "execution_id": "1157329d-c95c-46c3-aae0-7bef16247fa2",
+  "command_id": "ff3914ef-7a80-4827-b762-9992eea7d050",
+  "schedule_lima": "03:00 daily",
+  "s3_manifest": "dr/postgres/manifests/20261119.json",
+  "blob": {
+    "bytes": 84654,
+    "encrypted": true,
+    "metadata": {
+      "Archive_Sha256": "f57deb8777b36512eeaa7242558e9002598feb8184f697d931fbe250bc75b3a5",
+      "Created_Utc": "2026-11-19T00:08:42.305523-05:00"
+    }
+  },
+  "export": {
+    "object": "postgres/20261119-daily.json",
+    "source_started_utc": "2026-11-19T00:08:42.305523-05:00",
+    "archive_sha256": "f57deb8777b36512eeaa7242558e9002598feb8184f697d931fbe250bc75b3a5",
+    "cipher_sha256": "5892650217ee7472d2235700c6f32cf8ea3c1e9dfa84f02096a583095e43555b",
+    "archive_bytes": 62916,
+    "upload_http": 201
+  },
+  "verified_rerun": {
+    "execution_id": "8858bd21-cbad-477a-8dbb-802c09285d33",
+    "command_id": "5d65a593-1087-4f52-94ce-f109073542e6",
+    "status": "Success",
+    "successful_targets": 2,
+    "existing_copy_status": "already_verified"
+  },
+  "restore": {
+    "object": "postgres/20261119-daily.json",
+    "restore_host_seconds": 3.364,
+    "tables": 20,
+    "portal_users": 1,
+    "orders": 1,
+    "outbox_events": 1,
+    "tcp_enabled": false,
+    "engine": "18.6",
+    "restore_started_utc": "2026-11-19T08:12:06.842601+00:00",
+    "restore_seconds": 35.108,
+    "ssm_command_id": "e75f0f60-7521-4dac-8088-528e17e66049"
+  }
+}

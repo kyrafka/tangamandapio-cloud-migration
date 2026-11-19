@@ -1,0 +1,79 @@
+{
+  "observed_utc": "2026-11-19T08:13:25.993911+00:00",
+  "target": "https://tangamandapio.kendellnm.me",
+  "roles": {
+    "customer": {
+      "actual": {
+        "/api/outbox": 403,
+        "/api/wms/inventory": 403,
+        "/api/audit": 403,
+        "/api/platform/overview": 403,
+        "/api/voice/directory": 403,
+        "/api/admin/alarm-subscriptions": 403
+      },
+      "orders": 200,
+      "passed": true
+    },
+    "sales": {
+      "actual": {
+        "/api/outbox": 403,
+        "/api/wms/inventory": 403,
+        "/api/audit": 403,
+        "/api/platform/overview": 403,
+        "/api/voice/directory": 200,
+        "/api/admin/alarm-subscriptions": 403
+      },
+      "orders": 200,
+      "passed": true
+    },
+    "warehouse": {
+      "actual": {
+        "/api/outbox": 200,
+        "/api/wms/inventory": 403,
+        "/api/audit": 403,
+        "/api/platform/overview": 403,
+        "/api/voice/directory": 403,
+        "/api/admin/alarm-subscriptions": 403
+      },
+      "orders": 200,
+      "passed": true
+    },
+    "operations": {
+      "actual": {
+        "/api/outbox": 200,
+        "/api/wms/inventory": 200,
+        "/api/audit": 200,
+        "/api/platform/overview": 200,
+        "/api/voice/directory": 200,
+        "/api/admin/alarm-subscriptions": 403
+      },
+      "orders": 200,
+      "passed": true
+    },
+    "auditor": {
+      "actual": {
+        "/api/outbox": 200,
+        "/api/wms/inventory": 403,
+        "/api/audit": 200,
+        "/api/platform/overview": 403,
+        "/api/voice/directory": 403,
+        "/api/admin/alarm-subscriptions": 403
+      },
+      "orders": 200,
+      "passed": true
+    },
+    "admin": {
+      "actual": {
+        "/api/outbox": 200,
+        "/api/wms/inventory": 200,
+        "/api/audit": 200,
+        "/api/platform/overview": 200,
+        "/api/voice/directory": 200,
+        "/api/admin/alarm-subscriptions": 200
+      },
+      "orders": 200,
+      "passed": true
+    }
+  },
+  "temporary_users_disabled": 5
+}

@@ -1,0 +1,54 @@
+{
+  "event_id": "evt-a56553941e9747e6bbd1ff5637ff9f4c",
+  "storage": "sttangama261030r",
+  "container": "fulfillment-events",
+  "objects": [
+    {
+      "created": "2026-11-18T23:54:43-05:00",
+      "encrypted": true,
+      "length": 594,
+      "modified": "2026-11-18T23:54:43-05:00",
+      "name": "evt-a56553941e9747e6bbd1ff5637ff9f4c.json"
+    },
+    {
+      "created": "2026-11-18T23:54:49-05:00",
+      "encrypted": true,
+      "length": 444,
+      "modified": "2026-11-18T23:54:49-05:00",
+      "name": "fulfillment/evt-a56553941e9747e6bbd1ff5637ff9f4c.json"
+    }
+  ],
+  "insights": {
+    "tables": [
+      {
+        "columns": [
+          {
+            "name": "timestamp",
+            "type": "datetime"
+          },
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "operation_Id",
+            "type": "string"
+          }
+        ],
+        "name": "PrimaryResult",
+        "rows": [
+          [
+            "2026-11-19T04:54:43.7773849Z",
+            "queued_event event_id=evt-a56553941e9747e6bbd1ff5637ff9f4c sha256=274c43c7df149f31145fcfb7135b7d4bb9359f512aa3b7e40e3e9e121c6cd3a9 duplicate=False",
+            "5de8e7ec2dab2e219941da66a0c58165"
+          ],
+          [
+            "2026-11-19T04:54:49.9894463Z",
+            "wms_demo_result_written event_id=evt-a56553941e9747e6bbd1ff5637ff9f4c sha256=274c43c7df149f31145fcfb7135b7d4bb9359f512aa3b7e40e3e9e121c6cd3a9 status=demo_fulfillment_completed",
+            "14a049af2954303a7a7338c4d534ec23"
+          ]
+        ]
+      }
+    ]
+  }
+}

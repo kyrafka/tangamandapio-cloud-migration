@@ -186,3 +186,15 @@ de un solo nombre al activar `EnablePrivateWmsRoute`. Esa pila es propietaria
 de ambos recursos en el flujo HA. `enable_tailscale_ha_route.sh` consulta la
 Function desde las EC2 por DNS normal y exige HTTPS 200 en `10.20.1.4`. Si
 falla el sondeo, revierte la ruta y la zona recién creadas.
+
+## Pilas activas en Ohio
+
+Consulta el [estado operativo del 19/11](../../ESTADO_REAL_2026-11-19.md) para
+los tiempos de conmutación, el pedido privado y el respaldo ensayado. Las
+pilas `tangamandapio-aws-azure-tailscale-ha` y
+`tangamandapio-azure-postgres-backup` ya existen. Si vas a administrar estas
+pilas con este estado de Terraform, impórtalas por su nombre antes de aplicar
+un plan. Declara `deployment_approved = true` para el par de routers y el
+objeto `backup_artifact` para la asociación diaria. En una reconstrucción
+desde cero, publica los paquetes verificados y guarda las claves de
+enrolamiento y el permiso de Blob en los almacenes de secretos.

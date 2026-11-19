@@ -52,3 +52,23 @@ resource "aws_cloudformation_stack" "router_pair" {
 
   depends_on = [terraform_data.deployment_guard]
 }
+
+resource "aws_cloudformation_stack" "postgres_blob_backup" {
+  count = var.backup_artifact == null ? 0 : 1
+
+  name          = "tangamandapio-azure-postgres-backup"
+  template_body = file("${path.module}/../../cloudformation/aws-azure-postgres-backup.yaml")
+  capabilities  = ["CAPABILITY_IAM"]
+  on_failure    = "ROLLBACK"
+
+  parameters = {
+    ArtifactsBucket      = var.asset_bucket_name
+    BackupArtifactKey    = var.backup_artifact.key
+    BackupArtifactSha256 = var.backup_artifact.sha256
+    AzureWrappingKeyId   = var.backup_artifact.azure_wrapping_key_id
+  }
+
+  tags = { Project = "Tangamandapio" }
+
+  depends_on = [terraform_data.deployment_guard]
+}

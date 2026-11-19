@@ -1,4 +1,19 @@
-# Matriz de evidencia por criterio — actualización 18/11/2026
+# Matriz de evidencia por criterio
+
+## Verificación del 19/11/2026
+
+El [registro operativo vigente](../iac/ESTADO_REAL_2026-11-19.md) enlaza las
+pruebas HTTP, las trazas de Azure, las muestras de conmutación y la copia
+restaurada. Las tablas de fechas anteriores son históricas.
+
+| Criterios | Verificado | Falta para la defensa |
+| --- | --- | --- |
+| 2, 3, 10 | TLS, DNS privado AWS–Azure y pedido correlacionado en Function, Queue, Blob e Insights. | Adjuntar aprobación escrita de AWS–Azure y explicar el alcance de la VPN. |
+| 4, 9 | Respaldo diario cifrado y restauración aislada de 20 tablas en 35,108 s. | Medir RPO de transacciones, renovar la autorización de Blob al vencimiento y validar recuperación regional. |
+| 5, 7 | Administrador recuperado. 42 comprobaciones de permisos del portal y 48 del ERP. Gmail recibió AWS SNS y Azure Monitor. | Completar revisión de credenciales históricas y confirmar el correo UPeU. |
+| 6, 12 | Conmutación AWS en 4,598 s y recuperación HTTP en 4,68 y 5,57 s. Llamada WebRTC con audio bidireccional y correo interno verificados. | Demostrar recuperación HTTP dentro de 5 s en ambas EC2, repetir carga sostenida y validar WebRTC entre redes restrictivas. |
+| 8, 11 | Pilas CloudFormation de VPN y respaldo activas. Terraform validado. AWS USD 150,59 de crédito y Azure USD 8,50 de costo mensual observado. | Validar reconstrucción completa en una cuenta o entorno aparte. RDS continúa en Single-AZ bajo el plan gratuito. |
+| 1, 13, 14 | Integrante, docente y ciclo registrados. Hay evidencia con fecha para el recorrido en vivo. | Adjuntar fotos, aprobación docente y ejecutar la defensa. |
 
 ## Verificación del 18/11/2026
 
@@ -14,9 +29,9 @@ filas históricas siguientes. Estados que cambiaron:
 | 8, 11 | CloudFormation incluye permisos y logs. Presupuesto Azure implementado y validado en ARM por USD 25 mensuales. | Probar reconstrucción completa y conciliar las raíces Terraform con su estado activo. |
 | 1, 13, 14 | Datos del integrante, docente y ciclo en el informe previo. Nueva evidencia reproducible de recuperación. | Pedido funcional, fotos, constancia del docente y demostración. |
 
-## Revisión actual — 16/11/2026, 21:00 UTC
+## Revisión histórica del 16/11/2026 a las 21:00 UTC
 
-Esta tabla es el corte vigente contra la rúbrica entregada. No es una nota
+Esta tabla es el corte de esa fecha contra la rúbrica entregada. No es una nota
 oficial: varios criterios requieren demostración del estudiante y la rúbrica
 nombra AWS–OCI, mientras el proyecto desplegado conecta AWS–Azure. El usuario
 indicó que el docente aceptó Azure; adjuntar esa aprobación en la entrega para

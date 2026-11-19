@@ -1,0 +1,35 @@
+{
+  "observed_utc": "2026-11-19T04:50:35.468719+00:00",
+  "stack": "arn:aws:cloudformation:us-east-2:481056890449:stack/tangamandapio-aws-azure-tailscale-ha/9a73a1f0-e3d3-11f1-8ab2-06f0a1ae3e19",
+  "function_hostname": "tangama-flex-261104.azurewebsites.net",
+  "endpoint": "10.20.1.4",
+  "route_table": "rtb-0cb5b4e9fd67db03e",
+  "routers": {
+    "i-05cf107fc67623c84": {
+      "ready": true,
+      "tailscale": "Running",
+      "private_wms_http": 200
+    },
+    "i-052a34fb3e5faf203": {
+      "ready": true,
+      "tailscale": "Running",
+      "private_wms_http": 200
+    }
+  },
+  "primary_interface": "eni-0813171c829923580",
+  "backup_interface": "eni-06a55b116fc103ed3",
+  "applications": {
+    "i-00df8f97d01742d6f": {
+      "http": 200,
+      "remote_ip": "10.20.1.4",
+      "ssl_verify_result": 0,
+      "seconds": 0.521533
+    },
+    "i-0302bd85cc7b84fb1": {
+      "http": 200,
+      "remote_ip": "10.20.1.4",
+      "ssl_verify_result": 0,
+      "seconds": 0.542363
+    }
+  }
+}

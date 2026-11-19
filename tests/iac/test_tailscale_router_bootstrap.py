@@ -29,7 +29,8 @@ class RouterBootstrapTests(unittest.TestCase):
 
     def test_backup_service_uses_one_second_checks_and_does_not_start_on_primary(self):
         self.assertIn('if [[ "$ROUTER_ROLE" == backup ]]', self.text)
-        self.assertIn("OnUnitActiveSec=500ms", self.text)
+        self.assertIn("--interval 0.3", self.text)
+        self.assertIn("Type=simple", self.text)
         self.assertIn("tailscale_ha_controller.py", self.text)
 
     def test_backup_interface_is_validated_only_after_it_is_read_from_imds(self):
@@ -42,6 +43,10 @@ class RouterBootstrapTests(unittest.TestCase):
         self.assertNotIn("set -x", self.text)
         self.assertNotRegex(self.text, r"echo\s+\$AUTH_KEY")
         self.assertNotRegex(self.text, r"tskey-auth-[A-Za-z0-9_-]{20,}")
+
+    def test_uses_existing_system_curl_and_removes_key_if_enrollment_fails(self):
+        self.assertIn("if ! command -v curl", self.text)
+        self.assertIn("trap 'rm -f /run/tangamandapio/auth-key' EXIT", self.text)
 
 
 if __name__ == "__main__":
