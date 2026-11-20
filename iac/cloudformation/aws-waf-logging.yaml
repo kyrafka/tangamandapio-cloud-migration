@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Registros de la ACL del portal Tangamandapio en CloudWatch Logs.'
+
+Parameters:
+  WebAclArn:
+    Type: String
+    Description: ARN de la ACL regional asociada al ALB.
+    AllowedPattern: 'arn:[^:]+:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/[^/]+/[0-9a-f-]+'
+  ProjectName:
+    Type: String
+    Default: tangamandapio
+    AllowedPattern: '[a-z0-9-]+'
+  RetentionDays:
+    Type: Number
+    Default: 7
+    AllowedValues: [3, 5, 7, 14, 30]
+
+Resources:
+  WafLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub 'aws-waf-logs-${ProjectName}-alb'
+      RetentionInDays: !Ref RetentionDays
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+
+  WafLogging:
+    Type: AWS::WAFv2::LoggingConfiguration
+    Properties:
+      ResourceArn: !Ref WebAclArn
+      LogDestinationConfigs:
+        - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${WafLogGroup}'
+      RedactedFields:
+        - QueryString: {}
+        - SingleHeader:
+            Name: authorization
+        - SingleHeader:
+            Name: cookie
+        - SingleHeader:
+            Name: x-functions-key
+        - SingleHeader:
+            Name: x-api-key
+        - SingleHeader:
+            Name: x-csrf-token
+
+Outputs:
+  LogGroupName:
+    Description: Grupo de logs de tráfico inspeccionado.
+    Value: !Ref WafLogGroup

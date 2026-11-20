@@ -1,0 +1,1461 @@
+{
+  "startedUtc": "2026-11-19T23:55:06.729Z",
+  "target": "https://tangamandapio.kendellnm.me",
+  "engine": "Playwright Chromium using Microsoft Edge",
+  "method": "Production UI login in independent sessions, visible modules and live permission checks. No business submissions.",
+  "scenarios": [
+    {
+      "label": "Administrador",
+      "portalRole": "admin",
+      "erpRole": "erp_admin",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "admin",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Integración WMS": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Telefonía IP": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Auditoría": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": true,
+            "Auditoría": true
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": true,
+            "Auditoría": true
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 200
+        },
+        "Centro de nube y CloudWatch": {
+          "pass": true,
+          "value": "ok"
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_admin"
+          ],
+          "actual": [
+            "erp_admin"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "access",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "access",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP sales": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP sales": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP purchases": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP purchases": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP finance": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP finance": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP access": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "access",
+            "mail"
+          ]
+        },
+        "Administración · Usuarios": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · companies": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · alerts": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · backups": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · scaling": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · technical": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · audit": {
+          "pass": true,
+          "value": true
+        },
+        "Administración · Comprobar WMS": {
+          "pass": true,
+          "value": {
+            "pending": 0,
+            "poison": 0,
+            "status": "ok"
+          }
+        },
+        "Consola de administración visible": {
+          "pass": true
+        }
+      },
+      "cloudMetricsState": "ok"
+    },
+    {
+      "label": "Cliente B2B",
+      "portalRole": "customer",
+      "erpRole": null,
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "customer",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": false,
+            "Telefonía IP": false,
+            "Auditoría": false
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": false,
+            "Telefonía IP": false,
+            "Auditoría": false
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 403
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "ERP corporativo excluido": {
+          "pass": true,
+          "expected": 403,
+          "actual": 403
+        },
+        "Pestañas internas ocultas": {
+          "pass": true,
+          "expected": 0,
+          "actual": 0
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": []
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Comercial",
+      "portalRole": "sales",
+      "erpRole": "erp_sales",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "sales",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Telefonía IP": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": false,
+            "Telefonía IP": true,
+            "Auditoría": false
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": false,
+            "Telefonía IP": true,
+            "Auditoría": false
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 403
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_sales"
+          ],
+          "actual": [
+            "erp_sales"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "sales",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "sales",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP sales": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP sales": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP purchases": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP finance": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "sales",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Operador WMS",
+      "portalRole": "warehouse",
+      "erpRole": null,
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "warehouse",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Integración WMS": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": false,
+            "Auditoría": false
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": false,
+            "Auditoría": false
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 403
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [],
+          "actual": []
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "mail"
+          ],
+          "actual": [
+            "mail"
+          ]
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP overview": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP masters": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP sales": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP purchases": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP finance": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Operaciones TI",
+      "portalRole": "operations",
+      "erpRole": null,
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "operations",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Integración WMS": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Telefonía IP": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Auditoría": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": true,
+            "Auditoría": true
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": true,
+            "Auditoría": true
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 403
+        },
+        "Centro de nube y CloudWatch": {
+          "pass": true,
+          "value": "ok"
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [],
+          "actual": []
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "mail"
+          ],
+          "actual": [
+            "mail"
+          ]
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP overview": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP masters": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP sales": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP purchases": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP finance": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      },
+      "cloudMetricsState": "ok"
+    },
+    {
+      "label": "Auditor",
+      "portalRole": "auditor",
+      "erpRole": "erp_auditor",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "auditor",
+            "temporaryPassword": false
+          }
+        },
+        "Abrir Pedidos": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Integración WMS": {
+          "pass": true,
+          "value": true
+        },
+        "Abrir Auditoría": {
+          "pass": true,
+          "value": true
+        },
+        "Menú del portal": {
+          "pass": true,
+          "expected": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": false,
+            "Auditoría": true
+          },
+          "actual": {
+            "Pedidos": true,
+            "Integración WMS": true,
+            "Telefonía IP": false,
+            "Auditoría": true
+          }
+        },
+        "Acceso visual a ERP": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Acceso visual a administración": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Acceso visual a centro cloud": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Formulario de pedido B2B": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Colas en seguimiento": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Etapas del pedido renderizadas": {
+          "pass": true,
+          "expected": 3,
+          "actual": 3
+        },
+        "Seguimiento": {
+          "pass": true,
+          "value": {
+            "orderCount": 2
+          }
+        },
+        "HTTP /api/orders": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/outbox": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/audit": {
+          "pass": true,
+          "value": 200
+        },
+        "HTTP /api/voice/directory": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /platform": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /administracion": {
+          "pass": true,
+          "value": 403
+        },
+        "HTTP /api/admin/technical-tests": {
+          "pass": true,
+          "value": 403
+        },
+        "Portal visible": {
+          "pass": true
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_auditor"
+          ],
+          "actual": [
+            "erp_auditor"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP sales": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP sales": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP purchases": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP purchases": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP finance": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP finance": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Finanzas ERP",
+      "portalRole": "warehouse",
+      "erpRole": "erp_finance",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "warehouse",
+            "temporaryPassword": false
+          }
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_finance"
+          ],
+          "actual": [
+            "erp_finance"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP sales": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP sales": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP purchases": {
+          "pass": true,
+          "expected": false,
+          "actual": false
+        },
+        "Módulo ERP purchases": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP finance": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP finance": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Compras ERP",
+      "portalRole": "warehouse",
+      "erpRole": "erp_purchasing",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "warehouse",
+            "temporaryPassword": false
+          }
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_purchasing"
+          ],
+          "actual": [
+            "erp_purchasing"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "purchases",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "purchases",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP purchases": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP purchases": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP sales": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP finance": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "purchases",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Datos maestros ERP",
+      "portalRole": "warehouse",
+      "erpRole": "erp_master_data",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "warehouse",
+            "temporaryPassword": false
+          }
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_master_data"
+          ],
+          "actual": [
+            "erp_master_data"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP sales": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP purchases": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP finance": {
+          "pass": true,
+          "value": 403
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    },
+    {
+      "label": "Administrador ERP delegado",
+      "portalRole": "warehouse",
+      "erpRole": "erp_admin",
+      "tests": {
+        "Inicio de sesión en pantalla": {
+          "pass": true,
+          "value": {
+            "role": "warehouse",
+            "temporaryPassword": false
+          }
+        },
+        "Roles ERP asignados": {
+          "pass": true,
+          "expected": [
+            "erp_admin"
+          ],
+          "actual": [
+            "erp_admin"
+          ]
+        },
+        "Pestañas ERP permitidas": {
+          "pass": true,
+          "expected": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ],
+          "actual": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Módulo ERP overview": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP masters": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP masters": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP sales": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP sales": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP purchases": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP purchases": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Formulario ERP finance": {
+          "pass": true,
+          "expected": true,
+          "actual": true
+        },
+        "Módulo ERP finance": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Módulo ERP mail": {
+          "pass": true,
+          "value": "visible"
+        },
+        "Bloqueo ERP access": {
+          "pass": true,
+          "value": 403
+        },
+        "ERP visible": {
+          "pass": true,
+          "value": [
+            "overview",
+            "masters",
+            "sales",
+            "purchases",
+            "finance",
+            "mail"
+          ]
+        },
+        "Cerrar sesión": {
+          "pass": true,
+          "value": true
+        }
+      }
+    }
+  ],
+  "cleanup": {
+    "attempted": true,
+    "verified": true,
+    "temporaryUserId": 60
+  },
+  "finishedUtc": "2026-11-19T23:57:46.510Z"
+}

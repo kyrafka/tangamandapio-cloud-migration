@@ -8,7 +8,8 @@
     <title>Administración · Tangamandapio</title>
     <link rel="stylesheet" href="/assets/index-c7d387cd5758.css?release=20261015-v16" />
     <link rel="stylesheet" href="/assets/admin-console.css" />
-    <script src="/assets/admin-console.js" defer></script>
+    <script type="module" src="/assets/admin-console.js"></script>
+    <link rel="stylesheet" href="/assets/portal-interface.css" />
   </head>
   <body class="admin-page">
     <div class="admin-shell">
@@ -48,6 +49,7 @@
             <button type="button" data-section="alerts"><span aria-hidden="true">♧</span><span>Alertas de nube</span></button>
             <button type="button" data-section="backups"><span aria-hidden="true">↓</span><span>Respaldos</span></button>
             <button type="button" data-section="scaling"><span aria-hidden="true">↗</span><span>Prueba de escalado</span></button>
+            <button type="button" data-section="technical"><span aria-hidden="true">✓</span><span>Pruebas técnicas</span></button>
             <button type="button" data-section="audit"><span aria-hidden="true">≋</span><span>Auditoría</span></button>
             <div class="admin-nav-note"><span class="admin-live-dot" aria-hidden="true"></span><span>Control de acceso activo<br /><small>Las API validan el rol en el servidor.</small></span></div>
           </nav>
@@ -141,6 +143,25 @@
                   <button type="submit" class="admin-button primary" disabled>Forzar escalado</button>
                 </form>
                 <p class="admin-form-hint">AWS programa el regreso a la capacidad inicial unos diez minutos después. La prueba de tráfico se ejecuta por separado.</p>
+              </section>
+            </section>
+
+            <section class="admin-view" data-view="technical" aria-labelledby="technical-heading" hidden>
+              <div class="admin-section-heading">
+                <div><h2 id="technical-heading">Pruebas técnicas</h2><p>Resultados de las pruebas y consulta en vivo de la conexión al WMS.</p></div>
+                <button type="button" class="admin-button secondary" data-reload="technical">Actualizar</button>
+              </div>
+              <section class="admin-card">
+                <div class="admin-card-heading">
+                  <div><h3>Conectividad WMS</h3><p>Consulta las colas de Azure desde el ERP y mide el tiempo de respuesta.</p></div>
+                  <button type="button" class="admin-button primary" id="technical-wms-probe">Comprobar WMS</button>
+                </div>
+                <p id="technical-wms-status" aria-live="polite"></p>
+              </section>
+              <section class="admin-card">
+                <h3>Resultados registrados</h3>
+                <p id="technical-date"></p>
+                <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Alcance</th></tr></thead><tbody id="technical-rows"></tbody></table></div>
               </section>
             </section>
 

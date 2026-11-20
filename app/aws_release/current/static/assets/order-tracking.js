@@ -1,3 +1,5 @@
+import { createPortalApi } from "./portal-api.mjs";
+
 (() => {
   const get = (id) => document.getElementById(id);
   const roleGuides = {
@@ -18,7 +20,7 @@
     insufficient_role: "Tu rol no permite esta acción.",
     invalid_order_items: "Revisa los SKU, elimina los duplicados y usa cantidades entre 1 y 1.000.",
   };
-  let csrf, role, records = [], selected, detail, loadNumber = 0;
+  let role, records = [], selected, detail, loadNumber = 0;
 
   function node(tag, value, className) {
     const element = document.createElement(tag);
@@ -27,14 +29,7 @@
     return element;
   }
 
-  async function request(path, options = {}) {
-    const headers = { Accept: "application/json" };
-    if (options.method === "POST") Object.assign(headers, { "Content-Type": "application/json", "X-CSRF-Token": csrf });
-    const response = await fetch(path, { ...options, headers, credentials: "same-origin", cache: "no-store" });
-    const value = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(errors[value.error] || `La operación devolvió HTTP ${response.status}.`);
-    return value;
-  }
+  const request = createPortalApi(errors);
 
   function announce(message, error = false) {
     get("notice").hidden = false;
@@ -189,10 +184,12 @@
   }
 
   async function init() {
+    const theme = localStorage.getItem("tangamandapio-theme");
+    const prefersDark = matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = theme === "dark" || (!theme && prefersDark) ? "dark" : "light";
     const session = await request("/api/auth/session");
     role = session.user?.role;
     if (!session.authenticated || !roleGuides[role]) { location.replace("/"); return; }
-    csrf = session.csrf_token;
     const operator = ["operations", "admin"].includes(role);
     get("role-summary").textContent = roleGuides[role];
     get("health").hidden = !operator;

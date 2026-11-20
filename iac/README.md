@@ -8,6 +8,13 @@ administra los logs del ALB mediante `EnableAlbAccessLogs` y la retención del
 prefijo `alb-access/`. El [presupuesto ARM](azure-monitoring/subscription-budget.json)
 se despliega a nivel de suscripción, fuera de las raíces Terraform existentes.
 
+La [pila de logging del WAF](cloudformation/aws-waf-logging.yaml) asocia la ACL
+regional del ALB con `aws-waf-logs-tangamandapio-alb`. Conserva siete días de
+tráfico y omite los valores de cookies, cabeceras de credenciales y cadenas de
+consulta. Despliégala después de asociar el WAF al ALB, usando el ARN de la ACL
+del entorno correspondiente. Revisa `AWS-WAF` y `AmazonCloudWatch` en el corte
+de facturación posterior a la activación.
+
 La [pila del respaldo diario](cloudformation/aws-azure-postgres-backup.yaml)
 usa Systems Manager a las 03:00 de Lima. Los manifiestos privados de S3 están
 en `dr/postgres/manifests/<fecha-UTC>.json`. Contienen el nombre de la copia
@@ -17,6 +24,8 @@ al vencimiento. El [entorno Terraform](environments/aws-azure-tailscale)
 puede administrar esa pila y la de los routers a través de CloudFormation.
 
 ### Topología comprobada
+
+Los diagramas editables en Draw.io muestran la [infraestructura desplegada](architecture/tangamandapio-infraestructura.drawio) y los [flujos de pedidos, recuperación y conmutación](architecture/tangamandapio-flujos.drawio).
 
 ```mermaid
 flowchart LR

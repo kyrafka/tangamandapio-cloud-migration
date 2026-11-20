@@ -1,0 +1,37 @@
+{
+  "checked_utc": "2026-11-19T20:44:17.918419+00:00",
+  "goal_seconds": 3,
+  "route_backup_observed_seconds": 1.428,
+  "applications": [
+    {
+      "instance": "i-048b5a242f7264d24",
+      "baseline_200": true,
+      "after_backup_observed_https_200_s": 2.641,
+      "failed_requests_during_12s": 2
+    },
+    {
+      "instance": "i-0cf75643b408971e7",
+      "baseline_200": true,
+      "after_backup_observed_https_200_s": 2.597,
+      "failed_requests_during_12s": 2
+    }
+  ],
+  "returned_to_primary": true,
+  "monitor_id": "3fdef311-5a15-4793-a87f-06773be1971c",
+  "test_id": "95490772-7d87-4275-bbca-9cd4a25dfd2b",
+  "phases": [
+    {
+      "action": "stop_start",
+      "epoch": 1795121031.4154937
+    },
+    {
+      "action": "stopped",
+      "epoch": 1795121032.3684487
+    },
+    {
+      "action": "started",
+      "epoch": 1795121044.6998105
+    }
+  ],
+  "method": "First private HTTP 200 after an observed switch to backup (conservative bound, includes AWS route polling)."
+}

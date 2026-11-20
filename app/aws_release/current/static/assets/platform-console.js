@@ -1,3 +1,5 @@
+import { createPortalApi } from "./portal-api.mjs";
+
 (() => {
   const roles = {
     customer: "Cliente B2B",
@@ -9,7 +11,7 @@
   };
   const allowedRoles = ["customer", "sales", "warehouse", "operations", "admin", "auditor"];
   const $ = (selector) => document.querySelector(selector);
-  const state = { csrf: "", role: "", window: 60, loading: false, inventory: [], outboxLimit: 30, outboxOffset: 0, outboxTotal: 0 };
+  const state = { role: "", window: 60, loading: false, inventory: [], outboxLimit: 30, outboxOffset: 0, outboxTotal: 0 };
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -18,41 +20,21 @@
     return node;
   }
 
-  async function request(path, options = {}) {
-    const { includeMeta = false, ...fetchOptions } = options;
-    const headers = new Headers(fetchOptions.headers || {});
-    if (fetchOptions.body) headers.set("Content-Type", "application/json");
-    if (state.csrf && fetchOptions.method && fetchOptions.method !== "GET") {
-      headers.set("X-CSRF-Token", state.csrf);
-    }
-    const response = await fetch(path, {
-      ...fetchOptions,
-      headers,
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-    const payload = response.status === 204 ? null : await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const errorCode = payload?.error || payload?.status;
-      const message = {
-        authentication_required: "La sesión terminó. Vuelve a iniciar sesión.",
-        insufficient_role: "Tu rol no puede realizar esta acción.",
-        cannot_remove_last_admin: "No se puede desactivar al último administrador activo.",
-        cannot_remove_own_admin_access: "No puedes quitarte tu propio acceso de administrador.",
-        use_self_service_password_change: "Usa el cambio de contraseña de tu propia cuenta.",
-        not_configured: "La consulta a Azure no está configurada en este entorno.",
-        unavailable: "Azure no está disponible ahora; el evento permanece en la cola de AWS.",
-        azure_event_not_found: "Azure todavía no registra este evento.",
-        event_not_found: "El evento ya no existe en la cola local.",
-        invalid_demo_sku: "El SKU no pertenece al catálogo de laboratorio.",
-        invalid_demo_quantity: "La cantidad debe ser un número entero entre 1 y 10.",
-        insufficient_demo_stock: "No hay suficiente stock demo para esa cantidad.",
-        azure_inventory_unavailable: "No se pudo consultar el inventario de Azure; no se creó el pedido.",
-      }[errorCode] || errorCode || `Error ${response.status}`;
-      throw new Error(message);
-    }
-    return includeMeta ? { payload, headers: response.headers } : payload;
-  }
+  const request = createPortalApi({
+    authentication_required: "La sesión terminó. Vuelve a iniciar sesión.",
+    insufficient_role: "Tu rol no puede realizar esta acción.",
+    cannot_remove_last_admin: "No se puede desactivar al último administrador activo.",
+    cannot_remove_own_admin_access: "No puedes quitarte tu propio acceso de administrador.",
+    use_self_service_password_change: "Usa el cambio de contraseña de tu propia cuenta.",
+    not_configured: "La consulta a Azure no está configurada en este entorno.",
+    unavailable: "Azure no está disponible ahora; el evento permanece en la cola de AWS.",
+    azure_event_not_found: "Azure todavía no registra este evento.",
+    event_not_found: "El evento ya no existe en la cola local.",
+    invalid_demo_sku: "El SKU no pertenece al catálogo de laboratorio.",
+    invalid_demo_quantity: "La cantidad debe ser un número entero entre 1 y 10.",
+    insufficient_demo_stock: "No hay suficiente stock demo para esa cantidad.",
+    azure_inventory_unavailable: "No se pudo consultar el inventario de Azure; no se creó el pedido.",
+  });
 
   function announce(message, tone = "error") {
     const alert = $("#platform-alert");
@@ -245,7 +227,7 @@
       catch { announce("No se pudo acceder al portapapeles; selecciona y copia el valor visible."); }
     });
     box.append(copy); box.hidden = false;
-    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    box.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest" });
   }
 
   function renderUsers(users, companies) {
@@ -520,7 +502,6 @@
   async function start() {
     try {
       const session = await request("/api/auth/session");
-      state.csrf = session.csrf_token || "";
       if (!session.authenticated || !["admin", "operations"].includes(session.user?.role)) {
         window.location.replace("/"); return;
       }

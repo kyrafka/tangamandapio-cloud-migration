@@ -1,10 +1,27 @@
 # Matriz de evidencia por criterio
 
-## Verificación del 19/11/2026
+## Actualización del 20/11/2026
+
+- [Recorrido para tomar las capturas del portal, AWS y Azure](../evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026).
+- [Lectura de costos de Azure del día y último corte disponible de AWS](../evidence/current/COSTOS-2026-11-20.md).
+
+## Actualización del 19/11/2026
+
+| Criterio | Evidencia vigente | Pendiente |
+| --- | --- | --- |
+| 5 Seguridad | Logs del WAF en CloudWatch por 7 días. Prueba de HTTPS con cadena de consulta y cookie de demostración ocultas. La cuenta AWS tiene cero usuarios IAM y cero claves raíz. | Separar el usuario SQL de ejecución del usuario maestro y verificar en las cuentas antiguas la revocación de credenciales expuestas. |
+| 6 y 12 Disponibilidad y carga | RDS está disponible en Multi-AZ. Failover privado en 2,64 s y 2,60 s con retorno al principal. 10.000 HTTPS al ALB con 50 concurrentes, 1 HTTP 502 y p95 de 487,14 ms. | Medir la conmutación de RDS y demostrar consistencia de la meta de 3 s para la VPN. La causa de los 4.399 fallos de transporte del ensayo histórico quedó indeterminada. |
+| 8 y 9 IaC y recuperación | La copia diaria tenía 15 h 39 min 44 s al corte simulado. Un pedido y un evento outbox quedan fuera. Se restauraron 20 tablas desde Azure en un PostgreSQL local en 14,568 s sin AWS. | La SCP deniega RDS en las 16 regiones habilitadas fuera de Ohio. Falta probar el ERP completo en la recuperación regional y la reconstrucción multinube desde cuentas vacías. |
+| 10 Multinube | Se presenta AWS–Azure según la confirmación del equipo. El pedido privado está correlacionado en Function, Queue, Blob e Insights. | Ejecutar la demostración de defensa. |
+| 11 Costos | [Presupuestos y desglose por servicio](../evidence/current/COSTOS-2026-11-19.md). | Actualizar el corte para la defensa. |
+| 13 y 14 Entrega | Informe con Draw.io, capturas y registro de pruebas. | Capturas de trazas, restauración y presupuesto Azure. |
+
+## Primera verificación del 19/11/2026
 
 El [registro operativo vigente](../iac/ESTADO_REAL_2026-11-19.md) enlaza las
 pruebas HTTP, las trazas de Azure, las muestras de conmutación y la copia
-restaurada. Las tablas de fechas anteriores son históricas.
+restaurada. Esta tabla y las de fechas anteriores conservan los resultados
+históricos de cada corte.
 
 | Criterios | Verificado | Falta para la defensa |
 | --- | --- | --- |

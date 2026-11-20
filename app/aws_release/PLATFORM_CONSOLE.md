@@ -8,6 +8,13 @@ El módulo local está en `/platform`. Lo pueden abrir Administración y
 Operaciones TI. El backend vuelve a comprobar el rol; ocultar el acceso del
 menú no es la barrera de seguridad.
 
+El paquete publicado se construye desde `app/aws_release/current`. Sus
+vistas comparten `static/assets/portal-interface.css` para colores,
+tipografía y transiciones. Administración, ERP, Seguimiento y Nube usan
+`static/assets/portal-api.mjs` para las solicitudes de sesión y la protección
+CSRF. Las consultas de métricas, colas y evidencias se registran desde
+`platform_routes.py`.
+
 Incluye:
 
 - solicitudes, latencia p95, errores 5xx y destinos saludables del ALB;
@@ -93,6 +100,12 @@ sesión activa y se registra en la auditoría.
   y luego sube el mínimo y el objetivo durante unos diez minutos. Completa una
   prueba antes de iniciar otra. Un ajuste manual de capacidad resulta visible
   en el panel. El comportamiento de la política bajo tráfico se mide con k6.
+
+- **Pruebas técnicas** muestra las mediciones fechadas de conmutación, carga,
+  recuperación y el cotejo entre la copia diaria y los pedidos de RDS.
+  **Comprobar WMS** consulta las colas privadas y muestra la latencia desde
+  el navegador, con sus dos conteos. El estado parcial indica qué lectura
+  falta. La consulta es de solo lectura y requiere Administración.
 
 CloudFormation administra los permisos del rol de instancia limitados al ASG
 del proyecto, al prefijo de respaldos y al parámetro de lectura. El listado de

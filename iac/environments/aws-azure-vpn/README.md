@@ -1,5 +1,17 @@
 # Red privada AWS–Azure (BGP, dos gateways activos)
 
+## Verificación de la cuenta vigente · 19/11/2026
+
+En la cuenta del proyecto, Ohio (`us-east-2`), las pruebas de permisos de
+`ec2:CreateCustomerGateway` y `ec2:CreateVpnGateway` devolvieron una denegación
+explícita de la política de la organización `p-yzos0uu8`. Se ejecutaron con
+`--dry-run` y posteriormente se repitieron como operaciones de creación
+reales con el perfil `main` y el rol `AccountFullAccessRole`. AWS volvió a
+devolver `UnauthorizedOperation` en ambos casos. El enlace privado operativo
+hacia el WMS usa Tailscale. El despliegue administrado requiere que la
+organización autorice ambas operaciones antes de aprovisionar el gateway de
+Azure.
+
 Este entorno crea una VNet Azure no solapada (`10.20.0.0/16`), subred de
 workloads, subred para Private Endpoints, una subred Flex Consumption delegada
 (`/27`, `Microsoft.App/environments`) y un gateway VPN RouteBased `VpnGw1AZ`

@@ -1,0 +1,28 @@
+{
+  "/health": 200,
+  "/ready": 200,
+  "/api/admin/technical-tests": 401,
+  "admin_login": 200,
+  "admin_checks": 200,
+  "cache_control": "no-store",
+  "checks": [
+    "Conmutación privada AWS–Azure",
+    "Carga del ALB",
+    "Punto de recuperación de PostgreSQL",
+    "Restauración aislada",
+    "Recuperación regional e IaC",
+    "Registro de tráfico AWS WAF"
+  ],
+  "admin_page": 200,
+  "admin_page_probe_button": true,
+  "wms_probe_erp_request_ms": 861.09,
+  "wms_probe_http": 200,
+  "azure_queue": {
+    "pending": 0,
+    "poison": 0,
+    "status": "ok"
+  },
+  "admin_logout": 204,
+  "verified_at_utc": "2026-11-19T21:09:14.896426+00:00",
+  "application_release": "20261119-technical-tests-and-recovery"
+}

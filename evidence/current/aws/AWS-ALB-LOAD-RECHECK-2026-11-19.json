@@ -1,0 +1,30 @@
+{
+  "test_id": "PT-PERF-01",
+  "started_at_utc": "2026-11-19T20:45:16.096274+00:00",
+  "finished_at_utc": "2026-11-19T20:46:50.733954+00:00",
+  "url": "https://tangamandapio.kendellnm.me/",
+  "connect_to": "tangamandapio-alb-1518602404.us-east-2.elb.amazonaws.com",
+  "requests": 10000,
+  "concurrency": 50,
+  "elapsed_seconds": 94.638,
+  "latency_ms": {
+    "min": 451.5,
+    "mean": 471.93,
+    "p95": 487.14,
+    "max": 704.35
+  },
+  "errors": 1,
+  "error_rate": 0.0001,
+  "thresholds": {
+    "max_p95_ms": 5000.0,
+    "max_error_rate": 0.01
+  },
+  "status_counts": {
+    "200": 9999,
+    "502": 1
+  },
+  "error_types": {
+    "HTTPError": 1
+  },
+  "passed": true
+}

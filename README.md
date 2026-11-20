@@ -2,10 +2,14 @@
 
 Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
 
-## Estado operativo vigente — 19/11/2026
+## Estado operativo al 20/11/2026
 
-El portal público funciona por HTTPS. En AWS Ohio, el ASG mantiene dos destinos
-sanos en dos zonas y permite escalar hasta cinco. AWS usa un NAT Gateway
+El 20/11, `/health` y `/ready` respondieron por HTTPS. El paquete
+`20261119-unified-portal-interface` pasó 50 pruebas locales y su publicación
+en Ohio espera la renovación de la sesión AWS.
+
+El inventario comprobado el 19/11 registró un ASG con dos destinos sanos
+en dos zonas y capacidad de escalar hasta cinco. AWS usa un NAT Gateway
 compartido. Azure West US opera sin NAT Gateway.
 
 Un pedido sintético recorrió **pendiente → en cola → procesado** por la VPN
@@ -14,12 +18,15 @@ Insights. El portal muestra el avance según el rol. Operaciones y Administraci�
 pueden consultar las colas y reintentar envíos.
 
 La copia diaria cifrada de PostgreSQL se restauró de forma aislada en **35,108 s**.
-El cambio al router de respaldo y el retorno se probaron, con recuperaciones
-HTTPS entre 4,59 y 9,92 s en los dos ensayos ajustados. RDS sigue en una zona,
-con un día de retención administrada. La última carga sostuvo 25 usuarios
-virtuales y completó 3.013 solicitudes sin errores, con p95 de 190 ms.
+El RPO observado fue de **15 h 39 min 44 s**. El ensayo más reciente de la ruta
+privada recuperó HTTPS en **2,64 y 2,60 s** desde ambas EC2. En los dos ensayos
+previos se midieron de 4,59 a 9,92 s. RDS está en **Multi-AZ** desde el 19/11 y
+conserva un día de retención. La última prueba al ALB registró un HTTP 502 en
+10.000 solicitudes con 50 concurrentes.
 
-[Estado real y evidencias](iac/ESTADO_REAL_2026-11-19.md) ·
+[Inventario del 19/11 y evidencias](iac/ESTADO_REAL_2026-11-19.md) ·
+[Costos actualizados](evidence/current/COSTOS-2026-11-20.md) ·
+[Guía de capturas](evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026) ·
 [Matriz de rúbrica](core/04_matriz_rubrica.md) ·
 [Seguimiento y permisos](app/aws_release/PLATFORM_CONSOLE.md#seguimiento-de-pedidos-por-rol)
 
@@ -71,8 +78,8 @@ El portal reúne funciones B2B para distribuidores y módulos ERP para equipos i
 
 ## Documentación principal
 
-- [Entregable final — plantilla académica](deliverables/Proyecto_Final_Tangamandapio_2026-11-19.docx)
-- [Manual técnico](deliverables/Manual_Tecnico_Tangamandapio_2026-11-19.docx)
+- [Entregable final](deliverables/Proyecto_Final_Tangamandapio_2026-11-20.docx)
+- [Manual técnico](deliverables/Manual_Tecnico_Tangamandapio_2026-11-20.docx)
 - [Infraestructura y estado de AWS/Azure](iac/README.md)
 - [CloudFormation de AWS: despliegue y recuperación](iac/cloudformation/README.md)
 - [Terraform: entornos y módulos](iac/)

@@ -29,7 +29,9 @@ El script conserva parámetros existentes con `UsePreviousValue` y tiene preflig
 
 ## Reconstruir
 
-`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias. Publica el paquete versionado antes de habilitar EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en el bucket indicado. Los valores predeterminados coinciden con RDS vivo, **Single-AZ y 1 día**. Para ampliar la cobertura, revisa permisos, precio y saldo antes de pasar `DATABASE_MULTI_AZ=true` o `DATABASE_BACKUP_RETENTION_DAYS=N`.
+`rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias. Publica el paquete versionado antes de habilitar EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en el bucket indicado.
+
+El valor predeterminado para un laboratorio sigue siendo Single-AZ y un día de retención. El RDS en producción ya usa Multi-AZ y conserva un día de retención. Usar `DATABASE_MULTI_AZ=true` en el próximo conjunto de cambios del stack de producción y revisar las acciones antes de ejecutarlo. La conversión directa quedó completa. El conjunto de cambios que intentó adoptar el estado también propuso reemplazos de red y cambios en SNS, por lo que la sincronización del parámetro del stack sigue pendiente.
 
 Para recuperar **Administración → Respaldos**, pasa
 `ADMIN_AZURE_BACKUP_ACCOUNT=sttangama261030r` y, si cambia el nombre por

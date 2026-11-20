@@ -55,7 +55,7 @@
       "zones": 2,
       "explicit_route_associations": 0,
       "internet_route": true,
-      "auto_assign_public_ip_observed": 0
+      "auto_assign_public_ip_observed": 2
     },
     "bucket_encryption": "AES256",
     "block_public_access_observed": null,

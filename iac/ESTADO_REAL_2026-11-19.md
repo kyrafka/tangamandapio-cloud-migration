@@ -2,12 +2,97 @@
 
 19 de noviembre de 2026, Lima. Cuenta AWS `481056890449` en Ohio y suscripción Azure for Students en West US.
 
+## RDS Multi-AZ en Ohio
+
+RDS completó la conversión de `tangamandapio-postgres` y quedó en estado
+`available` con `MultiAZ=true`. El portal devolvió HTTP 200 a `/ready`
+durante y después de la conversión. Se conservó la base PostgreSQL cifrada,
+con 20 GiB gp3 y un día de respaldos. La conmutación de la base aún requiere
+un ensayo controlado. El costo adicional estimado para 21 días de operación
+continua es USD 10,66 antes de créditos.
+[Evidencia de la conversión](../evidence/current/aws/AWS-RDS-MULTIAZ-2026-11-19.json)
+· [Cálculo de costos](../evidence/current/COSTOS-2026-11-19.md).
+
+El parámetro `DatabaseMultiAZ` del stack aún figura en `false`. El conjunto
+de cambios que reconoció `SyncWithActual` para RDS también propuso reemplazar
+recursos de red y quitar una suscripción SNS existente. Se retiraron las dos
+propuestas sin ejecutarlas. Para el siguiente despliegue del stack, revisar el
+conjunto de cambios preparado con `DATABASE_MULTI_AZ=true`.
+[Parámetros de despliegue](cloudformation/README.md).
+
+## Recuperación fuera de AWS
+
+RDS devolvió una denegación explícita de la política de la organización en
+las 16 regiones AWS habilitadas fuera de Ohio. Azure Blob en West US ya
+conserva la copia externa. Se restauró en PostgreSQL local temporal con
+Azure Blob y Key Vault, sin usar las API ni el cómputo de AWS. Se verificaron
+las huellas del cifrado y del archivo, 20 tablas, un pedido y un evento
+outbox en 14,568 s. El clúster temporal se eliminó. La prueba demuestra
+la recuperación de la base fuera de AWS. Sigue pendiente levantar y
+redirigir un ERP completo en otra región.
+[Evidencia de restauración independiente](../evidence/current/azure/AZURE-POSTGRES-RESTORE-WITHOUT-AWS-2026-11-19.json).
+
+La cuenta de almacenamiento de Azure está en `Standard_LRS`. Mantiene
+la copia en una sola región de Azure. La programación diaria y la clave
+de recuperación siguen siendo dependencias de este procedimiento.
+
+## Segunda ronda de pruebas del 19/11
+
+- **WAF.** CloudFormation creó `tangamandapio-waf-logging`. El grupo de
+  CloudWatch conserva siete días. Una petición HTTPS real a `/ready` dejó
+  un registro `ALLOW` con la cookie y la cadena de consulta ocultas.
+  [Evidencia del WAF](../evidence/current/aws/AWS-WAF-LOGGING-2026-11-19.json).
+- **Disponibilidad.** El cambio al respaldo se observó a los 1,43 s. Las
+  aplicaciones completaron HTTPS privado en 2,64 s y 2,60 s tras el corte,
+  con dos solicitudes fallidas en cada una y retorno al principal. El objetivo
+  se cumplió en esa ejecución.
+  [Evidencia de conmutación](../evidence/current/aws/AWS-WMS-FAILOVER-RUBRIC-2026-11-19.json).
+- **Carga.** Una repetición acotada con 10.000 peticiones HTTPS directas al
+  ALB y 50 concurrentes obtuvo 9.999 HTTP 200 y un 502. p95 de 487,14 ms.
+  El registro del 502 muestra la acción `waf,forward` y carece de código
+  HTTP del destino. Los logs archivados no conservan la ventana del 16/11,
+  así que los 4.399 fallos históricos de transporte siguen sin causa demostrada.
+  [Resultado de carga](../evidence/current/aws/AWS-ALB-LOAD-RECHECK-2026-11-19.json)
+  · [Correlación ALB](../evidence/current/aws/AWS-ALB-502-CORRELATION-2026-11-19.json).
+- **RPO.** La copia diaria de las 00:08:42 de Lima se cotejó con RDS en modo
+  lectura a las 15:48:26. En una caída simulada en ese momento quedarían fuera
+  un pedido sintético y un evento outbox. El punto tenía 15 h 39 min 44 s de
+  antigüedad. Se verificó la integridad y el Azure Key Vault volvió a permitir
+  el descifrado autorizado de la copia. El tiempo de 35,108 s viene de la
+  restauración aislada previa de la misma copia.
+  [Evidencia de RPO](../evidence/current/aws/AWS-POSTGRES-RPO-MARKERS-2026-11-19.json).
+- **Seguridad y alcance.** AWS informó cero usuarios IAM y cero claves raíz
+  en la cuenta del proyecto. La sesión operativa usa STS. El rol del router
+  tiene `ReplaceRoute` acotado a la tabla de aplicación y el despacho de
+  respaldo tiene alcance al documento SSM del proyecto y a las instancias
+  con etiqueta del ASG. El ERP aún lee el secreto maestro de su RDS, por lo
+  que queda pendiente un usuario SQL separado con permisos de ejecución.
+  Siguen por verificar las credenciales que aparecieron en capturas de otras
+  cuentas. [Revisión de IAM](../evidence/current/aws/AWS-IAM-SCOPE-2026-11-19.json).
+- **Regiones y entrega.** RDS seguía en Single-AZ durante este corte. La SCP denegó el
+  acceso a RDS en `us-west-2` y `us-east-1`; no se efectuó una restauración
+  regional. El emulador creó y eliminó 17 recursos de red de Terraform.
+  CloudFormation identificó 21 de 23 recursos de su subconjunto y el borrado
+  devolvió `DependencyViolation`. La reconstrucción completa requiere probar
+  las dos nubes desde cuentas vacías. Se presenta AWS–Azure según la
+  confirmación del equipo.
+  [Prueba de IaC](../evidence/current/aws/AWS-IAC-EMULATOR-2026-11-19.json)
+  ·
+  [Tabla de costos por servicio](../evidence/current/COSTOS-2026-11-19.md).
+
 ## Portal y permisos
+
+La versión `20261119-technical-tests-and-recovery` quedó desplegada. La sección
+**Administración → Pruebas técnicas** rechazó con HTTP 401 el acceso anónimo
+y devolvió HTTP 200 con sesión administrativa. La consulta al WMS desde el
+ERP respondió en 861,09 ms en esta prueba, con cero mensajes pendientes y cero
+en la cola de errores. [Prueba del módulo en producción](../evidence/current/aws/AWS-ERP-TECHNICAL-TESTS-2026-11-19.json).
 
 El administrador pudo iniciar y cerrar sesión por el dominio público. El CNAME de Cloudflare apuntaba a un balanceador anterior. Se actualizó el registro de Tangamandapio con el ALB actual y se verificaron TLS y sesión de administrador. La contraseña activa se guarda en `tangamandapio/portal/admin` en Secrets Manager.
 
 | Evidencia | Resultado |
 | --- | --- |
+| [Sesiones por rol en navegador](../evidence/current/aws/AWS-PORTAL-ROLES-BROWSER-2026-11-19.json) | 256 comprobaciones aprobadas en diez sesiones de producción. Se abrieron los módulos según el rol, se verificaron las respuestas 403 esperadas y se confirmó la suspensión de la cuenta temporal. Administración consultó el WMS con cero mensajes pendientes y cero en la cola de errores. |
 | [Portal público](../evidence/current/aws/AWS-PUBLIC-PORTAL-ADMIN-2026-11-18.json) | 32 lecturas HTTP 200. Incluyen administración, usuarios, empresas, alertas, auditoría, pedidos, outbox, ERP, inventario WMS y telefonía. |
 | [Roles del portal](../evidence/current/aws/AWS-PORTAL-ROLES-2026-11-19.json) | Seis roles y 42 respuestas contrastadas con la matriz de permisos. Cinco cuentas temporales quedaron desactivadas. |
 | [Roles y operaciones ERP](../evidence/current/aws/AWS-ERP-ADMIN-MODULES-2026-11-19.json) | Seis roles ERP y 48 comprobaciones. Se registró y liquidó un gasto sintético de 0,05 en el ERP. El panel concilió el pedido con su evento outbox. |
@@ -119,6 +204,6 @@ temporal de lectura; el token queda fuera de Git y del estado Terraform.
 | Azure Cost Management | USD 8,7973 acumulados en el mes. Presupuesto mensual de USD 25. |
 | Cambios de capacidad | Dos routers AWS `t3.micro` con crédito de CPU estándar. Se reutilizaron las VM, el Private Endpoint y el almacenamiento de Azure. El respaldo usa las EC2 de aplicación existentes. |
 
-RDS está disponible en una sola zona y conserva su respaldo administrado de un día. El plan gratuito admite el despliegue Single-AZ. Una segunda región de recuperación, el escalado sostenido por debajo del umbral de errores y el audio entre redes restrictivas quedan por validar. La sustitución de una EC2 completa en cinco segundos no forma parte del resultado medido por el cambio entre routers.
+RDS está disponible en Multi-AZ y conserva su respaldo administrado de un día. Una segunda región con el ERP completo, el escalado sostenido por debajo del umbral de errores y el audio entre redes restrictivas quedan por validar. La sustitución de una EC2 completa en cinco segundos queda fuera del ensayo de cambio entre routers.
 
 La defensa requiere adjuntar fotografías autorizadas y aprobación escrita del docente para presentar AWS–Azure cuando la rúbrica pide AWS–OCI.

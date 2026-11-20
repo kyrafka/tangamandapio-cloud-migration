@@ -1,0 +1,26 @@
+{
+  "backup_object": "postgres/20261119-daily.json",
+  "backup_snapshot_start": "2026-11-19T05:08:42.305523+00:00",
+  "simulated_cutoff": "2026-11-19T20:48:26.565631+00:00",
+  "observed_recovery_point_age_seconds": 56384.3,
+  "source_order_count": 2,
+  "backup_order_count": 1,
+  "source_outbox_count": 2,
+  "backup_outbox_count": 1,
+  "verified_synthetic_orders_at_risk": 1,
+  "markers": [
+    {
+      "reference": "WMS-DEMO-20261119-AF9E52",
+      "source_created_at": "2026-11-19T04:54:43.090216+00:00",
+      "recovered_from_archive": true
+    },
+    {
+      "reference": "SEGUIMIENTO-DEMO-20261119-151352",
+      "source_created_at": "2026-11-19T15:13:52.761817+00:00",
+      "recovered_from_archive": false
+    }
+  ],
+  "archive_read_seconds": 8.67,
+  "source_read_command": "a9ee379d-e766-4ef2-9512-8317d6138da1",
+  "method": "Read-only RDS marker comparison against a verified, decrypted daily archive inspected in memory. Prior 20-table isolated PostgreSQL restore remains separate."
+}

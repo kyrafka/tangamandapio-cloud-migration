@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="pedidos" name="Flujo de pedidos por rol">
+    <mxGraphModel dx="1280" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="840" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" vertex="1" value="Flujo de pedidos por rol" style="text;html=1;align=left;strokeColor=none;fillColor=none;fontFamily=Segoe UI;fontSize=28;fontStyle=1;fontColor=#16334A;">
+          <mxGeometry x="16" y="11" width="1230" height="41" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" parent="1" vertex="1" value="Registro en AWS, procesamiento asíncrono en Azure y consulta del resultado desde el portal" style="text;html=1;align=left;strokeColor=none;fillColor=none;fontFamily=Segoe UI;fontSize=15;fontColor=#486477;">
+          <mxGeometry x="17" y="54" width="1220" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="sales" parent="1" vertex="1" value="Usuario y control de acceso" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=12;fontColor=#16334A;fontFamily=Segoe UI;fontSize=18;fontStyle=1;fillColor=#EEF4F8;strokeColor=#8DA8B9;strokeWidth=1.4;">
+          <mxGeometry x="18" y="97" width="1244" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="erp" parent="1" vertex="1" value="Aplicación y datos en AWS" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=12;fontColor=#80480C;fontFamily=Segoe UI;fontSize=18;fontStyle=1;fillColor=#FFF1DC;strokeColor=#C47924;strokeWidth=1.4;">
+          <mxGeometry x="18" y="259" width="1244" height="159" as="geometry" />
+        </mxCell>
+        <mxCell id="wms" parent="1" vertex="1" value="WMS en Azure" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=12;fontColor=#14537F;fontFamily=Segoe UI;fontSize=18;fontStyle=1;fillColor=#E8F4FF;strokeColor=#2B80BB;strokeWidth=1.4;">
+          <mxGeometry x="18" y="435" width="1244" height="226" as="geometry" />
+        </mxCell>
+        <mxCell id="actor" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Cliente B2B, Ventas o Admin&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Envía SKU y cantidad&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#16334A;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#8DA8B9;strokeWidth=1.7;">
+          <mxGeometry x="54" y="149" width="232" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="saved" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Pedido registrado&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;HTTP 201 · pendiente&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#196755;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2A8373;strokeWidth=1.7;">
+          <mxGeometry x="425" y="149" width="250" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="lookup" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Consulta por rol&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Resultado del inventario sintético&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#196755;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2A8373;strokeWidth=1.7;">
+          <mxGeometry x="930" y="149" width="280" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="txn" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Transacción PostgreSQL&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Pedido, líneas y outbox&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="54" y="316" width="232" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="worker" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Worker de entrega&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Reintento con el mismo ID&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="425" y="316" width="250" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="retry" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Operaciones o Administración&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Supervisa colas y reintenta&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="930" y="316" width="280" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="func" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Function privada&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Clave y evento idempotente&lt;br&gt;Escribe el original en Blob&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="425" y="492" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="queue" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Queue&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Procesa de forma asíncrona&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="790" y="492" width="173" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="final" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;WMS y Blob&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Resultado por ID de evento&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="1025" y="492" width="208" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="telemetry" parent="1" vertex="1" value="&lt;b style='font-size:15px'&gt;Application Insights&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#486477'&gt;Correlación por event_id, etapas en cola y resultado escrito.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=10;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#E8F4FF;strokeColor=#2B80BB;strokeWidth=1.2;">
+          <mxGeometry x="425" y="592" width="808" height="47" as="geometry" />
+        </mxCell>
+        <mxCell id="roles" parent="1" vertex="1" value="&lt;b style='font-size:15px'&gt;Visibilidad y supervisión&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#486477'&gt;Cliente B2B: solo su empresa. Almacén: líneas y resultado WMS. Auditoría: historial técnico y tiempos.&lt;br&gt;Ventas: registro y consulta autorizada. Operaciones y Administración: colas y reintentos auditados.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=10;fontColor=#16334A;fontFamily=Segoe UI;fillColor=#EEF4F8;strokeColor=#8DA8B9;strokeWidth=1.2;">
+          <mxGeometry x="18" y="686" width="1244" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="submit" edge="1" parent="1" source="actor" target="txn" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dispatch" edge="1" parent="1" source="txn" target="worker" value="Outbox" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tunnel" edge="1" parent="1" source="worker" target="func" value="HTTPS privado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#247E6E;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="enqueue" edge="1" parent="1" source="func" target="queue" value="En cola" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#247E6E;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="work" edge="1" parent="1" source="queue" target="final" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#247E6E;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ack" edge="1" parent="1" source="txn" target="saved" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=1;exitY=0.22;entryX=0;entryY=0.6;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="330" />
+              <mxPoint x="350" y="188" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="view" edge="1" parent="1" source="final" target="lookup" value="Procesado" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#247E6E;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=1;exitY=0;entryX=1;entryY=0.6;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1243" y="482" />
+              <mxPoint x="1243" y="193" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="retryTo" edge="1" parent="1" source="retry" target="worker" value="Reintento" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="operacion" name="Flujos de recuperación y conmutación">
+    <mxGraphModel dx="1280" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="840" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" vertex="1" value="Flujos de recuperación y conmutación" style="text;html=1;align=left;strokeColor=none;fillColor=none;fontFamily=Segoe UI;fontSize=28;fontStyle=1;fontColor=#16334A;">
+          <mxGeometry x="16" y="11" width="1230" height="41" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" parent="1" vertex="1" value="Copia cifrada y restauración aislada · Cambio de ruta privada al router sano" style="text;html=1;align=left;strokeColor=none;fillColor=none;fontFamily=Segoe UI;fontSize=15;fontColor=#486477;">
+          <mxGeometry x="17" y="54" width="1220" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="recovery" parent="1" vertex="1" value="Recuperación de PostgreSQL" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=12;fontColor=#80480C;fontFamily=Segoe UI;fontSize=18;fontStyle=1;fillColor=#FFF1DC;strokeColor=#C47924;strokeWidth=1.4;">
+          <mxGeometry x="18" y="105" width="604" height="570" as="geometry" />
+        </mxCell>
+        <mxCell id="failover" parent="1" vertex="1" value="Continuidad de la ruta WMS" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingTop=10;spacingLeft=12;fontColor=#14537F;fontFamily=Segoe UI;fontSize=18;fontStyle=1;fillColor=#E8F4FF;strokeColor=#2B80BB;strokeWidth=1.4;">
+          <mxGeometry x="638" y="105" width="624" height="570" as="geometry" />
+        </mxCell>
+        <mxCell id="backa" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Systems Manager inicia exportación&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Todos los días a las 03:00 de Lima&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="110" y="165" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="backb" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;EC2 ejecuta pg_dump&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Cifra el archivo y calcula las huellas&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="110" y="285" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="backedgeb" edge="1" parent="1" source="backa" target="backb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="backc" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Azure Blob recibe la copia cifrada&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Manifiesto privado en S3&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="110" y="405" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="backedgec" edge="1" parent="1" source="backb" target="backc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="backd" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Restauración aislada&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Valida huellas, descifra y comprueba PostgreSQL&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#C47924;strokeWidth=1.7;">
+          <mxGeometry x="110" y="525" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="backedged" edge="1" parent="1" source="backc" target="backd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="neta" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Ruta /32 usa el principal&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Sondeos del servicio y HTTPS al WMS&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="735" y="165" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="netb" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Monitor confirma la caída&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Comprueba al respaldo antes del cambio&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="735" y="285" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="netedgeb" edge="1" parent="1" source="neta" target="netb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="netc" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Actualiza el destino de la ruta&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;ENI de respaldo · aviso SNS&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="735" y="405" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="netedgec" edge="1" parent="1" source="netb" target="netc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="netd" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;El principal vuelve a estar sano&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:14px;color:#486477'&gt;Valida recuperación y restablece ruta y aviso&lt;/span&gt;" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;spacing=6;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#FFFFFF;strokeColor=#2B80BB;strokeWidth=1.7;">
+          <mxGeometry x="735" y="525" width="420" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="netedged" edge="1" parent="1" source="netc" target="netd" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#527891;strokeWidth=2;fontFamily=Segoe UI;fontSize=13;fontColor=#16334A;labelBackgroundColor=#FFFFFF;dashed=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rto" parent="1" vertex="1" value="&lt;b style='font-size:15px'&gt;Restauración aislada y pérdida simulada&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#486477'&gt;20 tablas en 35,108 s. RPO observado: 15 h 39 min 44 s.&lt;br&gt;Un pedido y un evento outbox quedarían fuera.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=10;fontColor=#80480C;fontFamily=Segoe UI;fillColor=#FFF1DC;strokeColor=#C47924;strokeWidth=1.2;">
+          <mxGeometry x="18" y="697" width="604" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="route" parent="1" vertex="1" value="&lt;b style='font-size:15px'&gt;Conmutación medida desde las dos EC2&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#486477'&gt;Primer HTTPS 200: 2,64 s y 2,60 s en la prueba del 19/11.&lt;br&gt;Retorno automático al principal verificado.&lt;/span&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=10;spacingRight=10;fontColor=#14537F;fontFamily=Segoe UI;fillColor=#E8F4FF;strokeColor=#2B80BB;strokeWidth=1.2;">
+          <mxGeometry x="638" y="697" width="624" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,352 @@
+/* Shared surfaces and interaction tokens for the shipped portal. */
+:root {
+  color-scheme: light;
+  --ui-font: "Segoe UI", system-ui, sans-serif;
+  --ui-page: #f3f6f3;
+  --ui-surface: #fff;
+  --ui-soft: #e9f1ec;
+  --ui-line: #d2dfd7;
+  --ui-ink: #142b22;
+  --ui-muted: #51675c;
+  --ui-accent: #176246;
+  --ui-on-accent: #fff;
+  --ui-good: #176246;
+  --ui-warn: #81500b;
+  --ui-bad: #9c342e;
+  --ui-focus: #247a55;
+  --ui-forest: #102b22;
+  --ui-forest-raised: #1a3a2f;
+  --ui-on-forest: #f4fbf5;
+  --ui-on-forest-muted: #bcd5c6;
+  --ui-mint: #c4ebcc;
+  --ui-radius: 16px;
+  --ui-shadow: 0 2px 5px #17362b08, 0 12px 30px #17362b08;
+  --ui-ease: cubic-bezier(.22, 1, .36, 1);
+  --ui-quick: 160ms;
+  --ui-enter: 280ms;
+  --ui-pixels: radial-gradient(circle, #c4ebcc38 1.15px, transparent 1.35px);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ui-page: #111e19;
+  --ui-surface: #192923;
+  --ui-soft: #23382e;
+  --ui-line: #3d574a;
+  --ui-ink: #eff9f1;
+  --ui-muted: #bccfc3;
+  --ui-accent: #9dd9ac;
+  --ui-on-accent: #143326;
+  --ui-good: #a9e0b7;
+  --ui-warn: #f0c783;
+  --ui-bad: #f2a59b;
+  --ui-focus: #afe4ba;
+  --ui-shadow: 0 12px 30px #08100c32;
+}
+
+:root, :root[data-theme="dark"] {
+  --portal-accent: var(--ui-accent);
+  --portal-page: var(--ui-page);
+  --portal-side: var(--ui-surface);
+  --portal-soft: var(--ui-soft);
+  --portal-line: var(--ui-line);
+  --portal-ink: var(--ui-ink);
+  --portal-muted: var(--ui-muted);
+  --platform-accent: var(--ui-accent);
+  --platform-good: var(--ui-good);
+  --platform-warn: var(--ui-warn);
+  --platform-bad: var(--ui-bad);
+  --platform-page: var(--ui-page);
+  --platform-surface: var(--ui-surface);
+  --platform-soft: var(--ui-soft);
+  --platform-line: var(--ui-line);
+  --platform-ink: var(--ui-ink);
+  --platform-muted: var(--ui-muted);
+}
+
+body { font-family: var(--ui-font); }
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 3px;
+}
+:where(button, summary) { touch-action: manipulation; }
+
+/* Sign-in uses the portal's existing artwork over a high-contrast grid. */
+:root .auth-minimal .brand-pane {
+  background: var(--ui-forest);
+  color: var(--ui-on-forest);
+  isolation: isolate;
+}
+:root .auth-minimal .brand-pane::before,
+:root[data-theme="dark"] .auth-minimal .brand-pane::before {
+  background-image:
+    linear-gradient(105deg, #102b22 8%, #102b22dc 49%, #102b2261 100%),
+    url("/images/tangamandapio-operations.svg");
+  background-position: center, right center;
+  filter: none;
+  transform: none;
+}
+.auth-minimal .brand-pane::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--ui-pixels);
+  background-size: 13px 13px;
+  mask-image: linear-gradient(115deg, transparent 22%, #000 100%);
+  pointer-events: none;
+  content: "";
+}
+:root .auth-minimal .brand-pane :is(h1, dt, .brand-topline strong) { color: var(--ui-on-forest); }
+:root .auth-minimal .brand-pane :is(dd, .brand-copy > p, .brand-footer, .brand-topline span) {
+  color: var(--ui-on-forest-muted);
+}
+:root .auth-minimal .brand-pane .brand-footer { opacity: 1; }
+:root .auth-minimal .brand-pane .eyebrow { color: var(--ui-mint); }
+:root .auth-minimal .brand-pane h1 {
+  max-width: 15ch;
+  font-size: clamp(2rem, 4.35vw, 4.5rem);
+  letter-spacing: -.055em;
+  text-wrap: balance;
+}
+:root .auth-minimal .brand-pane :is(.brand-mark, .login-theme-toggle) {
+  background: var(--ui-mint);
+  color: #123625;
+  border-color: transparent;
+}
+:root .auth-minimal .capability-list div { border-color: #a3ceab47; }
+:root .auth-minimal .login-column { background: var(--ui-surface); color: var(--ui-ink); }
+:root .auth-minimal .login-card :is(h2, label) { color: var(--ui-ink); }
+:root .auth-minimal .login-column :is(.login-intro, .login-help, .login-note, .drawer-top, .login-assurance p) {
+  color: var(--ui-muted);
+}
+:root .auth-minimal .login-card input {
+  min-height: 47px;
+  background: var(--ui-page);
+  border-color: var(--ui-line);
+  color: var(--ui-ink);
+}
+:root .auth-minimal .login-card .login-submit { min-height: 52px; border-radius: 11px; }
+:root .auth-minimal .login-card .login-submit,
+.admin-page .admin-button.primary,
+.platform-body .erp-button--primary {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+  color: var(--ui-on-accent);
+}
+
+/* Workspace navigation and dashboard. */
+#root .app-shell { background: var(--ui-page); }
+#root .app-shell .sidebar {
+  color: var(--ui-on-forest);
+  background: var(--ui-forest);
+  border-color: #243f34;
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+}
+#root .sidebar :is(.logo strong, .identity strong) { color: var(--ui-on-forest); }
+#root .sidebar :is(small, .sidebar-group-label) { color: var(--ui-on-forest-muted); }
+#root .sidebar :is(.identity, .avatar) { background: var(--ui-forest-raised); border-color: #3c5b4b; }
+#root .sidebar :is(.logo > span, .avatar) { color: var(--ui-mint); background: #2d5944; }
+#root .app-shell .sidebar :is(nav button, nav a, .sidebar-action, .portal-theme-toggle) {
+  color: var(--ui-on-forest);
+}
+#root .app-shell .sidebar :is(.nav-icon, .sidebar-action svg) { color: #a3cfaa; }
+#root .app-shell .sidebar :is(nav button, nav a, .sidebar-action):hover { background: #294b3d; }
+#root .app-shell .sidebar :is(nav button, nav a)[aria-current="page"] {
+  color: #112c22;
+  background: var(--ui-mint);
+  font-weight: 750;
+}
+#root .app-shell .sidebar :is(nav button, nav a)[aria-current="page"] :is(.nav-label, .nav-icon) { color: #112c22; }
+#root .app-shell .sidebar :is(button, a):focus-visible { outline-color: var(--ui-mint); }
+#root .app-shell .sidebar .admin-nav-label { border-color: #3b574a; }
+#root .app-shell .workspace { color: var(--ui-ink); }
+#root .workspace .topbar {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-bottom: clamp(18px, 2.7vw, 34px);
+}
+#root .workspace .topbar-start { flex: 1 1 360px; min-width: 0; }
+#root .workspace .topbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#root .workspace .topbar h1 {
+  color: var(--ui-ink);
+  font-size: clamp(1.7rem, 3.8vw, 3.15rem);
+  letter-spacing: -.052em;
+  line-height: 1.12;
+}
+#root .workspace :is(.platform-shortcut, .erp-shortcut) {
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+  color: var(--ui-accent);
+  box-shadow: var(--ui-shadow);
+}
+#root .workspace .metric-grid {
+  border: 0;
+  gap: clamp(8px, 1.4vw, 16px);
+  margin-bottom: 18px;
+}
+#root .workspace .metric-item {
+  padding: clamp(12px, 1.6vw, 19px);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-shadow);
+  min-width: 0;
+}
+#root .workspace .metric-item strong { color: var(--ui-ink); font-variant-numeric: tabular-nums; }
+#root .workspace :is(.metric-item small, .metric-label) { color: var(--ui-muted); }
+#root .workspace :is(.metric-emoji, .flow-emoji) { color: var(--ui-accent); background: var(--ui-soft); }
+#root .workspace .control-strip {
+  margin: 0 0 18px;
+  border: 1px solid #314b40;
+  border-radius: var(--ui-radius);
+  background: linear-gradient(95deg, #1a3a2f 12%, transparent 85%),
+    var(--ui-pixels) right top / 12px 12px, var(--ui-forest-raised);
+  padding: clamp(16px, 2.1vw, 26px);
+}
+#root .workspace .control-strip :is(h2, strong) { color: var(--ui-on-forest); }
+#root .workspace .control-strip :is(p, small) { color: var(--ui-on-forest-muted); }
+#root .workspace .control-strip .eyebrow { color: var(--ui-mint); }
+#root .workspace .control-strip .control-signal { border-color: #708f7b75; }
+#root .workspace .control-strip .signal-dot { background: #a5b6ab; }
+#root .workspace .control-strip .is-ready .signal-dot { background: #a1edb6; box-shadow: 0 0 0 4px #a1edb624; }
+#root .workspace .control-strip .is-review .signal-dot { background: #f5bd71; }
+#root .workspace :is(.flow-card, .service-card, .card) {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+}
+#root .workspace .flow-card { padding: clamp(16px, 2vw, 24px); margin-bottom: 18px; }
+
+/* Administration, ERP, cloud and order tracking share the same surfaces. */
+:where(.admin-page, .platform-body, .tracking-page) { margin: 0; color: var(--ui-ink); background: var(--ui-page); }
+:where(.admin-page, .platform-body, .tracking-page) .eyebrow {
+  color: var(--ui-accent);
+  font-size: .7rem;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.admin-page .admin-intro,
+.platform-body .erp-title-row,
+.platform-body .platform-header {
+  padding: clamp(18px, 2.7vw, 34px);
+  border: 1px solid #314b40;
+  border-radius: calc(var(--ui-radius) + 2px);
+  color: var(--ui-on-forest);
+  background: linear-gradient(95deg, #102b22 12%, transparent 85%),
+    var(--ui-pixels) right top / 13px 13px, var(--ui-forest);
+}
+.admin-page .admin-intro h1,
+.platform-body :is(.erp-title-row, .platform-header) h1 { color: var(--ui-on-forest); text-wrap: balance; }
+.admin-page .admin-intro .eyebrow,
+.platform-body :is(.erp-title-row, .platform-header) .eyebrow { color: var(--ui-mint); }
+.admin-page .admin-intro > div:first-child > p:last-child,
+.platform-body :is(.erp-lede, .platform-header .platform-identity) { color: var(--ui-on-forest-muted); }
+.admin-page .admin-summary { background: var(--ui-forest-raised); border-color: #577365; }
+.admin-page .admin-summary strong { color: var(--ui-on-forest); font-variant-numeric: tabular-nums; }
+.admin-page .admin-summary :is(small, .admin-summary-icon) { color: var(--ui-on-forest-muted); }
+.admin-page .admin-summary > div + div { border-color: #577365; }
+.admin-page :is(.admin-nav, .admin-card),
+.platform-body :is(.erp-card, .erp-kpi, .platform-panel, .chart-panel) {
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+}
+.admin-page .admin-card { background: var(--ui-surface); }
+.admin-page .admin-nav button[aria-current="page"],
+.platform-body .erp-tab[aria-selected="true"] { background: var(--ui-soft); color: var(--ui-accent); }
+.platform-body :is(.erp-tab, .platform-button, .erp-button) { min-height: 44px; }
+.platform-body .erp-kpi strong { font-variant-numeric: tabular-nums; }
+.platform-body .erp-tab[data-action="refresh"] { margin-inline-start: auto; }
+.tracking-page {
+  --paper: var(--ui-page);
+  --panel: var(--ui-surface);
+  --ink: var(--ui-ink);
+  --muted: var(--ui-muted);
+  --border: var(--ui-line);
+  --wash: var(--ui-soft);
+  --accent: var(--ui-accent);
+  --accent-ink: var(--ui-on-accent);
+  --warning: var(--ui-warn);
+}
+.tracking-page .top {
+  background: var(--ui-forest);
+  color: var(--ui-on-forest);
+  border: 0;
+}
+.tracking-page .top :is(a, span) { color: var(--ui-on-forest); }
+.tracking-page .top nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding-inline: 10px;
+  text-decoration: none;
+  border-radius: 8px;
+}
+.tracking-page .top nav a:hover { background: var(--ui-forest-raised); }
+.tracking-page .top a:focus-visible { outline-color: var(--ui-mint); }
+.tracking-page .tracking-intro {
+  padding: clamp(16px, 3vw, 28px);
+  margin-bottom: 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-soft);
+}
+.tracking-page #role-summary { margin-bottom: 0; }
+.tracking-page .panel { border-radius: var(--ui-radius); box-shadow: var(--ui-shadow); }
+.tracking-page .flow li { padding: .8rem; border-radius: 11px; }
+.tracking-page .order-list[aria-busy="true"] { min-height: 2rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes portal-enter {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #root .workspace > :is(.metric-grid, .control-strip, .flow-card, .service-card, .content-grid),
+  .admin-page .admin-view:not([hidden]),
+  .platform-body :is(.erp-content > div:not(.erp-loading), .erp-content > .erp-card),
+  .tracking-page #order-detail .flow {
+    animation: portal-enter var(--ui-enter) var(--ui-ease) both;
+  }
+  :is(.tracking-page button, .erp-tab, .admin-nav button, .app-shell .sidebar a) {
+    transition: color var(--ui-quick) ease, background-color var(--ui-quick) ease,
+      border-color var(--ui-quick) ease, opacity var(--ui-quick) ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root :is(.workspace, .sidebar) *,
+  :is(.admin-page, .platform-body, .tracking-page) * {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #root .workspace .topbar-meta { justify-content: flex-start; }
+  .admin-page .admin-intro { gap: 18px; }
+}
+@media (max-width: 720px) {
+  .admin-page .admin-summary { width: 100%; }
+  .platform-body .erp-tab[data-action="refresh"] { margin-inline-start: 0; }
+  .platform-body .erp-tabs { position: static; }
+  .tracking-page .top nav { gap: 4px; }
+  .tracking-page .tracking-intro { align-items: start; }
+}
+@media (max-width: 480px) {
+  #root .workspace .topbar { gap: 10px; }
+  #root .workspace .topbar-start { flex-basis: 100%; }
+  #root .workspace .metric-item { gap: 6px; }
+  #root .workspace :is(.metric-label, .metric-item small) { overflow-wrap: anywhere; }
+  .admin-page .admin-summary > div { padding: 8px; }
+  .admin-page .admin-summary-icon { display: none; }
+}

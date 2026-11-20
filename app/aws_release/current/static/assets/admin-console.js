@@ -1,3 +1,5 @@
+import { createPortalApi } from "./portal-api.mjs";
+
 (() => {
   const roleLabels = {
     admin: "Administrador",
@@ -7,8 +9,7 @@
     auditor: "Auditor",
     customer: "Cliente B2B",
   };
-  const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
-  const state = { csrf: "", user: null, section: "users", users: [], companies: [], subscriptions: [] };
+  const state = { user: null, section: "users", users: [], companies: [], subscriptions: [] };
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
@@ -18,49 +19,35 @@
     })[character]);
   }
 
-  async function api(path, options = {}) {
-    const method = String(options.method || "GET").toUpperCase();
-    if (!safeMethods.has(method) && !state.csrf) await api("/api/auth/session");
-    const headers = new Headers(options.headers || {});
-    if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-    if (!safeMethods.has(method) && state.csrf) headers.set("X-CSRF-Token", state.csrf);
-    const response = await fetch(path, { ...options, method, headers, credentials: "same-origin", cache: "no-store" });
-    const body = response.status === 204 ? null : await response.json().catch(() => ({}));
-    if (body?.csrf_token) state.csrf = body.csrf_token;
-    if (!response.ok) {
-      const labels = {
-        authentication_required: "La sesión terminó. Vuelve a ingresar.",
-        insufficient_role: "Esta acción requiere una cuenta administradora.",
-        csrf_token_required: "La sesión de seguridad cambió. Actualiza la página e inténtalo de nuevo.",
-        invalid_alarm_email: "Escribe un correo válido.",
-        alarm_notifications_not_configured: "El tema de alarmas no está configurado en este entorno.",
-        alarm_service_access_denied: "El rol de AWS no permite administrar esta suscripción.",
-        alarm_service_unavailable: "AWS SNS no respondió. Comprueba el servicio e inténtalo de nuevo.",
-        alarm_subscription_not_found: "La suscripción ya no existe o no pertenece a este tema.",
-        alarm_subscription_pending_confirmation: "Confirma primero la suscripción desde el correo recibido.",
-        username_already_exists: "Ya existe una cuenta con ese usuario.",
-        company_slug_already_exists: "Ya existe una empresa con ese identificador.",
-        cannot_remove_last_admin: "No puedes quitar el último administrador activo.",
-        cannot_remove_own_admin_access: "No puedes quitar tu propia cuenta administradora.",
-        backup_too_large: "La copia excede el límite del panel. Usa el respaldo completo de PostgreSQL.",
-        backup_storage_unavailable: "No se pudo acceder al almacenamiento del respaldo.",
-        scaling_not_configured: "Este entorno no tiene un grupo de escalado configurado.",
-        scaling_restore_pending: "Hay una prueba pendiente de restauración o el grupo tiene suspendida la programación.",
-        invalid_capacity: "Elige una capacidad válida dentro del rango del grupo.",
-        scaling_unavailable: "AWS no pudo completar la solicitud de escalado.",
-      };
-      const code = body?.error || `HTTP ${response.status}`;
-      throw Object.assign(new Error(labels[code] || code), { status: response.status, code });
-    }
-    return body;
-  }
+  const api = createPortalApi({
+    authentication_required: "La sesión terminó. Vuelve a ingresar.",
+    insufficient_role: "Esta acción requiere una cuenta administradora.",
+    csrf_token_required: "La sesión de seguridad cambió. Actualiza la página e inténtalo de nuevo.",
+    invalid_alarm_email: "Escribe un correo válido.",
+    alarm_notifications_not_configured: "El tema de alarmas no está configurado en este entorno.",
+    alarm_service_access_denied: "El rol de AWS no permite administrar esta suscripción.",
+    alarm_service_unavailable: "AWS SNS no respondió. Comprueba el servicio e inténtalo de nuevo.",
+    alarm_subscription_not_found: "La suscripción ya no existe o no pertenece a este tema.",
+    alarm_subscription_pending_confirmation: "Confirma primero la suscripción desde el correo recibido.",
+    username_already_exists: "Ya existe una cuenta con ese usuario.",
+    company_slug_already_exists: "Ya existe una empresa con ese identificador.",
+    cannot_remove_last_admin: "No puedes quitar el último administrador activo.",
+    cannot_remove_own_admin_access: "No puedes quitar tu propia cuenta administradora.",
+    backup_too_large: "La copia excede el límite del panel. Usa el respaldo completo de PostgreSQL.",
+    backup_storage_unavailable: "No se pudo acceder al almacenamiento del respaldo.",
+    scaling_not_configured: "Este entorno no tiene un grupo de escalado configurado.",
+    scaling_restore_pending: "Hay una prueba pendiente de restauración o el grupo tiene suspendida la programación.",
+    invalid_capacity: "Elige una capacidad válida dentro del rango del grupo.",
+    scaling_unavailable: "AWS no pudo completar la solicitud de escalado.",
+    technical_tests_unavailable: "Este entorno todavía no tiene resultados registrados.",
+  });
 
   function notice(message, tone = "success") {
     const box = $("#admin-notice");
     box.textContent = message;
     box.dataset.tone = tone;
     box.hidden = false;
-    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    box.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest" });
   }
 
   function hideNotice() { $("#admin-notice").hidden = true; }
@@ -200,6 +187,33 @@
     }
   }
 
+  async function loadTechnicalTests() {
+    const report = await api("/api/admin/technical-tests");
+    $("#technical-date").textContent = `Corte: ${friendlyDate(report.observed_at)}.`;
+    $("#technical-rows").innerHTML = report.checks.map(({name, result, scope}) =>
+      `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(result)}</td><td>${escapeHtml(scope)}</td></tr>`
+    ).join("");
+  }
+
+  async function probePrivateWms(event) {
+    const button = event.currentTarget;
+    const status = $("#technical-wms-status");
+    button.disabled = true;
+    status.textContent = "Consultando las colas de Azure…";
+    const started = performance.now();
+    try {
+      const {azure_queue: queue} = await api("/api/platform/fulfillment-health");
+      const latency = Math.round(performance.now() - started);
+      const states = {ok: "Colas disponibles", degraded: "Información parcial", unavailable: "Colas sin respuesta"};
+      status.textContent = `${states[queue.status] || states.unavailable}. ${latency} ms. ` +
+        `Pendientes: ${queue.pending ?? "sin dato"}. Fallidos: ${queue.poison ?? "sin dato"}.`;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   let scalingRefresh;
   async function loadScaling() {
     const form = $("#scaling-form");
@@ -237,6 +251,7 @@
       if (section === "alerts") await loadAlerts();
       if (section === "backups") await loadBackups();
       if (section === "scaling") await loadScaling();
+      if (section === "technical") await loadTechnicalTests();
       if (section === "audit") await loadAudit();
     } catch (error) {
       if (error.status === 401) { window.location.replace("/"); return; }
@@ -308,7 +323,6 @@
   async function start() {
     try {
       const session = await api("/api/auth/session");
-      state.csrf = session.csrf_token || "";
       if (!session.authenticated || session.user?.role !== "admin") { window.location.replace("/"); return; }
       state.user = session.user;
       $("#admin-identity").textContent = `${session.user.username} · Administrador`;
@@ -334,6 +348,7 @@
         } catch (error) { notice(error.message, "error"); }
         finally { setBusy(button, false); }
       });
+      $("#technical-wms-probe").addEventListener("click", probePrivateWms);
       $("#scaling-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = event.currentTarget;

@@ -3,6 +3,7 @@ import json
 import re
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode
 from urllib.request import HTTPRedirectHandler, build_opener
 from uuid import uuid4
@@ -27,6 +28,11 @@ class ScalingConflict(Exception):
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, msg, headers, newurl):
         return None
+
+
+def technical_test_results():
+    evidence = Path(__file__).with_name("technical-tests.json")
+    return json.loads(evidence.read_text(encoding="utf-8"))
 
 
 def aws_client(service, config):

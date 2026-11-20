@@ -1,5 +1,51 @@
 # Checklist de capturas vigentes
 
+## Recorrido para la defensa del 20 de noviembre de 2026
+
+Abre el [portal de Tangamandapio](https://tangamandapio.kendellnm.me/), la consola de AWS en **Ohio (us-east-2)** y el portal de Azure en la suscripción del proyecto. Guarda cada PNG con los nombres de la tabla. Mantén visibles el nombre del recurso, la fecha y el resultado. Recorta correos, IDs de cuenta o suscripción, contraseñas, claves, tokens y enlaces de descarga firmados.
+
+| Paso y archivo | Dónde entrar y qué hacer | Qué debe verse |
+| --- | --- | --- |
+| 1. `01-portal-admin.png` | Entra al portal con Administración. Abre **Administración → Pruebas técnicas**. Opcionalmente repite con una cuenta de Ventas para `01b-portal-ventas.png`. | Menú y rol tras el inicio de sesión. En Ventas, abre el ERP y verifica que **Administración** queda restringida. |
+| 2. `02-pedido-wms.png` | Abre **Seguimiento de pedidos** y elige el pedido sintético `SEGUIMIENTO-DEMO-20261119-151352`. Pulsa **Verificar en almacén**. En **Administración → Pruebas técnicas**, pulsa **Comprobar WMS** y guarda `02b-wms-en-vivo.png`. | El pedido procesado, su ID de evento y los estados del flujo. En la segunda imagen se ven la latencia y los conteos de ambas colas, que pueden estar en cero. |
+| 3. `03-azure-trazas.png` y `03b-azure-blob.png` | Abre **Application Insights → tangama-wms-ai → Logs**. Elige un intervalo que incluya el 19/11 desde las 15:14 UTC y ejecuta la consulta de abajo. Luego abre **Storage accounts → sttangama261030r → Containers → fulfillment-events** y busca el mismo evento en los objetos de entrada y de resultado. | La misma ID en ambas trazas, con el registro de Queue seguido por el de resultado. En Blob se ven el archivo original y el de la carpeta `fulfillment/`. Si Azure deniega el acceso al contenedor, conserva la captura de las trazas y el [registro de objetos](azure/AZURE-WMS-ORDER-TRACKING-2026-11-19.json). |
+| 4. `04-aws-stack.png` y `04b-aws-targets.png` | Abre **CloudFormation → Stacks → tangamandapio-live-20261116 → Events**. Luego entra a **EC2 → Target Groups → tangamandapio-tg → Targets**. | El estado de la pila, la última actualización y dos destinos `Healthy` tras estabilizarse. |
+| 5. `05-aws-rds.png` | Abre **RDS → Databases → tangamandapio-postgres → Configuration**. | Estado `Available`, `Multi-AZ` habilitado y retención de un día. Puedes tomar una segunda captura de **Maintenance & backups** si la retención aparece allí. |
+| 6. `06-aws-waf.png` y `06b-aws-registro-waf.png` | Abre la ACL regional del ALB en **AWS WAF → Web ACLs → Rules**. Luego abre **CloudWatch → Log groups → aws-waf-logs-tangamandapio-alb → Logs Insights** y ejecuta la consulta de abajo. | Las cuatro reglas y un registro real, con fecha, método, ruta y acción. La consulta proyecta solo esos campos. |
+| 7. `07-escalado.png` y `07b-alarmas.png` | Abre **EC2 → Auto Scaling Groups → tangamandapio-asg → Activity** y amplía el período al día de la prueba. En **CloudWatch → Alarms** entra a una alarma de Tangamandapio y abre **History**. | Cambios de capacidad y retorno a dos. La alarma debe mostrar nombre, métrica y estado. La captura del correo SNS se toma aparte si el mensaje está disponible. |
+| 8. `08-respaldo-y-restore.png` y `08b-copia-azure.png` | En **Administración → Pruebas técnicas**, abre la sección de restauración/RPO. En **Administración → Respaldos**, muestra el catálogo. En Azure abre **Storage → Containers → tangama-postgres-backups**. | El resultado fechado del ensayo, las 20 tablas restauradas, el RPO observado y el objeto de copia elegido. Para evidencia de ejecución abre también el comando de restauración en **AWS Systems Manager → Run Command → Command history** con el ID del [registro](aws/AWS-AZURE-POSTGRES-SCHEDULE-2026-11-19.json). |
+| 9. `09-ruta-privada.png` | En **Administración → Pruebas técnicas**, muestra el ensayo fechado de conmutación. Puedes agregar **VPC → Route Tables → Routes**, filtrando por el destino privado `10.20.1.4/32`. | Tiempo de recuperación por EC2, conmutación al respaldo y regreso al principal. El estado mostrado corresponde al ensayo documentado. |
+| 10. `10-aws-costos.png` y `10b-azure-costos.png` | Abre **AWS Billing → Budgets** y **Azure Cost Management → Budgets → tangamandapio-demo-usd25**. | Presupuesto, gasto, moneda y período de cada nube. Anota la hora de consulta porque los valores se actualizan de forma diferida. |
+
+En **Logs** de Application Insights usa esta consulta. Si generas un pedido de demostración nuevo, reemplaza la ID en las dos búsquedas de Azure y conserva esa misma ID en las capturas.
+
+```kusto
+traces
+| where message contains "evt-dce8944d04a64ea78484bf226ca876ef"
+| where message contains "queued" or message contains "result_written"
+| project timestamp, message
+| order by timestamp asc
+```
+
+En **CloudWatch Logs Insights**, con el grupo del WAF seleccionado, usa esta consulta. Abre `/ready` en el portal antes de consultar si necesitas un registro reciente.
+
+```text
+fields @timestamp, httpRequest.httpMethod, httpRequest.uri, action
+| filter httpRequest.uri = "/ready"
+| sort @timestamp desc
+| limit 10
+```
+
+El recorrido usa lecturas y evidencia existente. Para la defensa, el paso de escalado puede mostrar la actividad ya registrada. Si el docente pide una ejecución en vivo, inicia solo el nivel 3 desde **Administración → Prueba de escalado**, captura el tercer destino sano y espera a que la capacidad vuelva a 2.
+
+## Entrega del 19/11/2026
+
+| Captura pendiente | Qué debe verse | Registro del resultado |
+|---|---|---|
+| Trazas WMS | Application Insights, vista Logs. Mostrar los estados `queued` y `result_written` del mismo identificador sintético de pedido. | [Trazas de Azure](azure/AZURE-WMS-ORDER-TRACKING-2026-11-19.json) |
+| Restauración | Mostrar la verificación de huellas y la consulta de las 20 tablas en el PostgreSQL aislado. La consola de Blob puede mostrar la copia de origen. | [Restauración](aws/AWS-AZURE-POSTGRES-SCHEDULE-2026-11-19.json) · [RPO](aws/AWS-POSTGRES-RPO-MARKERS-2026-11-19.json) |
+| Presupuesto de Azure | Cost Management → Budgets, con gasto, presupuesto de USD 25 y período. Ocultar el identificador de la suscripción. | [Corte y desglose de costos](COSTOS-2026-11-19.md) |
+
 **Regla de integridad:** guardar cada imagen con el identificador indicado dentro de la carpeta de la nube correspondiente. No usar una imagen de `legacy/andemarket-historical` como si fuera evidencia de Tangamandapio. No mostrar cuentas, claves de Function, tokens, URLs firmadas ni credenciales.
 
 ## Corte de evidencias — 08/10/2026

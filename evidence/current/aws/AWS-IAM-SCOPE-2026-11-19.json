@@ -1,0 +1,117 @@
+{
+  "account": 481056890449,
+  "access": {
+    "iam_users": 0,
+    "root_access_keys_present": 0,
+    "operator_session": "temporary STS"
+  },
+  "cases": [
+    {
+      "role": "tangamandapio-vpn-router-role",
+      "policy_names": [
+        "tangamandapio-vpn-router-runtime"
+      ],
+      "action": "ec2:ReplaceRoute",
+      "identity_simulation": [
+        {
+          "resource": "arn:aws:ec2:${Region}:${Account}:${ResourceType}/${ResourcePath}",
+          "decision": "implicitDeny"
+        }
+      ]
+    },
+    {
+      "role": "tangamandapio-azure-postgres-bac-BackupDispatchRole-9SmsZLjJNwk2",
+      "policy_names": [
+        "DispatchExactBackupDocument"
+      ],
+      "action": "ssm:SendCommand",
+      "identity_simulation": [
+        {
+          "resource": "arn:aws:ssm:${Region}:${Account}:${RelativeId}",
+          "decision": "implicitDeny"
+        }
+      ]
+    },
+    {
+      "role": "tangamandapio-app-role",
+      "policy_names": [
+        "tangamandapio-app-runtime",
+        "tangamandapio-scheduled-blob-backup"
+      ],
+      "action": "iam:CreateUser",
+      "identity_simulation": [
+        {
+          "resource": "*",
+          "decision": "implicitDeny"
+        }
+      ]
+    }
+  ],
+  "scope": "Identity policy simulation. Current failover and scheduled backup supply the real AWS-operation evidence. SCP regional enforcement was checked separately.",
+  "deployed_scopes": {
+    "backup_dispatch": [
+      {
+        "Action": "ssm:SendCommand",
+        "Resource": "arn:aws:ssm:us-east-2:481056890449:document/tangamandapio-postgres-to-azure-blob",
+        "Effect": "Allow"
+      },
+      {
+        "Condition": {
+          "StringEquals": {
+            "ssm:resourceTag/aws:autoscaling:groupName": "tangamandapio-asg"
+          }
+        },
+        "Action": "ssm:SendCommand",
+        "Resource": "arn:aws:ec2:us-east-2:481056890449:instance/*",
+        "Effect": "Allow"
+      }
+    ],
+    "router_replace_route": {
+      "Resource": "arn:aws:ec2:us-east-2:481056890449:route-table/rtb-0cb5b4e9fd67db03e",
+      "Effect": "Allow",
+      "Action": "ec2:ReplaceRoute"
+    }
+  },
+  "secret_metadata_only": [
+    {
+      "Name": "tangamandapio/azure/function-key",
+      "LastChangedDate": "2026-11-18T23:52:47.639-05:00",
+      "RotationEnabled": null
+    },
+    {
+      "Name": "tangamandapio/portal/admin",
+      "LastChangedDate": "2026-11-18T23:27:33.657-05:00",
+      "RotationEnabled": null
+    },
+    {
+      "Name": "tangamandapio/rds/master-tangamandapio-live-20261116",
+      "LastChangedDate": "2026-11-16T03:11:58.149-05:00",
+      "RotationEnabled": null
+    },
+    {
+      "Name": "tangamandapio/portal/session",
+      "LastChangedDate": "2026-11-16T03:21:27.025-05:00",
+      "RotationEnabled": null
+    },
+    {
+      "Name": "tangamandapio/tailscale/aws-pilot",
+      "LastChangedDate": "2026-11-18T23:28:47.647-05:00",
+      "RotationEnabled": null
+    },
+    {
+      "Name": "tangamandapio/tailscale/aws-backup",
+      "LastChangedDate": "2026-11-18T23:30:02.996-05:00",
+      "RotationEnabled": null
+    }
+  ],
+  "simulation_limit": "For route and SSM actions the AWS simulator returned generic ARN templates rather than per-request ARN evaluation. The scoped statements were confirmed from IAM and execution verified separately.",
+  "app_runtime_review": {
+    "release_archive": "Exact S3 object for active version",
+    "manual_backup": "Only S3 prefix dr/postgres/manual-outbox/",
+    "backup_read_authorization": "Exact SSM parameter for portal",
+    "backup_write_authorization": "Separate exact SSM parameter for scheduled export",
+    "autoscaling_changes": "Only tangamandapio-asg",
+    "credential_residual": "The ERP currently retrieves the master secret for its project RDS instance. Data-plane permissions are broader than a dedicated runtime PostgreSQL user.",
+    "previous_accounts": "Revocation could not be verified in the migrated-from AWS accounts."
+  }
+}

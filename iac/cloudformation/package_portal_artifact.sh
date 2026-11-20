@@ -31,6 +31,7 @@ trap cleanup EXIT
 test -f "$application_root/app.py"
 test -f "$application_root/erp_service.py"
 test -f "$application_root/admin_cloud_tools.py"
+test -f "$application_root/platform_routes.py"
 test -f "$application_root/requirements.txt"
 test -f "$application_root/requirements.lock"
 test -f "$application_root/BUILD_REVISION"
@@ -40,6 +41,7 @@ test -d "$application_root/migrations"
 cp "$application_root/app.py" "$staging_directory/app.py"
 cp "$application_root/erp_service.py" "$staging_directory/erp_service.py"
 cp "$application_root/admin_cloud_tools.py" "$staging_directory/admin_cloud_tools.py"
+cp "$application_root/platform_routes.py" "$staging_directory/platform_routes.py"
 cp "$application_root/requirements.txt" "$staging_directory/requirements.txt"
 cp "$application_root/requirements.lock" "$staging_directory/requirements.lock"
 cp "$application_root/BUILD_REVISION" "$staging_directory/BUILD_REVISION"
@@ -51,7 +53,11 @@ rm -f "$staging_directory/static/audio/sweet-dove-ambient.mp3"
 if [[ -d "$staging_directory/static/images" ]]; then
   find "$staging_directory/static/images" -maxdepth 1 -type f -name 'walpurgis-*.png' -delete
 fi
-artifact_files=(app.py erp_service.py admin_cloud_tools.py requirements.txt requirements.lock static migrations BUILD_REVISION)
+artifact_files=(app.py erp_service.py admin_cloud_tools.py platform_routes.py requirements.txt requirements.lock static migrations BUILD_REVISION)
+if [[ -f "$application_root/technical-tests.json" ]]; then
+  cp "$application_root/technical-tests.json" "$staging_directory/technical-tests.json"
+  artifact_files+=(technical-tests.json)
+fi
 if [[ -f "$application_root/cloud_observability.py" ]]; then
   cp "$application_root/cloud_observability.py" "$staging_directory/cloud_observability.py"
   artifact_files+=(cloud_observability.py)
@@ -62,7 +68,7 @@ fi
 # identical across those environments; leave images, audio, and XLSX untouched.
 find "$staging_directory" -type f \
   \( -name '*.py' -o -name '*.txt' -o -name '*.lock' -o -name '*.html' \
-     -o -name '*.css' -o -name '*.js' -o -name '*.sql' -o -name '*.csv' \
+     -o -name '*.css' -o -name '*.js' -o -name '*.mjs' -o -name '*.sql' -o -name '*.csv' \
      -o -name '*.json' -o -name '*.svg' -o -name '*.xml' -o -name '*.map' \
      -o -name 'BUILD_REVISION' \) \
   -exec perl -pi -e 's/\r\n?/\n/g' {} +

@@ -1,0 +1,15 @@
+{
+  "checked_utc": "2026-11-19T21:25:57.329366+00:00",
+  "backup": "postgres/20261119-daily.json",
+  "source": "Azure Blob and Azure Key Vault",
+  "used_aws_apis": false,
+  "isolated_destination": "ephemeral workstation PostgreSQL loopback, separate from production",
+  "archive_and_ciphertext_hashes_verified": true,
+  "recovery_s": 14.568,
+  "tables": 20,
+  "orders": 1,
+  "outbox": 1,
+  "listener": "127.0.0.1",
+  "engine": "17.5",
+  "ephemeral_cluster_removed": true
+}

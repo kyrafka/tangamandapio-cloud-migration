@@ -106,6 +106,25 @@ class ErpReleaseTests(unittest.TestCase):
             names = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         self.assertTrue({"erp_products", "erp_sales_orders", "erp_purchase_orders", "erp_financial_documents", "internal_messages"}.issubset(names))
 
+    def test_operational_results_require_administration(self):
+        path = "/api/admin/technical-tests"
+        anonymous = self.application.test_client()
+        self.assertEqual(anonymous.get(path).status_code, 401)
+        created = self.post(self.client, "/api/admin/users", {
+            "username": "tests-sales@release.test",
+            "password": "Release-Test-Sales-Password-2026!",
+            "role": "sales",
+        })
+        self.assertEqual(created.status_code, 201)
+        self.login(anonymous, "tests-sales@release.test", "Release-Test-Sales-Password-2026!")
+        self.assertEqual(anonymous.get(path).status_code, 403)
+
+        with patch("platform_routes.technical_test_results", return_value={"observed_at": "2026-11-19T16:00:00+00:00", "checks": []}):
+            response = self.client.get(path)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertEqual(response.get_json()["checks"], [])
+
     def test_temporary_password_flag_does_not_block_portal_access(self):
         self.application.config["FORCE_INITIAL_PASSWORD_CHANGE"] = True
         created = self.post(self.client, "/api/admin/users", {

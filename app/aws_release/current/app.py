@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import math
+import mimetypes
 import os
 import re
 import secrets
@@ -38,7 +39,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import admin_cloud_tools
-from cloud_observability import collect_cloudwatch_metrics
+from platform_routes import register_platform_routes
 from erp_service import (
     SKU_PATTERN,
     grant_default_erp_roles,
@@ -48,6 +49,7 @@ from erp_service import (
 
 
 LOGGER = logging.getLogger("tangamandapio.api")
+mimetypes.add_type("text/javascript", ".mjs")
 RDS_SECRET_CACHE_TTL_SECONDS = 300
 _RDS_SECRET_CACHE = {}
 _RDS_SECRET_CACHE_LOCK = threading.RLock()
@@ -1347,33 +1349,14 @@ def create_app(test_config=None):
             return redirect("/", code=303)
         return send_from_directory(static_folder / "tracking", "index.html")
 
-    @app.get("/api/platform/fulfillment-health")
-    @require_roles("admin", "operations")
-    def platform_fulfillment_health():
-        with connect(database_path) as connection:
-            counts = connection.execute(
-                "SELECT COUNT(*) AS pending, MIN(created_at) AS oldest, "
-                "COUNT(CASE WHEN attempts >= ? THEN 1 END) AS exhausted FROM outbox_events WHERE status != 'delivered'",
-                (app.config["OUTBOX_RETRY_MAX_ATTEMPTS"],),
-            ).fetchone()
-        queue = {"status": "unavailable", "pending": None, "poison": None}
-        service_url = app.config["AZURE_FULFILLMENT_URL"]
-        key = app.config["AZURE_FUNCTION_KEY"]
-        if service_url and key:
-            try:
-                upstream = Request(azure_inventory_url(service_url).removesuffix("inventory") + "queue-status",
-                                   headers={"Accept": "application/json", "x-functions-key": key})
-                with urlopen(upstream, timeout=3) as response:
-                    data = json.loads(response.read())
-                if isinstance(data, dict):
-                    for name in ("pending", "poison"):
-                        if type(data.get(name)) is int and data[name] >= 0:
-                            queue[name] = data[name]
-                    available = sum(queue[name] is not None for name in ("pending", "poison"))
-                    queue["status"] = {0: "unavailable", 1: "degraded", 2: "ok"}[available]
-            except (OSError, ValueError):
-                pass
-        return jsonify(outbox=dict(counts), azure_queue=queue, checked_at=datetime.now(timezone.utc).isoformat())
+    register_platform_routes(
+        app,
+        database_path,
+        connect=connect,
+        require_roles=require_roles,
+        azure_inventory_url=azure_inventory_url,
+        database_kind=lambda: "postgresql" if is_postgresql(configured_database_target(app.config)) else "sqlite_demo",
+    )
 
     @app.get("/administracion")
     def administration_console():
@@ -1383,36 +1366,6 @@ def create_app(test_config=None):
         if user["role"] != "admin":
             return "Acceso restringido a Administración.", 403
         return send_from_directory(static_folder / "admin", "index.html")
-
-    @app.get("/api/platform/overview")
-    @require_roles("admin", "operations")
-    def platform_overview():
-        try:
-            window_minutes = int(request.args.get("window", "60"))
-            cloudwatch = collect_cloudwatch_metrics(app.config, window_minutes)
-        except (TypeError, ValueError):
-            return jsonify(error="invalid_metrics_window"), 400
-        return jsonify(
-            cloudwatch=cloudwatch,
-            application={
-                "instance": socket.gethostname(),
-                "requests_since_worker_start": app.extensions["metrics"]["requests_total"],
-                "orders_created_since_worker_start": app.extensions["metrics"]["orders_created_total"],
-                "counter_scope": "este proceso web; CloudWatch ALB agrega el tráfico de la capa",
-            },
-            security={
-                "role_enforcement": "backend",
-                "csrf": "enabled",
-                "session_cookie_secure": bool(app.config["SESSION_COOKIE_SECURE"]),
-                "session_cookie_httponly": bool(app.config["SESSION_COOKIE_HTTPONLY"]),
-                "recordings_enabled": bool(app.config["VOICE_RECORDINGS_ENABLED"]),
-                "waf_enabled": bool(
-                    app.config.get("CLOUDWATCH_WAF_WEB_ACL_NAME")
-                    and app.config.get("CLOUDWATCH_WAF_REGION")
-                ),
-                "database": "postgresql" if is_postgresql(configured_database_target(app.config)) else "sqlite_demo",
-            },
-        )
 
     @app.get("/api/admin/backups")
     @require_roles("admin")

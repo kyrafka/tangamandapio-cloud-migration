@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Seguimiento de pedidos · Tangamandapio</title>
   <link rel="stylesheet" href="/assets/order-tracking.css">
-  <script src="/assets/order-tracking.js" defer></script>
+  <script type="module" src="/assets/order-tracking.js"></script>
+  <link rel="stylesheet" href="/assets/portal-interface.css" />
 </head>
-<body>
+<body class="tracking-page">
   <header class="top"><a href="/">Tangamandapio <span>Portal B2B</span></a><nav aria-label="Accesos"><a href="/">Volver al portal</a><a href="/platform" id="operations-link" hidden>Centro de nube</a></nav></header>
   <main>
-    <div class="heading"><div><h1>Seguimiento de pedidos</h1><p id="role-summary"></p></div><button id="refresh-list" type="button">Actualizar pedidos</button></div>
+    <div class="heading tracking-intro"><div><h1>Seguimiento de pedidos</h1><p id="role-summary"></p></div><button id="refresh-list" type="button">Actualizar pedidos</button></div>
     <p id="notice" role="status" class="notice" hidden></p>
     <div class="layout">
       <section class="panel inbox" aria-labelledby="list-title">

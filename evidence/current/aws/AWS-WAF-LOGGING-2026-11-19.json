@@ -1,0 +1,16 @@
+{
+  "stack": "tangamandapio-waf-logging",
+  "region": "us-east-2",
+  "web_acl": "tangamandapio-alb",
+  "log_group": "aws-waf-logs-tangamandapio-alb",
+  "retention_days": 7,
+  "redacted_fields": ["query-string", "authorization", "cookie", "x-api-key", "x-csrf-token", "x-functions-key"],
+  "verified": {
+    "timestamp_ms": 1795120958664,
+    "path": "/ready",
+    "waf_action": "ALLOW",
+    "direct_alb_https_status": 200,
+    "query_redacted": true,
+    "cookie_redacted": true
+  }
+}

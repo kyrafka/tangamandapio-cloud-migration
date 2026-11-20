@@ -180,6 +180,15 @@ class StaticCachePolicyTests(unittest.TestCase):
         finally:
             response.close()
 
+    def test_portal_api_client_is_served_as_javascript(self):
+        response = self.client.get("/assets/portal-api.mjs")
+        try:
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.mimetype, "text/javascript")
+            self.assertEqual(response.headers["Cache-Control"], "no-store")
+        finally:
+            response.close()
+
     def test_missing_static_assets_are_never_cached(self):
         for asset_path in (
             "/assets/index-missing-build-2026.js",

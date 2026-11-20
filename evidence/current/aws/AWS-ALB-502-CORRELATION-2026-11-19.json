@@ -1,0 +1,20 @@
+{
+  "matched_current_rows": {
+    "200": 9898,
+    "502": 1
+  },
+  "new_502_rows": [
+    {
+      "time_utc": "2026-11-19T20:46:22.661475+00:00",
+      "elb_status": 502,
+      "target_status": null,
+      "request_processing_s": "0.001",
+      "target_processing_s": "0.001",
+      "response_processing_s": "-1",
+      "error_reason": "-",
+      "action": "waf,forward"
+    }
+  ],
+  "downloaded_log_files": 2,
+  "historical_access_log_present_in_retained_prefix": false
+}

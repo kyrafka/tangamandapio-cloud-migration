@@ -1,10 +1,12 @@
+import { createPortalApi } from "./portal-api.mjs";
+
 import { parseInventoryCsv } from "./catalogCsv.js";
 
 (() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const state = {
-    csrf: "", user: null, access: { permissions: [], role_labels: {} }, section: "",
+    user: null, access: { permissions: [], role_labels: {} }, section: "",
     overview: null, partners: [], products: [], sales: [], purchases: [], finance: [], users: [],
     mail: [], recipients: [], mailStatus: null, folder: "inbox", selectedMail: null, busy: false,
     catalogRows: [], catalogFileName: "", catalogError: "", catalogImporting: false,
@@ -16,29 +18,18 @@ import { parseInventoryCsv } from "./catalogCsv.js";
   const date = (value) => value ? new Date(value).toLocaleString("es-PE") : "—";
   const has = (permission) => state.user?.role === "admin" || state.access.permissions?.includes(permission);
 
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers || {});
-    if (options.body) headers.set("Content-Type", "application/json");
-    if (options.method && options.method !== "GET" && state.csrf) headers.set("X-CSRF-Token", state.csrf);
-    const response = await fetch(path, { ...options, headers, credentials: "same-origin", cache: "no-store" });
-    const payload = response.status === 204 ? null : await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const errors = {
-        authentication_required: "Tu sesión terminó. Vuelve a iniciar sesión en el portal.",
-        insufficient_role: "Tu rol del portal no tiene acceso a esta acción.",
-        erp_permission_required: "Tu administrador todavía no asignó ese permiso ERP.",
-        internal_recipient_not_found: "La cuenta destinataria no está activa.",
-        invalid_partner: "Revisa el tipo, razón social, identificador y correo del socio.",
-        customer_required: "Elige un cliente antes de guardar el pedido.",
-        supplier_required: "Elige un proveedor antes de guardar la orden.",
-        product_not_found: "El SKU no está dado de alta en el catálogo ERP.",
-        wms_unavailable_or_sku_missing: "Azure WMS no está disponible o no reconoce el SKU.",
-        csrf_token_required: "La sesión cambió. Actualiza la página e inténtalo otra vez.",
-      };
-      throw new Error(errors[payload?.error] || payload?.error || `No se pudo completar la acción (${response.status}).`);
-    }
-    return payload;
-  }
+  const api = createPortalApi({
+    authentication_required: "Tu sesión terminó. Vuelve a iniciar sesión en el portal.",
+    insufficient_role: "Tu rol del portal no tiene acceso a esta acción.",
+    erp_permission_required: "Tu administrador todavía no asignó ese permiso ERP.",
+    internal_recipient_not_found: "La cuenta destinataria no está activa.",
+    invalid_partner: "Revisa el tipo, razón social, identificador y correo del socio.",
+    customer_required: "Elige un cliente antes de guardar el pedido.",
+    supplier_required: "Elige un proveedor antes de guardar la orden.",
+    product_not_found: "El SKU no está dado de alta en el catálogo ERP.",
+    wms_unavailable_or_sku_missing: "Azure WMS no está disponible o no reconoce el SKU.",
+    csrf_token_required: "La sesión cambió. Actualiza la página e inténtalo otra vez.",
+  });
 
   function announce(message, tone = "error") {
     const alert = $("#erp-alert");
@@ -121,7 +112,10 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     const status = wms?.status || "consultando";
     const node = $("#erp-wms-state");
     node.dataset.state = status === "connected" ? "ok" : status === "consultando" ? "loading" : "error";
-    const label = status === "connected" ? `Azure WMS · ${wms.mode === "demo-inventory-ledger" ? "demostración" : "conectado"}` : `Azure WMS · ${status}`;
+    const labels = { consultando: "consultando", not_configured: "sin configurar", unavailable: "sin conexión", invalid_response: "respuesta inválida" };
+    const label = status === "connected"
+      ? `Azure WMS · ${wms.mode === "demo-inventory-ledger" ? "demostración" : "conectado"}`
+      : `Azure WMS · ${labels[status] || "sin lectura"}`;
     node.innerHTML = `<i class="status-dot"></i><span>${esc(label)}</span>`;
   }
 
@@ -382,7 +376,6 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     $("#erp-tabs").addEventListener("click", handleAction);
     try {
       const session = await api("/api/auth/session");
-      state.csrf = session.csrf_token || "";
       if (!session.authenticated) {
         $("#erp-identity").textContent = "Sesión no iniciada";
         $("#erp-content").innerHTML = `<section class="erp-card">${sectionHeading("Acceso requerido", "Inicia sesión en el portal")}${empty("Este módulo usa la misma cuenta y sesión del portal. Vuelve al inicio de sesión y ábrelo después de entrar.")}<a class="erp-button erp-button--primary" href="/">Ir al portal</a></section>`;

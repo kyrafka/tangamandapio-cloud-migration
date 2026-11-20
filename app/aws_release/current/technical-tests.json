@@ -1,0 +1,35 @@
+{
+  "observed_at": "2026-11-19T20:48:26+00:00",
+  "checks": [
+    {
+      "name": "Conmutación privada AWS–Azure",
+      "result": "Primer HTTPS 200 en 2,64 s y 2,60 s. El principal recuperó la ruta.",
+      "scope": "Dos EC2. Caída controlada de Tailscale; objetivo de 3 s cumplido en esta ejecución."
+    },
+    {
+      "name": "Carga del ALB",
+      "result": "10.000 solicitudes, 50 concurrentes, p95 de 487,14 ms y un HTTP 502.",
+      "scope": "HTTPS directo al ALB. No se registraron errores de transporte en esta repetición acotada."
+    },
+    {
+      "name": "Punto de recuperación de PostgreSQL",
+      "result": "La copia tenía 15 h 39 min 44 s de antigüedad. Un pedido y un evento outbox posteriores quedaron fuera.",
+      "scope": "Cotejo de la copia diaria cifrada con RDS en modo lectura. La caída fue simulada."
+    },
+    {
+      "name": "Restauración aislada",
+      "result": "20 tablas recuperadas en 35,108 s.",
+      "scope": "Restauración de la copia verificada en PostgreSQL aislado."
+    },
+    {
+      "name": "Recuperación regional e IaC",
+      "result": "RDS en las dos regiones secundarias consultadas bloqueado por política de la organización.",
+      "scope": "Terraform y CloudFormation tienen pruebas parciales de red y S3 en el emulador. La reconstrucción multinube desde cuentas vacías queda pendiente."
+    },
+    {
+      "name": "Registro de tráfico AWS WAF",
+      "result": "Grupo dedicado de CloudWatch Logs con siete días de retención.",
+      "scope": "Se omiten valores de cookies, credenciales de cabecera y cadenas de consulta."
+    }
+  ]
+}
