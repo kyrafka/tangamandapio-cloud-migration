@@ -339,6 +339,12 @@ cambios a RDS. La evidencia integral está en
 
 ## ERP y correo interno — revisión 9 de octubre de 2026
 
+El buzón está disponible para cuentas internas con sesión activa. Cada
+participante consulta sus propios mensajes. El estado de correo informa
+cuántos mensajes quedan sin leer, y el servidor actualiza ese total al
+confirmar la lectura. Los perfiles que solo tienen correo acceden al buzón
+desde **ERP y correo → Correo interno** con sus permisos actuales.
+
 El módulo `/erp` vive en la misma sesión, protección CSRF y PostgreSQL RDS.
 Incluye maestros de clientes/proveedores y productos, ventas, compras y
 recepción, cuentas por cobrar/pagar, gastos básicos, roles ERP independientes

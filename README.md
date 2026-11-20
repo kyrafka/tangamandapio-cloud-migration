@@ -4,7 +4,14 @@ Proyecto académico de una distribuidora ficticia. La arquitectura de referencia
 
 ## Estado operativo al 20/11/2026
 
-El 20/11 se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
+El release vigente en AWS Ohio es `20261120-erp-mail-by-role`. El balanceador
+mantiene dos destinos sanos. El buzón interno permite abrir mensajes y
+actualizar el contador de no leídos también en los perfiles que solo tienen
+permiso de correo. Después del despliegue pasaron 297 comprobaciones en diez
+sesiones y se verificó el envío de Comercial a Almacén.
+[Verificación de correo y permisos](evidence/current/aws/AWS-ERP-MAIL-ROLES-2026-11-20.json).
+
+El 20/11 también se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
 terminó la actualización y el balanceador quedó con dos destinos sanos.
 `/ready` devolvió HTTP 200 en las 34 muestras del recambio. Una sesión real
 de Administración confirmó el ensamblaje de las tarjetas desde **ERP y correo**,

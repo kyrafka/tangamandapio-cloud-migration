@@ -433,6 +433,12 @@ def register_erp_routes(
     bp = Blueprint("erp", __name__)
     staff = require_roles(*INTERNAL_PORTAL_ROLES)
 
+    def unread_mail_count(connection, user_id):
+        return int(connection.execute(
+            "SELECT COUNT(*) AS n FROM internal_messages WHERE recipient_user_id=? AND read_at IS NULL",
+            (user_id,),
+        ).fetchone()["n"])
+
     def require_erp(permission):
         def decorate(endpoint):
             @wraps(endpoint)
@@ -572,11 +578,11 @@ def register_erp_routes(
                 metrics["open_payables"] = connection.execute(
                     "SELECT COALESCE(SUM(amount),0) AS n FROM erp_financial_documents WHERE kind='payable' AND status='open'"
                 ).fetchone()["n"]
-            unread = connection.execute("SELECT COUNT(*) AS n FROM internal_messages WHERE recipient_user_id=? AND read_at IS NULL", (user["id"],)).fetchone()["n"]
+            unread = unread_mail_count(connection, user["id"])
         inventory, wms_error = fetch_wms_inventory(app)
         return jsonify(
             metrics={key: round(float(value), 2) if key.startswith("open_") else int(value) for key, value in metrics.items()},
-            unread_messages=int(unread),
+            unread_messages=unread,
             wms={"status": "connected" if inventory else wms_error, "mode": (inventory or {}).get("mode"), "note": (inventory or {}).get("note")},
         )
 
@@ -1053,9 +1059,12 @@ def register_erp_routes(
     @internal_user
     def mail_status():
         settings = _smtp_settings(app.config)
+        with connect(database_path) as connection:
+            unread = unread_mail_count(connection, g.portal_user["id"])
         return jsonify(
             transport="smtp" if settings["configured"] else "portal_only",
             smtp_configured=settings["configured"],
+            unread_messages=unread,
             security=settings["security"] if settings["configured"] else None,
             recipient_domain=settings["recipient_domain"] or None,
             note=("El relay SMTP acepta el envío; la entrega final depende de sus buzones y políticas."
@@ -1155,13 +1164,15 @@ def register_erp_routes(
     @bp.post("/mail/<int:message_id>/read")
     @internal_user
     def mark_internal_message_read(message_id):
+        user_id = g.portal_user["id"]
         with connect(database_path) as connection:
-            row = connection.execute("SELECT id,read_at FROM internal_messages WHERE id=? AND recipient_user_id=?", (message_id, g.portal_user["id"])).fetchone()
+            row = connection.execute("SELECT id,read_at FROM internal_messages WHERE id=? AND recipient_user_id=?", (message_id, user_id)).fetchone()
             if row is None:
                 return jsonify(error="message_not_found"), 404
             if row["read_at"] is None:
-                connection.execute("UPDATE internal_messages SET read_at=? WHERE id=? AND recipient_user_id=? AND read_at IS NULL", (now_text(), message_id, g.portal_user["id"]))
+                connection.execute("UPDATE internal_messages SET read_at=? WHERE id=? AND recipient_user_id=? AND read_at IS NULL", (now_text(), message_id, user_id))
                 connection.commit()
-        return jsonify(id=message_id, read=True)
+            unread = unread_mail_count(connection, user_id)
+        return jsonify(id=message_id, read=True, unread_messages=unread)
 
     app.register_blueprint(bp, url_prefix="/api/erp")

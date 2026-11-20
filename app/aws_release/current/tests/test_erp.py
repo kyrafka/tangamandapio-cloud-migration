@@ -349,6 +349,31 @@ class ErpReleaseTests(unittest.TestCase):
         self.assertIn("To: ventas@release.test", smtp.messages[0])
         self.assertEqual(self.client.get("/api/erp/mail?folder=sent").get_json()[0]["smtp_attempts"], 1)
 
+    def test_mail_only_user_can_get_unread_count_and_mark_message_read(self):
+        username, password = "warehouse@release.test", "Warehouse-Mail-Test-Password!"
+        created = self.post(self.client, "/api/admin/users", {
+            "username": username, "password": password, "role": "warehouse",
+        })
+        self.assertEqual(created.status_code, 201)
+        sent = self.post(self.client, "/api/erp/mail", {
+            "recipient_id": created.get_json()["user"]["id"],
+            "subject": "Coordinación con almacén",
+            "body": "Mensaje interno de prueba.",
+        })
+        self.assertEqual(sent.status_code, 201)
+
+        mailbox = self.application.test_client()
+        self.login(mailbox, username, password)
+        self.assertEqual(mailbox.get("/api/erp/overview").status_code, 403)
+        self.assertEqual(mailbox.get("/api/erp/mail/status").get_json()["unread_messages"], 1)
+        path = f"/api/erp/mail/{sent.get_json()['id']}/read"
+        for _ in range(2):
+            read = self.post(mailbox, path, {})
+            self.assertEqual(read.status_code, 200)
+            self.assertTrue(read.get_json()["read"])
+            self.assertEqual(read.get_json()["unread_messages"], 0)
+        self.assertEqual(mailbox.get("/api/erp/mail/status").get_json()["unread_messages"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

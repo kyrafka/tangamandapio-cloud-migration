@@ -1,0 +1,377 @@
+{
+  "release": "20261120-erp-mail-by-role",
+  "cloud": {
+    "revision": "20261120-erp-mail-by-role",
+    "sha256": "7d1364cc3d3ff380c1971593e99ee36f17aa1b805b7e57ffbbaf425ff4a5f979",
+    "stack": "tangamandapio-live-20261116",
+    "stackStatus": "UPDATE_COMPLETE",
+    "startedUTC": "2026-11-20T21:02:28.1010000Z",
+    "completedUTC": "2026-11-20T21:17:37.3810000Z",
+    "app": {
+      "Desired": 2,
+      "Min": 2,
+      "Max": 5,
+      "HealthyTargets": 2,
+      "VerifiedNodes": [
+        {
+          "Zone": "us-east-2b",
+          "Template": "8",
+          "Release": "20261120-erp-mail-by-role",
+          "AssetSHA256": {
+            "erp_service.py": "9f638845337ab762487bb32d0c206d8926c938c89153d93268b1addec9015edb",
+            "erp.css": "4f3180c924540f27857d30b3d4febd080e1cf9cd2f2df66222963104d933115d",
+            "erp.js": "e738a0b1ed8ff213dc3c47fc8d973df690eee75917669cc46228d0b8c5939281"
+          },
+          "Ready": true
+        },
+        {
+          "Zone": "us-east-2a",
+          "Template": "8",
+          "Release": "20261120-erp-mail-by-role",
+          "AssetSHA256": {
+            "erp_service.py": "9f638845337ab762487bb32d0c206d8926c938c89153d93268b1addec9015edb",
+            "erp.css": "4f3180c924540f27857d30b3d4febd080e1cf9cd2f2df66222963104d933115d",
+            "erp.js": "e738a0b1ed8ff213dc3c47fc8d973df690eee75917669cc46228d0b8c5939281"
+          },
+          "Ready": true
+        }
+      ]
+    },
+    "rds": {
+      "Status": "available",
+      "MultiAZ": true
+    },
+    "publicAssetMatches": true,
+    "readiness": {
+      "samples": 34,
+      "http200": 34
+    }
+  },
+  "mailRegressionBefore": {
+    "checkedAt": "2026-11-20T21:00:36.630Z",
+    "tests": {
+      "send": {
+        "pass": true,
+        "result": {
+          "http": 201,
+          "transport": "portal_only"
+        }
+      },
+      "sender_sees_sent": {
+        "pass": true,
+        "result": true
+      },
+      "warehouse_overview_forbidden": {
+        "pass": true,
+        "result": 403
+      },
+      "inbox_unread": {
+        "pass": true,
+        "result": true
+      },
+      "unread_badge": {
+        "pass": false,
+        "error": "locator.textContent: Timeout 2500ms exceeded."
+      },
+      "read": {
+        "pass": true,
+        "result": 200
+      },
+      "warehouse_displays_message": {
+        "pass": false,
+        "error": "Tu administrador todavía no asignó ese permiso ERP."
+      },
+      "read_state_persists": {
+        "pass": true,
+        "result": true
+      },
+      "private_to_participants": {
+        "pass": true,
+        "result": true
+      }
+    },
+    "cleanup": {
+      "created": 2,
+      "disabled": 2
+    },
+    "transport": {
+      "status": "portal_only",
+      "smtpConfigured": false
+    },
+    "finishedAt": "2026-11-20T21:01:11.238Z"
+  },
+  "mailAfter": {
+    "checkedAt": "2026-11-20T21:19:03.151Z",
+    "tests": {
+      "azure_private_wms": {
+        "pass": true,
+        "result": {
+          "status": "ok"
+        }
+      },
+      "sales_cannot_open_finance": {
+        "pass": true,
+        "result": {
+          "sales": 200,
+          "finance": 403
+        }
+      },
+      "send": {
+        "pass": true,
+        "result": {
+          "http": 201,
+          "transport": "portal_only"
+        }
+      },
+      "sender_sees_sent": {
+        "pass": true,
+        "result": true
+      },
+      "warehouse_overview_forbidden": {
+        "pass": true,
+        "result": 403
+      },
+      "inbox_unread": {
+        "pass": true,
+        "result": true
+      },
+      "unread_badge": {
+        "pass": true,
+        "result": 1
+      },
+      "read": {
+        "pass": true,
+        "result": 200
+      },
+      "warehouse_displays_message": {
+        "pass": true,
+        "result": true
+      },
+      "unread_badge_cleared": {
+        "pass": true,
+        "result": true
+      },
+      "read_state_persists": {
+        "pass": true,
+        "result": true
+      },
+      "private_to_participants": {
+        "pass": true,
+        "result": true
+      }
+    },
+    "cleanup": {
+      "created": 2,
+      "disabled": 2
+    },
+    "transport": {
+      "status": "portal_only",
+      "smtpConfigured": false
+    },
+    "finishedAt": "2026-11-20T21:19:34.951Z"
+  },
+  "rolesAfter": {
+    "startedUTC": "2026-11-20T21:19:03.154Z",
+    "finishedUTC": "2026-11-20T21:22:08.858Z",
+    "sessions": 10,
+    "checks": 297,
+    "profiles": [
+      {
+        "profile": "Administrador",
+        "portalRole": "admin",
+        "erpRole": "erp_admin",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "sales",
+          "purchases",
+          "finance",
+          "access",
+          "mail"
+        ],
+        "passed": 49,
+        "checks": 49,
+        "writeRequests": {
+          "masters": 400,
+          "sales": 400,
+          "purchases": 400,
+          "finance": 400
+        }
+      },
+      {
+        "profile": "Cliente B2B",
+        "portalRole": "customer",
+        "erpRole": null,
+        "accessibleTabs": [],
+        "passed": 27,
+        "checks": 27,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Comercial",
+        "portalRole": "sales",
+        "erpRole": "erp_sales",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "sales",
+          "mail"
+        ],
+        "passed": 36,
+        "checks": 36,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 400,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Operador WMS",
+        "portalRole": "warehouse",
+        "erpRole": null,
+        "accessibleTabs": [
+          "mail"
+        ],
+        "passed": 34,
+        "checks": 34,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Operaciones TI",
+        "portalRole": "operations",
+        "erpRole": null,
+        "accessibleTabs": [
+          "mail"
+        ],
+        "passed": 37,
+        "checks": 37,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Auditor",
+        "portalRole": "auditor",
+        "erpRole": "erp_auditor",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "sales",
+          "purchases",
+          "finance",
+          "mail"
+        ],
+        "passed": 39,
+        "checks": 39,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Finanzas ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_finance",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "sales",
+          "purchases",
+          "finance",
+          "mail"
+        ],
+        "passed": 20,
+        "checks": 20,
+        "writeRequests": {
+          "masters": 403,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 400
+        }
+      },
+      {
+        "profile": "Compras ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_purchasing",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "purchases",
+          "mail"
+        ],
+        "passed": 18,
+        "checks": 18,
+        "writeRequests": {
+          "masters": 400,
+          "sales": 403,
+          "purchases": 400,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Datos maestros ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_master_data",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "mail"
+        ],
+        "passed": 17,
+        "checks": 17,
+        "writeRequests": {
+          "masters": 400,
+          "sales": 403,
+          "purchases": 403,
+          "finance": 403
+        }
+      },
+      {
+        "profile": "Administrador ERP delegado",
+        "portalRole": "warehouse",
+        "erpRole": "erp_admin",
+        "accessibleTabs": [
+          "overview",
+          "masters",
+          "sales",
+          "purchases",
+          "finance",
+          "mail"
+        ],
+        "passed": 20,
+        "checks": 20,
+        "writeRequests": {
+          "masters": 400,
+          "sales": 400,
+          "purchases": 400,
+          "finance": 400
+        }
+      }
+    ],
+    "temporaryAccountDisabled": true,
+    "syntheticBusinessTransactionsCreated": 0
+  },
+  "privateAzureWMS": {
+    "queueStatus": "ok"
+  },
+  "localTests": {
+    "python": 29,
+    "javascript": 22
+  }
+}

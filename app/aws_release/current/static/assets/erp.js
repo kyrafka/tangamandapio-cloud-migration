@@ -8,7 +8,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
   const state = {
     user: null, access: { permissions: [], role_labels: {} }, section: "",
     overview: null, partners: [], products: [], sales: [], purchases: [], finance: [], users: [],
-    mail: [], recipients: [], mailStatus: null, folder: "inbox", selectedMail: null, busy: false,
+    mail: [], recipients: [], mailStatus: null, unreadMessages: 0, folder: "inbox", selectedMail: null, busy: false,
     catalogRows: [], catalogFileName: "", catalogError: "", catalogImporting: false,
   };
   let renderedSection;
@@ -61,7 +61,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
   ].filter((item) => item[2]);
 
   function renderTabs() {
-    const unread = Number(state.overview?.unread_messages || 0);
+    const unread = state.unreadMessages;
     $("#erp-tabs").innerHTML = `${tabs().map(([key, label]) => `<button class="erp-tab" type="button" role="tab" aria-selected="${state.section === key}" data-action="section" data-section="${key}">${esc(label)}${key === "mail" && unread ? `<span class="tab-count">${unread}</span>` : ""}</button>`).join("")}<button class="erp-tab" type="button" data-action="refresh" ${state.busy ? "disabled" : ""}>${state.busy ? "Actualizando…" : "Actualizar"}</button>`;
   }
 
@@ -70,7 +70,10 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     renderTabs();
     $("#erp-content").innerHTML = `<div class="erp-loading"><span class="erp-spinner" aria-hidden="true"></span> Cargando ${esc(section)}…</div>`;
     try {
-      if (section === "overview") state.overview = await api("/api/erp/overview");
+      if (section === "overview") {
+        state.overview = await api("/api/erp/overview");
+        state.unreadMessages = state.overview.unread_messages;
+      }
       if (section === "masters") {
         const [partners, productState] = await Promise.all([api("/api/erp/partners"), api("/api/erp/products")]);
         state.partners = partners; state.products = productState.products || []; state.wms = productState.wms;
@@ -86,6 +89,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       if (section === "finance") {
         const [docs, overview, partners] = await Promise.all([api("/api/erp/finance/documents"), api("/api/erp/overview"), api("/api/erp/partners")]);
         state.finance = docs; state.overview = overview; state.partners = partners;
+        state.unreadMessages = overview.unread_messages;
       }
       if (section === "access") state.users = await api("/api/erp/users");
       if (section === "mail") await loadMail();
@@ -105,6 +109,8 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       api(`/api/erp/mail?folder=${state.folder}`), api("/api/erp/mail/users"), api("/api/erp/mail/status"),
     ]);
     state.mail = messages; state.recipients = recipients; state.mailStatus = mailStatus;
+    const inboxUnread = state.folder === "inbox" ? messages.filter(message => message.unread).length : state.unreadMessages;
+    state.unreadMessages = mailStatus.unread_messages ?? inboxUnread;
     if (state.selectedMail && !messages.some((item) => item.id === state.selectedMail.id)) state.selectedMail = null;
   }
 
@@ -152,7 +158,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       <section class="erp-card">${sectionHeading("Propiedad de datos", "El ERP coordina; Azure mantiene el inventario", "Pedidos, precios, socios y documentos financieros se guardan en la base administrada por AWS. Las existencias se consultan en Azure y no se duplican aquí.")}
         <p class="erp-note">${esc(state.overview?.wms?.note || "El inventario es un ledger ficticio de laboratorio. Las ventas y recepciones muestran el flujo técnico, no stock comercial real.")}</p>
       </section>
-      <section class="erp-card">${sectionHeading("Mensajería", "Correo interno del portal", "Mensajes entre cuentas internas, con bandeja de entrada, enviados y confirmación de lectura.")}<button class="erp-button erp-button--primary" type="button" data-action="section" data-section="mail">Abrir buzón · ${Number(state.overview?.unread_messages || 0)} sin leer</button><p class="erp-note">No crea buzones de Internet ni envía por SMTP; todo queda privado dentro del portal.</p></section>
+      <section class="erp-card">${sectionHeading("Mensajería", "Correo interno del portal", "Mensajes entre cuentas internas, con bandeja de entrada, enviados y confirmación de lectura.")}<button class="erp-button erp-button--primary" type="button" data-action="section" data-section="mail">Abrir buzón · ${state.unreadMessages} sin leer</button></section>
     </div>`;
   }
 
@@ -332,15 +338,16 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       } else if (kind === "cancel-compose") {
         state.compose = false; await loadSection("mail");
       } else if (kind === "open-mail") {
-        state.selectedMail = state.mail.find((item) => item.id === Number(action.dataset.id)) || null;
-        if (state.folder === "inbox" && state.selectedMail && !state.selectedMail.read_at) {
-          await api(`/api/erp/mail/${state.selectedMail.id}/read`, { method: "POST" });
-          state.selectedMail.read_at = new Date().toISOString();
-          state.selectedMail.unread = false;
-          state.overview = state.overview || await api("/api/erp/overview");
-          state.overview.unread_messages = Math.max(0, Number(state.overview.unread_messages || 0) - 1);
+        const message = state.mail.find((item) => item.id === Number(action.dataset.id)) || null;
+        state.selectedMail = message;
+        if (state.folder === "inbox" && message && !message.read_at) {
+          const result = await api(`/api/erp/mail/${message.id}/read`, { method: "POST" });
+          const wasUnread = !message.read_at;
+          message.read_at ||= new Date().toISOString();
+          message.unread = false;
+          state.unreadMessages = result.unread_messages ?? Math.max(0, state.unreadMessages - Number(wasUnread));
         }
-        renderSection();
+        if (state.section === "mail" && state.selectedMail === message) renderSection();
       } else if (kind === "test-smtp") {
         const result = await api("/api/erp/mail/smtp-test", { method: "POST" });
         announce(`Prueba aceptada por el relay SMTP (${result.message_id}).`, "success");
