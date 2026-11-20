@@ -99,10 +99,27 @@ El ciclo completo entre nubes desde cuentas vacías sigue pendiente.
    los conteos y el tiempo de recuperación que imprime la orden. No se pasa
    una contraseña o URL SAS como argumento.
 
-La identidad de este flujo manual caduca con la sesión del operador. Para
-programarlo se requiere una identidad de servicio con permiso sobre el
-contenedor, un rol PostgreSQL de exportación y un único ejecutor con alerta de
-omisión o fallo. El respaldo manual y el restore del 18/11 están probados.
+La identidad de este flujo manual caduca con la sesión del operador. La copia
+diaria de producción ya se ejecuta con el stack `tangamandapio-azure-postgres-backup`.
+
+### Ensayar la recuperación de todo el ERP
+
+Desde la raíz del repositorio, usa el entorno Python de la aplicación con
+`app/requirements-ci.lock`, Azure CLI con permiso de lectura del contenedor y
+`unwrapKey` junto con las herramientas locales de PostgreSQL. Para un ensayo
+representativo de RDS 18.3, usa binarios de PostgreSQL 18.
+
+```powershell
+python iac/scripts/rehearse_erp_recovery_from_blob.py --manifest evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json --postgres-bin "C:/Program Files/PostgreSQL/18/bin"
+```
+
+Para otra fecha, usa como `--manifest` el JSON exportado de
+`dr/postgres/manifests/YYYYMMDD.json` del bucket de respaldo de AWS y conserva
+una copia confiable fuera de AWS antes de simular la pérdida de la región. El
+script comprueba ambas huellas, restaura la base en `127.0.0.1`, levanta el ERP,
+crea usuarios de ensayo en la base aislada, comprueba pedidos, permisos y correo
+interno, y elimina el clúster local al finalizar. Las integraciones de envío
+externo quedan desactivadas en el ensayo. [Registro de recuperación del 20/11](../evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json).
 
 ## Estado real de nube — 16/11/2026
 

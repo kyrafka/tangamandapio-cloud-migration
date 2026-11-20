@@ -8,7 +8,8 @@ El release vigente en AWS Ohio es `20261120-erp-mail-by-role`. El balanceador
 mantiene dos destinos sanos. El buzón interno permite abrir mensajes y
 actualizar el contador de no leídos también en los perfiles que solo tienen
 permiso de correo. Después del despliegue pasaron 297 comprobaciones en diez
-sesiones y se verificó el envío de Comercial a Almacén.
+sesiones y se verificó el envío de Comercial a Almacén. El correo del ERP se
+entrega dentro del portal.
 [Verificación de correo y permisos](evidence/current/aws/AWS-ERP-MAIL-ROLES-2026-11-20.json).
 
 El 20/11 también se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
@@ -27,14 +28,16 @@ privada AWS–Azure. El evento se verificó en Function, Queue, Blob y Applicati
 Insights. El portal muestra el avance según el rol. Operaciones y Administración
 pueden consultar las colas y reintentar envíos.
 
-La copia diaria cifrada de PostgreSQL se restauró de forma aislada en **35,108 s**.
-El RPO observado fue de **15 h 39 min 44 s**. El ensayo más reciente de la ruta
+La copia diaria cifrada del 20/11 recuperó 20 tablas. El ERP arrancó sobre esa
+copia y completó 19 comprobaciones en **12,75 s** en un entorno aislado. El RPO
+del ensayo del 19/11 fue de **15 h 39 min 44 s**. El ensayo más reciente de la ruta
 privada recuperó HTTPS en **2,64 y 2,60 s** desde ambas EC2. En los dos ensayos
 previos se midieron de 4,59 a 9,92 s. RDS está en **Multi-AZ** desde el 19/11 y
-conserva un día de retención. La última prueba al ALB registró un HTTP 502 en
+conserva un día de retención. CloudFormation confirmó que el recurso RDS está
+sincronizado. La última prueba al ALB registró un HTTP 502 en
 10.000 solicitudes con 50 concurrentes.
 
-[Inventario del 19/11 y evidencias](iac/ESTADO_REAL_2026-11-19.md) ·
+[Inventario y evidencias](iac/ESTADO_REAL_2026-11-20.md) ·
 [Costos actualizados](evidence/current/COSTOS-2026-11-20.md) ·
 [Guía de capturas](evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026) ·
 [Matriz de rúbrica](core/04_matriz_rubrica.md) ·

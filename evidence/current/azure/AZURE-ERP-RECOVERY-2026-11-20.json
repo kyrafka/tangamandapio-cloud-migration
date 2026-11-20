@@ -1,0 +1,61 @@
+{
+  "capturedUTC": "2026-11-20T18:11:15.3511-05:00",
+  "backup": "postgres/20261120-daily.json",
+  "backupCreatedUTC": "2026-11-20T03:01:07.150558-05:00",
+  "verifiedManifest": {
+    "object": "postgres/20261120-daily.json",
+    "source_started_utc": "2026-11-20T03:01:07.150558-05:00",
+    "archive_sha256": "2709f3e3f93b71708df535f64556e54bea36245253a88c7fb5cb0e846a874a43",
+    "cipher_sha256": "b284df26c0d33f1c147ed8a9bd24b19cf3b84bf5fe58ef902956f6fa7b892840",
+    "archive_bytes": 68137
+  },
+  "release": "20261120-erp-mail-by-role",
+  "destination": "workstation loopback, isolated from production",
+  "azureBlobAndKeyVault": true,
+  "archiveAndCiphertextSHA256Verified": true,
+  "awsApisDuringExercise": false,
+  "externalIntegrationsEnabled": false,
+  "postgreSQL": {
+    "tables": 20,
+    "orders": 2,
+    "outbox": 2,
+    "listen": "127.0.0.1",
+    "engine": "17.5"
+  },
+  "ordersSeenByERP": 2,
+  "http": {
+    "http_health": 200,
+    "http_ready": 200,
+    "erp_without_session": 401,
+    "admin_csrf": 200,
+    "admin_login": 200,
+    "admin_session": 200,
+    "restored_orders": 200,
+    "erp_html": 200,
+    "erp_overview": 200,
+    "erp_sales": 200,
+    "erp_finance": 200,
+    "create_isolated_user": 201,
+    "send_internal_mail": 201,
+    "warehouse_csrf": 200,
+    "warehouse_login": 200,
+    "warehouse_session": 200,
+    "warehouse_finance_forbidden": 403,
+    "receive_internal_mail": 200,
+    "read_internal_mail": 200
+  },
+  "seconds": {
+    "downloadAndDecrypt": 4.89,
+    "isolatedPostgresRestored": 8.906,
+    "erpAndChecksCompleted": 12.75
+  },
+  "ephemeralClusterRemoved": true,
+  "sourcePostgresEngine": "18.3",
+  "priorRunEndToEndSeconds": 14.546,
+  "replayedFromPublishedManifest": {
+    "capturedUTC": "2026-11-20T23:18:57.714613+00:00",
+    "httpChecks": 19,
+    "erpAndChecksCompletedSeconds": 13.625,
+    "ephemeralClusterRemoved": true
+  }
+}

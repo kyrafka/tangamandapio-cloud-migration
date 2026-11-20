@@ -1,0 +1,88 @@
+{
+  "checkedUTC": "2026-11-20T23:12:33.1076120Z",
+  "stack": "tangamandapio-live-20261116",
+  "changeSet": "rubric-rds-multi-az-preflight-20261120",
+  "completedUTC": "2026-11-20T23:10:40.0110000Z",
+  "cloudFormation": {
+    "status": "UPDATE_COMPLETE",
+    "databaseResourceDrift": "IN_SYNC",
+    "protectedAgainstReplacementAndRemovalDuringUpdates": true,
+    "DatabaseMultiAZ": "true"
+  },
+  "rds": {
+    "samePhysicalDatabase": true,
+    "status": "available",
+    "pending": {},
+    "primary": "us-east-2b",
+    "secondary": "us-east-2a",
+    "engine": "18.3",
+    "retentionDays": 1,
+    "multiAZ": true
+  },
+  "plan": [
+    {
+      "Resource": "DatabaseCPUAlarm",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Details": [
+        "Dimensions",
+        "Dimensions"
+      ]
+    },
+    {
+      "Resource": "Database",
+      "Action": "Modify",
+      "Replacement": "Conditional",
+      "Details": [
+        "MultiAZ"
+      ]
+    },
+    {
+      "Resource": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Details": [
+        "LaunchTemplateData"
+      ]
+    },
+    {
+      "Resource": "OperationsDashboard",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Details": [
+        "DashboardBody",
+        "DashboardBody"
+      ]
+    }
+  ],
+  "portalReadiness": {
+    "samples": 3,
+    "http200": 3
+  },
+  "fullStackDrift": {
+    "detectionStatus": "DETECTION_COMPLETE",
+    "stackStatus": "DRIFTED",
+    "checkedUTC": "2026-11-20T23:11:57.741Z",
+    "changes": [
+      {
+        "resource": "AlarmNotificationTopic",
+        "path": "/Subscription/0",
+        "type": "ADD",
+        "subscription": "Gmail",
+        "confirmed": true
+      },
+      {
+        "resource": "AppInstanceRole",
+        "path": "/Policies/1",
+        "type": "ADD",
+        "policy": "tangamandapio-scheduled-blob-backup",
+        "ownerStack": "tangamandapio-azure-postgres-backup"
+      }
+    ],
+    "institutionalEmail": "PendingConfirmation"
+  },
+  "asg": {
+    "healthy": 2,
+    "desired": 2
+  }
+}

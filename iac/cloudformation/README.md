@@ -1,6 +1,11 @@
 # AWS CloudFormation — portal y recuperación
 
-**Corte vigente 16/11/2026:** la cuenta activa es `481056890449`, región `us-east-2`; CloudFormation administra el portal y ASG en estado sano. La prueba de carga llegó a 5 instancias y volvió automáticamente a 2, aunque el ensayo largo registró 1,47% de errores. RDS está disponible, cifrada, Single-AZ y con retención de 1 día. No está implementado el respaldo automático cifrado PostgreSQL→Azure Blob ni una restauración aislada. La ruta privada AWS→Azure y el failover desde AWS siguen pendientes. SNS todavía requiere confirmación del correo; ACM espera el CNAME que el usuario pidió dejar para después. Ver el [estado real completo](../ESTADO_REAL_2026-11-16.md). Los párrafos fechados de octubre y principios de noviembre que aparecen más abajo son registros históricos, no estado actual.
+**Corte vigente 20/11/2026.** La cuenta activa es `481056890449` en `us-east-2`.
+El portal tiene dos destinos sanos, RDS Multi-AZ está disponible con un día de
+retención, la VPN Tailscale transporta los eventos privados y la copia diaria
+cifrada de Blob permitió recuperar el ERP. El parámetro `DatabaseMultiAZ` del
+stack es `true` y el recurso RDS está `IN_SYNC`. Las entradas fechadas de abajo
+conservan el historial. [Estado y evidencias del 20/11](../ESTADO_REAL_2026-11-20.md).
 
 ## Qué administra
 
@@ -13,7 +18,7 @@ Plantillas auxiliares:
 - `aws-azure-p2s-router.yaml`: infraestructura base para el router EC2 de la alternativa Azure P2S. Requiere configurar el perfil y certificados OpenVPN fuera del repositorio; crear la instancia no crea por sí solo un túnel funcional.
 - Los prototipos locales de IPsec/WireGuard no están validados de extremo a extremo y no forman parte de la IaC publicada.
 
-## Estado operativo conocido
+## Verificación histórica del 16/11
 
 La verificación viva del 16/11 consultó la cuenta `481056890449` con el perfil `main`. El stack principal figura `UPDATE_COMPLETE`; el ASG tiene dos instancias y dos destinos saludables, con capacidad min 2 / desired 2 / max 5. RDS está disponible, cifrada, Single-AZ y con un día de retención. El escalado 2→4→5 y el scale-in 5→4→3→2 fueron automáticos. La prueba de 300.000 solicitudes tuvo 1,47% de errores; el postcheck de 3.000 tuvo cero. CloudFormation drift quedó `IN_SYNC` con cero recursos desviados. Esto no demuestra ruta privada hacia Azure, recuperación regional ni restore de RDS desde Blob.
 
@@ -24,6 +29,18 @@ La verificación viva del 16/11 consultó la cuenta `481056890449` con el perfil
 3. Ejecuta `deploy.sh` para generar/revisar el change set. El primer paso no lo aplica. Comprueba especialmente reemplazos de RDS, VPC, ALB, almacenamiento o recursos con datos.
 4. Para aplicar, repite solo después de revisar el plan, con `APPLY_CHANGE_SET=true`, `CONFIRM_STACK_NAME` idéntico y la confirmación interactiva solicitada por el script.
 5. Comprueba salud externa, destinos del ALB, actividad del ASG, RDS y alarmas después del cambio.
+
+Para una reconstrucción equivalente a producción, configura
+`DATABASE_MULTI_AZ=true`. El valor predeterminado del laboratorio permite
+ensayos con una sola zona y menor consumo. Tras crear el stack de producción,
+aplica [la política de protección de RDS](production-database-stack-policy.json)
+con `aws cloudformation set-stack-policy`. La política impide el reemplazo o
+retiro de `Database` durante actualizaciones del stack. El borrado del stack
+tiene controles independientes. [Políticas de stack de CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html).
+
+```powershell
+aws cloudformation set-stack-policy --stack-name tangamandapio-live-20261116 --profile main --region us-east-2 --stack-policy-body file://iac/cloudformation/production-database-stack-policy.json
+```
 
 El script conserva parámetros existentes con `UsePreviousValue` y tiene preflight para nombre del stack y HTTPS. Los overrides de Multi-AZ, días de backup, WAF y AWS Backup pueden cambiar costos; revisa el change set y la factura del laboratorio antes de usarlos.
 

@@ -5,6 +5,16 @@
 - [Recorrido para tomar las capturas del portal, AWS y Azure](../evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026).
 - [Corte de costos de AWS y Azure del 20/11 con desglose por servicio](../evidence/current/COSTOS-2026-11-20.md).
 - [Publicación del ERP y verificación en producción del 20/11](../evidence/current/aws/AWS-ERP-RELEASE-2026-11-20.json).
+- [Correo interno y permisos en producción, 297 comprobaciones en diez sesiones](../evidence/current/aws/AWS-ERP-MAIL-ROLES-2026-11-20.json).
+- [Reconciliación de RDS Multi-AZ en CloudFormation](../evidence/current/aws/AWS-RDS-IAC-RECONCILIATION-2026-11-20.json).
+- [Recuperación aislada de PostgreSQL y del ERP desde Azure Blob](../evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json).
+
+| Criterios | Verificado el 20/11 | Pendiente |
+| --- | --- | --- |
+| 5 y 7 Seguridad y monitoreo | Comercial envió un mensaje, Almacén lo abrió y el acceso quedó limitado a sus participantes. Gmail está confirmado en SNS. | Confirmar la suscripción UPeU, separar el usuario SQL de ejecución y verificar la revocación de credenciales históricas. |
+| 6 y 12 Disponibilidad y pruebas | RDS Multi-AZ está disponible. El portal respondió 200 en las tres muestras de la actualización de CloudFormation. | Medir la conmutación de RDS y repetir la prueba de VPN para establecer la consistencia de la meta de tres segundos. |
+| 8 y 9 IaC y recuperación | Recurso RDS `IN_SYNC`. El ERP recuperado arrancó en 12,75 s, leyó los dos pedidos y pasó 19 comprobaciones locales. | El stack principal conserva dos diferencias documentadas. La SCP bloquea la recuperación RDS fuera de Ohio. Falta la reconstrucción multinube completa desde cuentas vacías. |
+| 13 y 14 Entrega | Los registros incluyen datos, acceso por rol, correo y recuperación. | Tomar las capturas de la defensa y ejecutar la demostración. |
 
 ## Actualización del 19/11/2026
 

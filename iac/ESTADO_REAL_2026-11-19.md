@@ -2,6 +2,9 @@
 
 19 de noviembre de 2026, Lima. Cuenta AWS `481056890449` en Ohio y suscripción Azure for Students en West US.
 
+Consulta el [estado del 20/11](ESTADO_REAL_2026-11-20.md) para la reconciliación de
+RDS, el correo por rol y la última restauración del ERP.
+
 ## RDS Multi-AZ en Ohio
 
 RDS completó la conversión de `tangamandapio-postgres` y quedó en estado
