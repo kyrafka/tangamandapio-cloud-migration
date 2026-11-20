@@ -11,6 +11,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     mail: [], recipients: [], mailStatus: null, folder: "inbox", selectedMail: null, busy: false,
     catalogRows: [], catalogFileName: "", catalogError: "", catalogImporting: false,
   };
+  let renderedSection;
   const roleLabels = { customer: "Cliente", sales: "Comercial", warehouse: "Operaciones WMS", operations: "Operaciones TI", admin: "Administración", auditor: "Auditoría" };
   const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -129,6 +130,13 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     else if (state.section === "finance") content.innerHTML = renderFinance();
     else if (state.section === "access") content.innerHTML = renderAccess();
     else if (state.section === "mail") content.innerHTML = renderMail();
+    if (state.section !== renderedSection) {
+      $$(".erp-kpi, .erp-card", content).forEach((card, index) => {
+        card.style.setProperty("--erp-assembly-delay", `${Math.min(index, 6) * 48}ms`);
+        card.setAttribute("data-erp-assemble", "");
+      });
+      renderedSection = state.section;
+    }
     updateWmsState();
   }
 
@@ -372,6 +380,9 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     document.documentElement.dataset.theme = localStorage.getItem("tangamandapio-theme") || "light";
     $("#erp-content").addEventListener("click", handleAction);
     $("#erp-content").addEventListener("submit", handleSubmit);
+    $("#erp-content").addEventListener("focusin", (event) => {
+      event.target.closest("[data-erp-assemble]")?.removeAttribute("data-erp-assemble");
+    });
     $("#erp-content").addEventListener("change", (event) => { handleRoleChange(event); void handleCatalogFile(event); });
     $("#erp-tabs").addEventListener("click", handleAction);
     try {

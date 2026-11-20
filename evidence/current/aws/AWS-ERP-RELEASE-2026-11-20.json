@@ -1,0 +1,71 @@
+{
+  "Release": "20261120-erp-card-assembly",
+  "stack": {
+    "status": "UPDATE_COMPLETE",
+    "artifact": "releases/tangamandapio/portal-erp-card-assembly-27cad4b7fa22.tar.gz",
+    "launchTemplateCommentRevision": "20261119-technical-tests-and-recovery",
+    "startUTC": "2026-11-20T16:05:19.231000+00:00",
+    "completedUTC": "2026-11-20T16:20:28.962000+00:00",
+    "sha256": "27cad4b7fa2245686f0054602ce25ef9a935d12350c2d6cd416a8b3e5b4056ca",
+    "name": "tangamandapio-live-20261116"
+  },
+  "asg": {
+    "Desired": 2,
+    "Min": 2,
+    "Max": 5,
+    "HealthyTargets": 2,
+    "VerifiedNodes": [
+      {
+        "Zone": "us-east-2a",
+        "Template": "7",
+        "Release": "20261120-erp-card-assembly",
+        "AssetSHA256": {
+          "erp.js": "a5b97906a20d051625806c314f90818b166dfe1a527b59f55db7c6698fee8b3b",
+          "erp.css": "4f3180c924540f27857d30b3d4febd080e1cf9cd2f2df66222963104d933115d"
+        },
+        "Ready": true
+      },
+      {
+        "Zone": "us-east-2b",
+        "Template": "7",
+        "Release": "20261120-erp-card-assembly",
+        "AssetSHA256": {
+          "erp.js": "a5b97906a20d051625806c314f90818b166dfe1a527b59f55db7c6698fee8b3b",
+          "erp.css": "4f3180c924540f27857d30b3d4febd080e1cf9cd2f2df66222963104d933115d"
+        },
+        "Ready": true
+      }
+    ]
+  },
+  "rds": {
+    "Status": "available",
+    "MultiAZ": true,
+    "Retention": 1
+  },
+  "browser": {
+    "checkedAt": "2026-11-20T16:22:37.017Z",
+    "adminPortalNavigation": true,
+    "outlineAssembly": true,
+    "cardCount": 6,
+    "delaysMs": [
+      0,
+      48,
+      96,
+      144,
+      192,
+      240
+    ],
+    "refreshWithoutReplay": true,
+    "mailTabReplays": true,
+    "reducedMotionMobile": true,
+    "ready": 200,
+    "browserErrors": 0
+  },
+  "publicReadySamples": {
+    "probeWaitSeconds": 24,
+    "publicHealth": 200,
+    "status200": 34,
+    "total": 34
+  },
+  "publicAssetHashesMatchPackage": true
+}

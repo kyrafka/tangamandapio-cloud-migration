@@ -3,7 +3,8 @@
 ## Actualización del 20/11/2026
 
 - [Recorrido para tomar las capturas del portal, AWS y Azure](../evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026).
-- [Lectura de costos de Azure del día y último corte disponible de AWS](../evidence/current/COSTOS-2026-11-20.md).
+- [Corte de costos de AWS y Azure del 20/11 con desglose por servicio](../evidence/current/COSTOS-2026-11-20.md).
+- [Publicación del ERP y verificación en producción del 20/11](../evidence/current/aws/AWS-ERP-RELEASE-2026-11-20.json).
 
 ## Actualización del 19/11/2026
 

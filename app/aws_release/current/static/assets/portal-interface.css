@@ -312,7 +312,6 @@ body { font-family: var(--ui-font); }
   }
   #root .workspace > :is(.metric-grid, .control-strip, .flow-card, .service-card, .content-grid),
   .admin-page .admin-view:not([hidden]),
-  .platform-body :is(.erp-content > div:not(.erp-loading), .erp-content > .erp-card),
   .tracking-page #order-detail .flow {
     animation: portal-enter var(--ui-enter) var(--ui-ease) both;
   }

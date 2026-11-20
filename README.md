@@ -4,9 +4,12 @@ Proyecto académico de una distribuidora ficticia. La arquitectura de referencia
 
 ## Estado operativo al 20/11/2026
 
-El 20/11, `/health` y `/ready` respondieron por HTTPS. El paquete
-`20261119-unified-portal-interface` pasó 50 pruebas locales y su publicación
-en Ohio espera la renovación de la sesión AWS.
+El 20/11 se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
+terminó la actualización y el balanceador quedó con dos destinos sanos.
+`/ready` devolvió HTTP 200 en las 34 muestras del recambio. Una sesión real
+de Administración confirmó el ensamblaje de las tarjetas desde **ERP y correo**,
+el cambio de módulo y el modo de movimiento reducido en móvil.
+[Registro de la publicación](evidence/current/aws/AWS-ERP-RELEASE-2026-11-20.json).
 
 El inventario comprobado el 19/11 registró un ASG con dos destinos sanos
 en dos zonas y capacidad de escalar hasta cinco. AWS usa un NAT Gateway
