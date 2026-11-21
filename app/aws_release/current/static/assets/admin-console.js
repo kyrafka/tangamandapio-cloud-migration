@@ -1,4 +1,5 @@
 import { createPortalApi } from "./portal-api.mjs";
+import { startVisibleRefresh } from "./visible-refresh.mjs";
 
 (() => {
   const roleLabels = {
@@ -171,11 +172,33 @@ import { createPortalApi } from "./portal-api.mjs";
     return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("es-PE");
   }
 
-  async function loadBackups() {
-    const backups = await api("/api/admin/backups");
-    $("#backup-create").disabled = !backups.aws.configured;
+  let backupListVersion = 0;
+  let backupAWSConfigured = false;
+  const backupSnapshots = {};
+
+  async function loadBackups(signal = AbortSignal.timeout(10000)) {
+    const version = ++backupListVersion;
+    const checked = $("#backup-checked");
+    let backups;
+    try {
+      backups = await api("/api/admin/backups", { signal });
+    } catch (error) {
+      if (version === backupListVersion && checked) {
+        checked.textContent = "No se pudo actualizar el catálogo. Se conserva la última lectura.";
+      }
+      throw error;
+    }
+    if (version !== backupListVersion) return;
+    const create = $("#backup-create");
+    backupAWSConfigured = backups.aws.configured;
+    create.disabled = !backupAWSConfigured || create.dataset.saving === "true";
+    if (checked) checked.textContent = `Última consulta ${new Date().toLocaleTimeString("es-PE")}`;
     for (const [source, listing] of Object.entries(backups)) {
       const target = $(`#backup-${source}`);
+      const snapshot = JSON.stringify(listing);
+      if (backupSnapshots[source] === snapshot) continue;
+      const activeLink = target.contains(document.activeElement) ? document.activeElement.href : null;
+      backupSnapshots[source] = snapshot;
       if (!listing.items.length) {
         target.textContent = listing.error ? "Almacenamiento temporalmente inaccesible." :
           listing.configured ? "Aún no hay copias guardadas." : "Almacenamiento sin configurar.";
@@ -184,6 +207,7 @@ import { createPortalApi } from "./portal-api.mjs";
       target.innerHTML = `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Copia</th><th>Fecha</th><th>Tamaño</th><th>Archivo</th></tr></thead><tbody>${listing.items.map((item, index) =>
         `<tr><td><strong>${escapeHtml(item.name)}</strong>${index === 0 ? " · Última copia" : ""}</td><td>${escapeHtml(friendlyDate(item.date))}</td><td>${Number(item.bytes).toLocaleString("es-PE")} B</td><td><a class="admin-button secondary" href="/api/admin/backups/${source}/${encodeURIComponent(item.name)}">Descargar</a></td></tr>`
       ).join("")}</tbody></table></div>`;
+      if (activeLink) Array.from(target.querySelectorAll("a")).find((link) => link.href === activeLink)?.focus({ preventScroll: true });
     }
   }
 
@@ -338,15 +362,21 @@ import { createPortalApi } from "./portal-api.mjs";
       $("#users-rows").addEventListener("click", handleUserAction);
       $("#temporary-credential").addEventListener("click", handleAlertAction);
       $("#alerts-rows").addEventListener("click", handleAlertAction);
+      startVisibleRefresh((signal) => state.section === "backups" && loadBackups(signal), 60000);
       $("#backup-create").addEventListener("click", async (event) => {
         const button = event.currentTarget;
+        button.dataset.saving = "true";
         setBusy(button, true, "Guardando…");
         try {
           const result = await api("/api/admin/backups", { method: "POST" });
           notice(`Copia guardada en AWS con ${result.events} eventos outbox.`);
           await loadBackups();
         } catch (error) { notice(error.message, "error"); }
-        finally { setBusy(button, false); }
+        finally {
+          delete button.dataset.saving;
+          setBusy(button, false);
+          button.disabled = !backupAWSConfigured;
+        }
       });
       $("#technical-wms-probe").addEventListener("click", probePrivateWms);
       $("#scaling-form").addEventListener("submit", async (event) => {

@@ -73,6 +73,9 @@
 .chart-line-secondary { fill: none; stroke: var(--platform-warn); stroke-dasharray: 5 4; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 .chart-label { fill: var(--platform-muted); font: 11px Inter, Aptos, Arial, sans-serif; }
 .platform-columns { display: grid; gap: 13px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fulfillment-overview, .fulfillment-check { margin-bottom: 13px; }
+#azure-event-title { overflow-wrap: anywhere; }
+#azure-event-status strong, #azure-event-status small { display: block; }
 .state-chip { background: var(--platform-soft); border: 1px solid var(--platform-line); border-radius: 999px; color: var(--platform-muted); font-size: .68rem; font-weight: 800; padding: 5px 8px; white-space: nowrap; }
 .state-chip[data-state="ok"] { color: var(--platform-good); }
 .state-chip[data-state="warning"] { color: var(--platform-warn); }

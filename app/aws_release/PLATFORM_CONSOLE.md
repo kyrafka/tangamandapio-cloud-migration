@@ -22,14 +22,19 @@ Incluye:
 - bloqueos WAF y capacidad del Auto Scaling Group cuando esos recursos publican
   métricas configuradas;
 - estado de controles del portal y contadores del proceso web actual;
-- trazabilidad de la cola transaccional: consulta bajo demanda del estado final
-  de cada evento en Azure y reintento auditado para Operaciones/Administración;
+- historial del outbox y resultado del evento consultado en Azure Blob, con
+  recuentos de pendientes y reintentos agotados en AWS y de mensajes en las
+  colas normal y de errores de Azure;
 - edición de rol, empresa y estado de cuentas; restablecimiento de contraseña
   con revelado único. El API invalida las sesiones y audita los cambios.
 
-El estado de Azure se consulta por evento y no modifica inventario desde esta
-pantalla. Si el endpoint de cumplimiento está en modo `demo-only`, se marca
-visiblemente como demostración. Los reintentos requieren confirmación y solo
+En **Centro de nube → Entregas al WMS** el historial y el resultado seleccionado
+se consultan cada 10 segundos y los recuentos cada 15 segundos mientras la
+pestaña está visible. El centro sigue el último evento entregado de la primera
+página. **Consultar Azure** permite seguir otro evento por su identificador.
+Las consultas del resultado se detienen cuando aparece un estado final. Los
+recuentos de Azure Queue Storage son aproximados y la vista distingue el valor
+cero de una lectura no disponible. Los reintentos requieren confirmación y solo
 Operaciones TI o Administración pueden ejecutarlos.
 
 ## Seguimiento de pedidos por rol
@@ -89,8 +94,9 @@ distintos.
 
 Entra a `/administracion` con una cuenta administradora. **Respaldos** muestra
 las copias de Azure Blob y de S3 por separado, con fecha, tamaño, descarga y
-distintivo para la última de cada almacén. La descarga pasa por el portal con
-sesión activa y se registra en la auditoría.
+distintivo para la última de cada almacén. El catálogo se actualiza cada minuto
+mientras esa vista está visible. La descarga pasa por el portal con sesión activa
+y se registra en la auditoría.
 
 - **Ejecutar respaldo** toma una lectura consistente de pedidos, sus líneas
   (`items_json`) y todos los estados del outbox. Guarda un JSON con SHA-256 en el

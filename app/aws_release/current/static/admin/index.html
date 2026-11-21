@@ -116,9 +116,10 @@
 
             <section class="admin-view" data-view="backups" aria-labelledby="backups-heading" hidden>
               <div class="admin-section-heading">
-                <div><h2 id="backups-heading">Respaldos</h2><p>Consulta la última copia y descarga las versiones disponibles.</p></div>
+                <div><h2 id="backups-heading">Respaldos</h2><p>Consulta la última copia y descarga las versiones disponibles. El catálogo se actualiza cada minuto en esta vista.</p></div>
                 <button type="button" class="admin-button secondary" data-reload="backups">Actualizar</button>
               </div>
+              <p id="backup-checked">Consultando almacenamiento…</p>
               <section class="admin-card">
                 <div class="admin-card-heading"><div><h3>Azure Blob</h3><p>Copias cifradas de PostgreSQL.</p></div></div>
                 <div id="backup-azure" aria-live="polite"></div>

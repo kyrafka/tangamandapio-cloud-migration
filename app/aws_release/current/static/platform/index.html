@@ -58,7 +58,18 @@
       </section>
 
       <section class="platform-section" aria-labelledby="fulfillment-heading">
-        <div class="section-heading"><div><p class="eyebrow">Trazabilidad multicloud</p><h2 id="fulfillment-heading">Entregas al WMS</h2><p class="section-copy">Sigue los eventos durables de AWS y consulta bajo demanda el resultado procesado por Azure. Se muestran primero los eventos más recientes, con paginación.</p></div><button id="outbox-refresh" class="platform-button" type="button">Actualizar eventos</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Trazabilidad multicloud</p><h2 id="fulfillment-heading">Entregas al WMS</h2><p class="section-copy">El historial y las colas se actualizan automáticamente mientras la pestaña está visible.</p></div><button id="outbox-refresh" class="platform-button" type="button">Actualizar eventos</button></div>
+        <div class="platform-columns fulfillment-overview">
+          <article class="metric-tile"><small>AWS · Por entregar</small><strong id="outbox-pending-count">—</strong><span>Incluye eventos con reintentos agotados</span></article>
+          <article class="metric-tile"><small>AWS · Reintentos agotados</small><strong id="outbox-exhausted-count">—</strong></article>
+          <article class="metric-tile"><small>Azure · En la cola</small><strong id="azure-pending-count">—</strong><span>Recuento aproximado</span></article>
+          <article class="metric-tile"><small>Azure · Cola de errores</small><strong id="azure-poison-count">—</strong><span>Recuento aproximado</span></article>
+        </div>
+        <p id="fulfillment-check" class="fulfillment-check panel-note">Consultando las colas…</p>
+        <article id="azure-event" class="platform-panel fulfillment-overview" aria-labelledby="azure-event-title" hidden>
+          <div class="panel-heading"><div><p class="eyebrow">Resultado en Azure Blob</p><h3 id="azure-event-title">Evento seleccionado</h3></div></div>
+          <div id="azure-event-status" class="panel-note" role="status"></div>
+        </article>
         <div class="platform-panel">
           <div class="table-wrap"><table class="users-table fulfillment-table"><thead><tr><th>Evento / pedido</th><th>Entrega desde AWS</th><th>Resultado WMS</th><th>Acciones</th></tr></thead><tbody id="outbox-table-body"></tbody></table></div>
           <div id="outbox-empty" class="empty-state" hidden>No hay eventos de entrega todavía.</div>

@@ -1,4 +1,5 @@
 import { createPortalApi } from "./portal-api.mjs";
+import { startVisibleRefresh } from "./visible-refresh.mjs";
 
 (() => {
   const roles = {
@@ -12,6 +13,19 @@ import { createPortalApi } from "./portal-api.mjs";
   const allowedRoles = ["customer", "sales", "warehouse", "operations", "admin", "auditor"];
   const $ = (selector) => document.querySelector(selector);
   const state = { role: "", window: 60, loading: false, inventory: [], outboxLimit: 30, outboxOffset: 0, outboxTotal: 0 };
+  const deliveryLabels = { pending: "Pendiente", failed: "Error de envío", delivered: "Entregado a Azure" };
+  const azureLabels = {
+    pending: "Resultado aún pendiente en Azure",
+    awaiting_items: "Procesado · Sin SKU ni cantidad",
+    demo_fulfillment_completed: "Inventario demo actualizado",
+    demo_restock_completed: "Reposición demo aplicada",
+    rejected_insufficient_stock: "Rechazado · Stock insuficiente",
+    rejected_invalid_event: "Rechazado · Evento inválido",
+    rejected_invalid_items: "Rechazado · Líneas inválidas",
+  };
+  let outboxVersion = 0;
+  let outboxSnapshot;
+  let azureSelection;
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -29,6 +43,8 @@ import { createPortalApi } from "./portal-api.mjs";
     not_configured: "La consulta a Azure no está configurada en este entorno.",
     unavailable: "Azure no está disponible ahora; el evento permanece en la cola de AWS.",
     azure_event_not_found: "Azure todavía no registra este evento.",
+    upstream_http_error: "No se pudo leer el resultado en Azure.",
+    upstream_error: "No se pudo leer el resultado en Azure.",
     event_not_found: "El evento ya no existe en la cola local.",
     invalid_demo_sku: "El SKU no pertenece al catálogo de laboratorio.",
     invalid_demo_quantity: "La cantidad debe ser un número entero entre 1 y 10.",
@@ -286,6 +302,8 @@ import { createPortalApi } from "./portal-api.mjs";
 
   function renderOutbox(events, total, limit, offset) {
     const body = $("#outbox-table-body");
+    const focused = body.contains(document.activeElement) ? document.activeElement : null;
+    let replacement;
     body.replaceChildren();
     $("#outbox-empty").hidden = events.length > 0;
     const end = Math.min(offset + events.length, total);
@@ -296,32 +314,27 @@ import { createPortalApi } from "./portal-api.mjs";
     $("#outbox-next").disabled = offset + limit >= total;
     for (const event of events) {
       const row = document.createElement("tr");
+      row.dataset.eventId = event.event_id;
       const identity = document.createElement("td");
       identity.append(element("strong", "", event.event_id), element("small", "", `Pedido #${event.order_id} · ${event.created_at || "fecha no disponible"}`));
       const delivery = document.createElement("td");
-      delivery.append(element("strong", "", event.status || "desconocido"), element("small", "", `${Number(event.attempts) || 0} intento(s)${event.delivered_at ? ` · entregado ${event.delivered_at}` : ""}`));
+      delivery.append(element("strong", "", deliveryLabels[event.status] || "Desconocido"), element("small", "", `${Number(event.attempts) || 0} intento(s)${event.delivered_at ? ` · entregado ${event.delivered_at}` : ""}`));
       const result = document.createElement("td");
-      result.append(element("span", "fulfillment-result", "Sin consultar"));
+      result.dataset.resultFor = event.event_id;
+      result.textContent = "Sin consultar";
       const actions = document.createElement("td");
       const check = element("button", "", "Consultar Azure");
       check.type = "button";
-      check.addEventListener("click", async () => {
-        check.disabled = true;
-        result.replaceChildren(element("span", "fulfillment-result", "Consultando…"));
-        try {
-          const payload = await request(`/api/outbox/${encodeURIComponent(event.event_id)}/fulfillment-status`);
-          const label = payload.simulated ? `${payload.fulfillment_status} · DEMO` : payload.fulfillment_status;
-          result.replaceChildren(element("strong", "", label));
-          if (payload.note) result.append(element("small", "", payload.note));
-          announce(payload.simulated ? "Azure actualizó el inventario ficticio de laboratorio; no representa existencias de un ERP real." : "Se consultó el estado final del evento en Azure.", payload.simulated ? "warning" : "success");
-        } catch (error) {
-          result.replaceChildren(element("span", "fulfillment-result", error.message));
-        } finally { check.disabled = false; }
+      check.dataset.outboxAction = "status";
+      check.addEventListener("click", () => {
+        selectAzureEvent(event, true);
+        refreshAzureEvent(AbortSignal.timeout(10000)).catch((error) => announce(error.message));
       });
       actions.append(check);
       if (["admin", "operations"].includes(state.role) && event.status !== "delivered") {
         const retry = element("button", "", "Reintentar entrega");
         retry.type = "button";
+        retry.dataset.outboxAction = "retry";
         retry.addEventListener("click", async () => {
           if (!window.confirm(`¿Reintentar ahora el envío del evento ${event.event_id} al WMS?`)) return;
           retry.disabled = true;
@@ -336,12 +349,86 @@ import { createPortalApi } from "./portal-api.mjs";
       }
       row.append(identity, delivery, result, actions);
       body.append(row);
+      if (focused?.closest("tr")?.dataset.eventId === event.event_id) {
+        replacement = [...actions.children].find((button) => button.dataset.outboxAction === focused.dataset.outboxAction) || check;
+      }
+    }
+    if (focused) (replacement || $("#outbox-refresh")).focus({ preventScroll: true });
+    renderAzureSelection();
+  }
+
+  function selectAzureEvent(event, manual = false) {
+    if (azureSelection?.event.event_id === event.event_id) {
+      azureSelection.manual ||= manual;
+      if (manual) azureSelection.settled = false;
+    } else {
+      azureSelection = { event, manual, label: "Consultando…", settled: false, loading: false };
+      renderAzureSelection();
     }
   }
 
-  async function refreshOutbox() {
+  function renderAzureSelection() {
+    if (!azureSelection) return;
+    const { event, label, note } = azureSelection;
+    for (const cell of document.querySelectorAll("[data-result-for]")) {
+      const next = cell.dataset.resultFor === event.event_id ? label : "Sin consultar";
+      if (cell.textContent !== next) cell.textContent = next;
+    }
+    const panel = $("#azure-event");
+    if (!panel) return;
+    panel.hidden = false;
+    $("#azure-event-title").textContent = `Pedido #${event.order_id} · ${event.event_id}`;
+    const status = $("#azure-event-status");
+    if (status.dataset.label === label && status.dataset.note === (note || "")) return;
+    status.dataset.label = label;
+    status.dataset.note = note || "";
+    status.replaceChildren(element("strong", "", label));
+    if (note) status.append(element("small", "", note));
+  }
+
+  async function refreshAzureEvent(signal) {
+    const selected = azureSelection;
+    if (!selected || selected.loading || selected.settled) return;
+    selected.loading = true;
+    try {
+      const payload = await request(`/api/outbox/${encodeURIComponent(selected.event.event_id)}/fulfillment-status`, { signal });
+      selected.label = azureLabels[payload.fulfillment_status] || payload.fulfillment_status || "Sin estado";
+      selected.note = payload.note || (payload.processed_at ? `Procesado ${new Date(payload.processed_at).toLocaleString("es-PE")}` : "");
+      selected.settled = Boolean(payload.fulfillment_status && payload.fulfillment_status !== "pending");
+    } catch (error) {
+      selected.label = error.code === "azure_event_not_found" ? "Resultado aún pendiente en Azure" : "Sin lectura de Azure";
+      selected.note = error.code === "azure_event_not_found" ? "" : error.message;
+      throw error;
+    } finally {
+      selected.loading = false;
+      if (selected === azureSelection) renderAzureSelection();
+    }
+  }
+
+  async function refreshFulfillmentHealth(signal) {
+    const checked = $("#fulfillment-check");
+    if (!checked) return;
+    try {
+      const { outbox, azure_queue: queue, checked_at: checkedAt } = await request("/api/platform/fulfillment-health", { signal });
+      for (const [selector, count] of [
+        ["#outbox-pending-count", outbox.pending], ["#outbox-exhausted-count", outbox.exhausted],
+        ["#azure-pending-count", queue.pending], ["#azure-poison-count", queue.poison],
+      ]) {
+        $(selector).textContent = Number.isSafeInteger(count) ? formatted(count, "", 0) : "Sin lectura";
+      }
+      const queueState = { ok: "Azure disponible", degraded: "Lectura parcial de Azure", unavailable: "Sin lectura de las colas de Azure" };
+      checked.textContent = `Última consulta ${new Date(checkedAt).toLocaleTimeString("es-PE")} · ${queueState[queue.status] || "Estado desconocido"}`;
+    } catch (error) {
+      checked.textContent = "No se pudo actualizar. Si hay cifras, corresponden a la última lectura.";
+      throw error;
+    }
+  }
+
+  async function refreshOutbox(signal) {
+    const version = ++outboxVersion;
     const query = new URLSearchParams({ limit: String(state.outboxLimit), offset: String(state.outboxOffset) });
-    const result = await request(`/api/outbox?${query}`, { includeMeta: true });
+    const result = await request(`/api/outbox?${query}`, { includeMeta: true, signal });
+    if (version !== outboxVersion) return;
     const total = Number(result.headers.get("X-Total-Count"));
     const limit = Number(result.headers.get("X-Page-Limit"));
     const offset = Number(result.headers.get("X-Page-Offset"));
@@ -351,9 +438,15 @@ import { createPortalApi } from "./portal-api.mjs";
     state.outboxTotal = total;
     if (offset > 0 && offset >= total) {
       state.outboxOffset = Math.max(0, Math.floor((total - 1) / state.outboxLimit) * state.outboxLimit);
-      return refreshOutbox();
+      return refreshOutbox(signal);
     }
-    renderOutbox(result.payload, total, limit, offset);
+    const snapshot = JSON.stringify([result.payload, total, limit, offset]);
+    if (snapshot !== outboxSnapshot) {
+      renderOutbox(result.payload, total, limit, offset);
+      outboxSnapshot = snapshot;
+    }
+    const latestDelivered = offset === 0 && result.payload.find((event) => event.status === "delivered");
+    if ($("#azure-event") && latestDelivered && !azureSelection?.manual) selectAzureEvent(latestDelivered);
   }
 
   function renderInventory(inventory) {
@@ -518,7 +611,12 @@ import { createPortalApi } from "./portal-api.mjs";
         });
       }
       $("#platform-refresh").addEventListener("click", refresh);
-      $("#outbox-refresh").addEventListener("click", () => refreshOutbox().catch((error) => announce(error.message)));
+      $("#outbox-refresh").addEventListener("click", async () => {
+        try {
+          await Promise.all([refreshOutbox(), refreshFulfillmentHealth(AbortSignal.timeout(10000))]);
+          await refreshAzureEvent(AbortSignal.timeout(10000));
+        } catch (error) { announce(error.message); }
+      });
       $("#outbox-prev").addEventListener("click", () => {
         if (state.outboxOffset === 0) return;
         state.outboxOffset = Math.max(0, state.outboxOffset - state.outboxLimit);
@@ -534,7 +632,18 @@ import { createPortalApi } from "./portal-api.mjs";
       $("#wms-demo-quantity").addEventListener("input", updateDemoProductNote);
       $("#wms-demo-form").addEventListener("submit", createDemoOrder);
       $("#users-refresh").addEventListener("click", () => refreshUsers().catch((error) => announce(error.message)));
-      await refresh();
+      const readAzureResult = async (signal) => {
+        try { await refreshAzureEvent(signal); }
+        catch (error) { if (error.code !== "azure_event_not_found") throw error; }
+      };
+      startVisibleRefresh(refreshOutbox, 10000);
+      startVisibleRefresh(readAzureResult, 10000);
+      startVisibleRefresh(refreshFulfillmentHealth, 15000);
+      await Promise.all([
+        refresh(),
+        refreshFulfillmentHealth(AbortSignal.timeout(10000)).catch(() => null),
+      ]);
+      await readAzureResult(AbortSignal.timeout(10000)).catch(() => null);
     } catch (error) {
       announce(error.message);
       if (/sesión terminó/i.test(error.message)) window.setTimeout(() => window.location.replace("/"), 1200);
