@@ -6,5 +6,5 @@ storage_account_name = "sttangama261030r"
 key_vault_name       = "kv-tangama-261030r"
 function_app_name    = "tangama-wms-261030"
 name_prefix          = "tangama"
-function_package_path = "../../../artifacts/azure_function_package-97383da268c023b54c38c8bba28c31853abb10545b796b995b8b336511bbe30d.zip"
+# lifecycle.ps1 pasa function_package_path con el ZIP generado en cada ejecución.
 alert_email_receivers = []

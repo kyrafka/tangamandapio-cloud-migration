@@ -119,6 +119,21 @@ Parameters:
     Type: String
     Default: ''
     Description: ARN/nombre del secreto RDS maestro existente. En una restauración, se puede adjuntar después del arranque aislado.
+  DatabaseRuntimeSecretArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+$'
+    Description: ARN del secreto del usuario SQL de ejecución. Requiere inicializar el esquema con el propietario antes del despliegue.
+  DatabaseBackupSecretArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+$'
+    Description: ARN del secreto del lector PostgreSQL usado para exportar copias cifradas.
+  RetainLegacyDatabaseSecretAccess:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Acceso transitorio de la flota anterior al secreto maestro durante el recambio.
   ManageDatabaseMasterPassword:
     Type: String
     Default: 'false'
@@ -207,6 +222,11 @@ Conditions:
   RestoreFromDatabaseSnapshot: !Not [!Equals [!Ref DatabaseSnapshotIdentifier, '']]
   UseRdsManagedMasterPassword: !Equals [!Ref ManageDatabaseMasterPassword, 'true']
   HasExistingDatabaseSecret: !Not [!Equals [!Ref ExistingDatabaseSecretArn, '']]
+  UseDatabaseRuntimeSecret: !Not [!Equals [!Ref DatabaseRuntimeSecretArn, '']]
+  AllowLegacyDatabaseSecretAccess: !Or
+    - !Not [!Condition UseDatabaseRuntimeSecret]
+    - !Equals [!Ref RetainLegacyDatabaseSecretAccess, 'true']
+  HasDatabaseBackupSecret: !Not [!Equals [!Ref DatabaseBackupSecretArn, '']]
   CreateDatabaseSecret: !And
     - !Equals [!Ref ExistingDatabaseSecretArn, '']
     - !Not [!Condition RestoreFromDatabaseSnapshot]
@@ -214,6 +234,15 @@ Conditions:
   CreatePortalAdminSecret: !Equals [!Ref ExistingPortalAdminSecretArn, '']
 
 Rules:
+  DatabaseRuntimeRequiresSeparateBackupSecret:
+    RuleCondition: !Not [!Equals [!Ref DatabaseRuntimeSecretArn, '']]
+    Assertions:
+      - Assert: !And
+          - !Not [!Equals [!Ref DatabaseBackupSecretArn, '']]
+          - !Not [!Equals [!Ref DatabaseRuntimeSecretArn, !Ref DatabaseBackupSecretArn]]
+          - !Not [!Equals [!Ref DatabaseRuntimeSecretArn, !Ref ExistingDatabaseSecretArn]]
+          - !Not [!Equals [!Ref DatabaseBackupSecretArn, !Ref ExistingDatabaseSecretArn]]
+        AssertDescription: El ERP y la copia usan ARNs diferentes del secreto maestro y entre sí.
   HttpsCertificateRequiresPortalDomain:
     RuleCondition: !Not [!Equals [!Ref CertificateArn, '']]
     Assertions:
@@ -581,15 +610,23 @@ Resources:
                       - !Ref ExistingPortalAdminSecretArn
                       - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ExistingPortalAdminSecretArn}-??????'
                   - !If
-                    - CreateDatabaseSecret
-                    - !Ref DBSecret
+                    - UseDatabaseRuntimeSecret
+                    - !Ref DatabaseRuntimeSecretArn
+                    - !Ref 'AWS::NoValue'
+                  - !If
+                    - AllowLegacyDatabaseSecretAccess
                     - !If
-                      - HasExistingDatabaseSecret
+                      - CreateDatabaseSecret
+                      - !Ref DBSecret
                       - !If
-                        - ExistingDatabaseSecretIsArn
-                        - !Ref ExistingDatabaseSecretArn
-                        - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ExistingDatabaseSecretArn}-??????'
-                      - !If [UseRdsManagedMasterPassword, !GetAtt Database.MasterUserSecret.SecretArn, !Ref 'AWS::NoValue']
+                        - HasExistingDatabaseSecret
+                        - !If
+                          - ExistingDatabaseSecretIsArn
+                          - !Ref ExistingDatabaseSecretArn
+                          - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ExistingDatabaseSecretArn}-??????'
+                        - !If [UseRdsManagedMasterPassword, !GetAtt Database.MasterUserSecret.SecretArn, !Ref 'AWS::NoValue']
+                    - !Ref 'AWS::NoValue'
+                  - !If [HasDatabaseBackupSecret, !Ref DatabaseBackupSecretArn, !Ref 'AWS::NoValue']
                   - !If
                     - HasAzureFunctionKey
                     - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${AzureFunctionKeySecret}-??????'
@@ -791,6 +828,11 @@ Resources:
             install -d -m 0700 /etc/tangamandapio
             DB_SECRET_REF='${ExistingDatabaseSecretArn}'
             if [ -z "$DB_SECRET_REF" ]; then DB_SECRET_REF='${ProjectName}/rds/master-${AWS::StackName}'; fi
+            DB_SCHEMA_MODE=migrate
+            if [ -n '${DatabaseRuntimeSecretArn}' ]; then
+              DB_SECRET_REF='${DatabaseRuntimeSecretArn}'
+              DB_SCHEMA_MODE=verify
+            fi
             PORTAL_ADMIN_SECRET_REF='${ExistingPortalAdminSecretArn}'
             if [ -z "$PORTAL_ADMIN_SECRET_REF" ]; then PORTAL_ADMIN_SECRET_REF='${ProjectName}/portal/admin'; fi
             export PORTAL_ADMIN_JSON="$(aws secretsmanager get-secret-value --secret-id "$PORTAL_ADMIN_SECRET_REF" --region ${AWS::Region} --query SecretString --output text)"
@@ -871,6 +913,8 @@ Resources:
             Environment=ADMIN_AZURE_BACKUP_CONTAINER=${AdminAzureBackupContainer}
             Environment=ADMIN_AZURE_BACKUP_PARAMETER=/${ProjectName}/dr/blob-read/portal
             Environment=DB_SECRET_ARN=$DB_SECRET_REF
+            Environment=DB_BACKUP_SECRET_ARN=${DatabaseBackupSecretArn}
+            Environment=DATABASE_SCHEMA_MODE=$DB_SCHEMA_MODE
             Environment=DB_HOST=${Database.Endpoint.Address}
             EnvironmentFile=/etc/tangamandapio/application.env
             WorkingDirectory=/opt/tangamandapio

@@ -8,12 +8,14 @@
 - [Correo interno y permisos en producción, 297 comprobaciones en diez sesiones](../evidence/current/aws/AWS-ERP-MAIL-ROLES-2026-11-20.json).
 - [Reconciliación de RDS Multi-AZ en CloudFormation](../evidence/current/aws/AWS-RDS-IAC-RECONCILIATION-2026-11-20.json).
 - [Recuperación aislada de PostgreSQL y del ERP desde Azure Blob](../evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json).
+- [Usuarios SQL dedicados y pruebas del ERP desplegado](../evidence/current/aws/AWS-ERP-SQL-ACCESS-2026-11-20.json).
+- [Planes contra el backend remoto Terraform de Azure](../evidence/current/azure/AZURE-TERRAFORM-DRIFT-2026-11-20.md).
 
 | Criterios | Verificado el 20/11 | Pendiente |
 | --- | --- | --- |
-| 5 y 7 Seguridad y monitoreo | Comercial envió un mensaje, Almacén lo abrió y el acceso quedó limitado a sus participantes. Gmail está confirmado en SNS. | Confirmar la suscripción UPeU, separar el usuario SQL de ejecución y verificar la revocación de credenciales históricas. |
-| 6 y 12 Disponibilidad y pruebas | RDS Multi-AZ está disponible. El portal respondió 200 en las tres muestras de la actualización de CloudFormation. | Medir la conmutación de RDS y repetir la prueba de VPN para establecer la consistencia de la meta de tres segundos. |
-| 8 y 9 IaC y recuperación | Recurso RDS `IN_SYNC`. El ERP recuperado arrancó en 12,75 s, leyó los dos pedidos y pasó 19 comprobaciones locales. | El stack principal conserva dos diferencias documentadas. La SCP bloquea la recuperación RDS fuera de Ohio. Falta la reconstrucción multinube completa desde cuentas vacías. |
+| 5 y 7 Seguridad y monitoreo | ERP y copia usan cuentas SQL dedicadas. Secrets Manager denegó el secreto maestro desde ambas EC2. Comercial envió un mensaje a Almacén con acceso limitado a sus participantes. Gmail está confirmado en SNS. | Confirmar la suscripción UPeU y verificar la revocación de credenciales históricas. |
+| 6 y 12 Disponibilidad y pruebas | RDS Multi-AZ está disponible. El portal respondió 200 en las 35 muestras del recambio. Un 502 posterior del ALB quedó correlacionado con WAF y sin respuesta del destino. La repetición de la matriz pasó 297 de 297. | Medir la conmutación de RDS, comprobar la causa del 502 y repetir la prueba VPN para establecer la consistencia de la meta de tres segundos. |
+| 8 y 9 IaC y recuperación | Recurso RDS `IN_SYNC`. El plan de Azure Flex terminó `No changes`. El ERP aislado recuperó dos pedidos y completó 25 comprobaciones con los nuevos permisos SQL. | Revisar siete diferencias en `azure-rebuild`. La SCP bloquea la recuperación RDS fuera de Ohio. Falta la reconstrucción multinube completa desde cuentas vacías. |
 | 13 y 14 Entrega | Los registros incluyen datos, acceso por rol, correo y recuperación. | Tomar las capturas de la defensa y ejecutar la demostración. |
 
 ## Actualización del 19/11/2026

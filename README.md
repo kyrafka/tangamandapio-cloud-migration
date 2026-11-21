@@ -4,13 +4,12 @@ Proyecto académico de una distribuidora ficticia. La arquitectura de referencia
 
 ## Estado operativo al 20/11/2026
 
-El release vigente en AWS Ohio es `20261120-erp-mail-by-role`. El balanceador
-mantiene dos destinos sanos. El buzón interno permite abrir mensajes y
-actualizar el contador de no leídos también en los perfiles que solo tienen
-permiso de correo. Después del despliegue pasaron 297 comprobaciones en diez
-sesiones y se verificó el envío de Comercial a Almacén. El correo del ERP se
-entrega dentro del portal.
-[Verificación de correo y permisos](evidence/current/aws/AWS-ERP-MAIL-ROLES-2026-11-20.json).
+El release vigente en AWS Ohio es `20261120-erp-db-runtime`. El balanceador
+mantiene dos destinos sanos. El ERP usa su propio usuario PostgreSQL y el
+exportador cifrado usa un lector separado. Las dos EC2 reciben acceso denegado
+al secreto maestro. Pasaron 297 comprobaciones en diez sesiones y se verificó
+el envío de Comercial a Almacén dentro del buzón del ERP.
+[Verificación en producción](evidence/current/aws/AWS-ERP-SQL-ACCESS-2026-11-20.json).
 
 El 20/11 también se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
 terminó la actualización y el balanceador quedó con dos destinos sanos.

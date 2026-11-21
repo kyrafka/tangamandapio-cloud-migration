@@ -42,6 +42,24 @@ tiene controles independientes. [Políticas de stack de CloudFormation](https://
 aws cloudformation set-stack-policy --stack-name tangamandapio-live-20261116 --profile main --region us-east-2 --stack-policy-body file://iac/cloudformation/production-database-stack-policy.json
 ```
 
+### Separar los permisos de PostgreSQL
+
+1. Crea el stack de secretos con [postgres-runtime-credentials.yaml](postgres-runtime-credentials.yaml). Conserva los `RuntimeSecretArn` y `BackupSecretArn` de las salidas. Secrets Manager genera ambos valores. El secreto propietario queda disponible para aplicar migraciones con autorización de operación.
+2. Desde un host autorizado en la VPC, aplica las migraciones y prepara las tablas ERP con la cuenta propietaria. En una instalación vacía, el modo inicial del portal usa `DATABASE_SCHEMA_MODE=migrate`. Luego ejecuta [provision_postgres_runtime.py](../scripts/provision_postgres_runtime.py) con la cuenta, región, hostname de RDS y los tres ARNs. El script exige las migraciones previas, aplica `0010`, crea los dos roles, registra sus permisos y comprueba conexiones con TLS `verify-full`. Ejecuta primero en modo de inspección y repite con `--apply`.
+3. Publica una copia del paquete del exportador que ya contiene `postgres_blob_export.py` con soporte para `DB_BACKUP_SECRET_ARN`. Actualiza su hash y clave en `aws-azure-postgres-backup.yaml`. Verifica la versión predeterminada del documento SSM antes del recambio de aplicaciones.
+4. En el cambio del stack del portal, pasa `DATABASE_RUNTIME_SECRET_ARN` y `DATABASE_BACKUP_SECRET_ARN` a `deploy.sh`. Si estás reemplazando una flota que sigue usando el propietario, pasa además `RETAIN_LEGACY_DATABASE_SECRET_ACCESS=true`. Este permiso transitorio conserva las EC2 anteriores mientras se verifica el reemplazo. Confirma ambas instancias, sus módulos y el exportador con el lector dedicado.
+5. Retira el permiso transitorio mediante un segundo cambio con `RETAIN_LEGACY_DATABASE_SECRET_ACCESS=false`. Revisa que el plan afecte únicamente a IAM. Comprueba que el rol de las EC2 pueda leer los secretos de ejecución y copia y reciba acceso denegado al propietario. Tras una migración posterior, vuelve a aplicar [los permisos SQL vigentes](../scripts/postgres_runtime_privileges.sql) para que las nuevas tablas y secuencias tengan sus permisos antes del despliegue.
+
+```powershell
+python iac/scripts/provision_postgres_runtime.py --account $account --region us-east-2 --host $rdsEndpoint --database tangamandapio --owner $ownerSecretArn --runtime $runtimeSecretArn --backup $backupSecretArn --migrations app/aws_release/current/migrations/postgres --privileges iac/scripts/postgres_runtime_privileges.sql --apply
+```
+
+El operador de este comando debe poder leer los tres secretos durante el
+aprovisionamiento. Para la ejecución diaria, el ERP verifica el registro de
+migraciones y trabaja con permisos de datos. El exportador usa el lector SQL
+dedicado. [Privilegios en PostgreSQL](https://www.postgresql.org/docs/18/sql-grant.html) ·
+[Verificación TLS de Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html).
+
 El script conserva parámetros existentes con `UsePreviousValue` y tiene preflight para nombre del stack y HTTPS. Los overrides de Multi-AZ, días de backup, WAF y AWS Backup pueden cambiar costos; revisa el change set y la factura del laboratorio antes de usarlos.
 
 ## Reconstruir

@@ -18,7 +18,7 @@ La clave RSA `postgres-backup-wrap` protege una copia manual que se restauró y 
 
 ## Lanzador guiado del entorno
 
-`lifecycle.ps1` administra solo esta raíz Terraform y exige el GUID de la suscripción esperada. `up` construye un ZIP inmutable desde el código actual, inicializa el backend, muestra el plan y solo aplica si se escribe `APPLY`. `down` muestra el plan de destrucción y exige escribir el nombre exacto del grupo de recursos. Ambos conservan el backend remoto `azure-tfstate`, que hace falta para gestionar y reconstruir este entorno. Antes del primer uso, copia `rebuild.tfvars.example` a `terraform.tfvars` y ajusta nombres globalmente únicos; el archivo local está excluido de Git. Tras destruir, cambia el nombre del Key Vault si Azure aún lo mantiene en soft delete.
+`lifecycle.ps1` administra solo esta raíz Terraform y exige el GUID de la suscripción esperada. `up` construye un ZIP inmutable desde el código actual, inicializa el backend, muestra el plan y solo aplica si se escribe `APPLY`. `down` muestra el plan de destrucción y exige escribir el nombre exacto del grupo de recursos. Ambos conservan el backend remoto `azure-tfstate`, que hace falta para gestionar y reconstruir este entorno. Antes del primer uso, copia `rebuild.tfvars.example` a `terraform.tfvars` y ajusta nombres globalmente únicos. El archivo local está excluido de Git. Para un plan manual proporciona `"-var=function_package_path=$packagePath"` con el ZIP generado. Tras destruir, cambia el nombre del Key Vault si Azure aún lo mantiene en soft delete.
 
 Este comando **no levanta ni elimina** las otras raíces de red/VPN, la recuperación regional o los recursos AWS. El texto de alcance que imprime es intencional: no equivale a un ciclo integral multinube.
 
@@ -212,7 +212,7 @@ Linux Consumption, y el release se monta desde un Blob privado por identidad.
 & .\iac\scripts\package_azure_function.ps1
 Push-Location iac\environments\azure-rebuild
 & ..\..\..\tools\terraform-1.16.0\terraform.exe validate
-& ..\..\..\tools\terraform-1.16.0\terraform.exe plan -var-file=rebuild.tfvars.example -var-file=alert-recipients.local.tfvars -out=rebuild-current.tfplan
+& ..\..\..\tools\terraform-1.16.0\terraform.exe plan -var-file=rebuild.tfvars.example -var-file=alert-recipients.local.tfvars "-var=function_package_path=$packagePath" -out=rebuild-current.tfplan
 & ..\..\..\tools\terraform-1.16.0\terraform.exe show -no-color rebuild-current.tfplan
 ```
 

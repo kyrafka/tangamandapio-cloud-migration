@@ -9,11 +9,13 @@ import socket
 import subprocess
 import sys
 import threading
+from contextlib import closing
 from datetime import datetime, timezone
 from http.cookiejar import CookieJar
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import monotonic
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
 
@@ -42,7 +44,7 @@ def pg_run(bin_dir, name, *args, data=None, env=None):
     return result.stdout.decode("utf-8", "replace").strip() if result.stdout else ""
 
 
-def verify_portal(application):
+def verify_portal(application, exercise_writes=False):
     server = make_server("127.0.0.1", 0, application, threaded=True)
     port = server.server_port
     worker = threading.Thread(target=server.serve_forever, daemon=True)
@@ -90,6 +92,25 @@ def verify_portal(application):
         call(admin, "erp_overview", "/api/erp/overview")
         call(admin, "erp_sales", "/api/erp/sales/orders")
         call(admin, "erp_finance", "/api/erp/finance/documents")
+        if exercise_writes:
+            partner = call(admin, "create_erp_partner", "/api/erp/partners", 201, {
+                "kind": "both", "name": "Socio de ensayo aislado", "tax_id": "RECOVERY-TEST-01",
+            }, admin_token)
+            order = {"partner_id": partner["id"], "items": [{"sku": "SKU-ARROZ-001", "quantity": 2}]}
+            inventory = {"mode": "demo-inventory-ledger", "items": [{"sku": "SKU-ARROZ-001", "on_hand": 25}]}
+            with patch("erp_service.fetch_wms_inventory", return_value=(inventory, None)):
+                call(admin, "create_erp_sale", "/api/erp/sales/orders", 201, order, admin_token)
+                purchase = call(admin, "create_erp_purchase", "/api/erp/purchases/orders", 201, order, admin_token)
+            receipt = call(admin, "queue_purchase_receipt", f"/api/erp/purchases/orders/{purchase['id']}/receive",
+                           202, {}, admin_token)
+            if receipt["status"] != "receipt_pending":
+                raise RuntimeError("Isolated purchase receipt must remain in the outbox")
+            expense = call(admin, "create_erp_expense", "/api/erp/finance/expenses", 201,
+                           {"description": "Gasto de ensayo aislado", "amount": 18.25}, admin_token)
+            settlement = call(admin, "settle_erp_expense", f"/api/erp/finance/documents/{expense['id']}/settle",
+                              200, {}, admin_token)
+            if settlement["status"] != "paid":
+                raise RuntimeError("Isolated expense did not settle")
         recipient = f"restore-{secrets.token_hex(6)}@example.invalid"
         password = secrets.token_urlsafe(26)
         user = call(admin, "create_isolated_user", "/api/admin/users", expected=201,
@@ -113,6 +134,52 @@ def verify_portal(application):
         worker.join(timeout=5)
         server.server_close()
     return checks, recovered_orders
+
+
+def prepare_restricted_roles(bin_dir, db, env, work, owner_url, port):
+    import psycopg2
+
+    from app import connect, initialize_database
+    from erp_service import initialize_erp_database
+
+    initialize_database(owner_url)
+    with connect(owner_url) as connection:
+        initialize_erp_database(connection, postgres=True)
+        connection.commit()
+    policy = Path(__file__).with_name("postgres_runtime_privileges.sql")
+    pg_run(bin_dir, "psql", *db, "-Xq", "-v", "ON_ERROR_STOP=1", "--single-transaction",
+           "-d", DB_NAME, "-f", policy, env=env)
+    runtime_password = secrets.token_urlsafe(26)
+    backup_password = secrets.token_urlsafe(26)
+    passwords = (f"ALTER ROLE tangama_app_runtime PASSWORD '{runtime_password}';"
+                 f"ALTER ROLE tangama_backup_reader PASSWORD '{backup_password}';")
+    pg_run(bin_dir, "psql", *db, "-Xq", "-v", "ON_ERROR_STOP=1", "-d", DB_NAME, data=passwords.encode(), env=env)
+    runtime_url = f"postgresql://tangama_app_runtime:{runtime_password}@127.0.0.1:{port}/{DB_NAME}"
+    backup_url = f"postgresql://tangama_backup_reader:{backup_password}@127.0.0.1:{port}/{DB_NAME}"
+    checks = {}
+    for label, url, statement in (
+        ("runtimeCannotCreateTables", runtime_url, "CREATE TABLE public.disallowed (id int)"),
+        ("runtimeCannotChangeMigrations", runtime_url, "DELETE FROM public.schema_migrations WHERE FALSE"),
+        ("backupCannotChangeOrders", backup_url, "UPDATE public.orders SET id = id WHERE FALSE"),
+    ):
+        with closing(psycopg2.connect(url)) as connection, connection.cursor() as cursor:
+            try:
+                cursor.execute(statement)
+            except psycopg2.errors.InsufficientPrivilege:
+                checks[label] = True
+            else:
+                raise RuntimeError(f"PostgreSQL did not enforce {label}")
+    reader_dump = work / "reader.dump"
+    pg_run(bin_dir, "pg_dump", "-h", "127.0.0.1", "-p", port, "-U", "tangama_backup_reader",
+           "--format=custom", "--no-owner", "--no-privileges", "--file", reader_dump, DB_NAME,
+           env=dict(env, PGPASSWORD=backup_password))
+    dump_index = pg_run(bin_dir, "pg_restore", "--list", reader_dump, env=env)
+    checks["backupIncludesOrdersAndSequences"] = all(name in dump_index for name in (
+        "TABLE DATA public orders", "TABLE DATA public internal_messages", "SEQUENCE SET public orders_id_seq",
+    ))
+    if not checks["backupIncludesOrdersAndSequences"]:
+        raise RuntimeError("The backup role dump does not include the required data and sequences")
+    return runtime_url, checks
 
 
 def rehearse(args):
@@ -180,8 +247,13 @@ def rehearse(args):
             sys.path.insert(0, str(RELEASE))
             from app import create_app
 
+            owner_url = f"postgresql://restore:{password}@127.0.0.1:{port}/{DB_NAME}"
+            database_url, permissions = owner_url, {}
+            if args.restricted_runtime:
+                database_url, permissions = prepare_restricted_roles(args.postgres_bin, db, env, work, owner_url, port)
             application = create_app({
-                "DATABASE_URL": f"postgresql://restore:{password}@127.0.0.1:{port}/{DB_NAME}",
+                "DATABASE_URL": database_url,
+                "DATABASE_SCHEMA_MODE": "verify" if args.restricted_runtime else "migrate",
                 "SECRET_KEY": secrets.token_urlsafe(32),
                 "BOOTSTRAP_ADMIN_USERNAME": f"restore-admin-{secrets.token_hex(5)}@example.invalid",
                 "BOOTSTRAP_ADMIN_PASSWORD": secrets.token_urlsafe(26),
@@ -193,7 +265,7 @@ def rehearse(args):
                 "VOICE_RECORDINGS_ENABLED": False,
                 "INTERNAL_ERP_ENABLED": True,
             })
-            checks, orders = verify_portal(application)
+            checks, orders = verify_portal(application, exercise_writes=args.restricted_runtime)
             if orders != min(records["orders"], 50):
                 raise RuntimeError("ERP order count differs from the restored database")
             done = monotonic()
@@ -216,6 +288,7 @@ def rehearse(args):
         "awsApisDuringExercise": False,
         "externalIntegrationsEnabled": False,
         "postgreSQL": records,
+        "restrictedRoleChecks": permissions,
         "ordersSeenByERP": orders,
         "http": checks,
         "seconds": {
@@ -231,6 +304,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True, help="Trusted SHA-256 manifest for a scheduled backup")
     parser.add_argument("--postgres-bin", type=Path, required=True, help="Directory with initdb, pg_ctl and pg_restore")
+    parser.add_argument("--restricted-runtime", action="store_true", help="Verify with separate ERP and backup SQL roles")
     try:
         print(json.dumps(rehearse(parser.parse_args()), indent=2))
     except (OSError, RuntimeError, KeyError, ValueError, subprocess.TimeoutExpired) as error:

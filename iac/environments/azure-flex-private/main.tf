@@ -124,6 +124,11 @@ resource "azurerm_function_app_flex_consumption" "wms" {
 
   app_settings = local.function_app_settings
 
+  lifecycle {
+    # Azure maintains this link when Application Insights is enabled.
+    ignore_changes = [tags["hidden-link: /app-insights-resource-id"]]
+  }
+
   depends_on = [terraform_data.flex_cost_gate]
 }
 

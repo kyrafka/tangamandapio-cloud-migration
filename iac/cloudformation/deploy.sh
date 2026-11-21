@@ -243,6 +243,27 @@ for key in $PARAMETER_KEYS; do
         PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
       fi
       ;;
+    DatabaseRuntimeSecretArn)
+      if [[ ${DATABASE_RUNTIME_SECRET_ARN+x} ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$DATABASE_RUNTIME_SECRET_ARN")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    DatabaseBackupSecretArn)
+      if [[ ${DATABASE_BACKUP_SECRET_ARN+x} ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$DATABASE_BACKUP_SECRET_ARN")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
+    RetainLegacyDatabaseSecretAccess)
+      if [[ -n "${RETAIN_LEGACY_DATABASE_SECRET_ACCESS:-}" ]]; then
+        PARAMETERS+=("ParameterKey=$key,ParameterValue=$RETAIN_LEGACY_DATABASE_SECRET_ACCESS")
+      else
+        PARAMETERS+=("ParameterKey=$key,UsePreviousValue=true")
+      fi
+      ;;
     ManageDatabaseMasterPassword)
       if [[ -n "${MANAGE_DATABASE_MASTER_PASSWORD:-}" ]]; then
         PARAMETERS+=("ParameterKey=$key,ParameterValue=$MANAGE_DATABASE_MASTER_PASSWORD")
@@ -315,6 +336,15 @@ done
 # first artifact publication instead of silently taking the compatibility default.
 if [[ -n "${APPLICATION_ARTIFACT_SHA256:-}" && "$PARAMETER_KEYS" != *ApplicationArtifactSha256* ]]; then
   PARAMETERS+=("ParameterKey=ApplicationArtifactSha256,ParameterValue=$APPLICATION_ARTIFACT_SHA256")
+fi
+if [[ -n "${DATABASE_RUNTIME_SECRET_ARN:-}" && "$PARAMETER_KEYS" != *DatabaseRuntimeSecretArn* ]]; then
+  PARAMETERS+=("ParameterKey=DatabaseRuntimeSecretArn,ParameterValue=$DATABASE_RUNTIME_SECRET_ARN")
+fi
+if [[ -n "${DATABASE_BACKUP_SECRET_ARN:-}" && "$PARAMETER_KEYS" != *DatabaseBackupSecretArn* ]]; then
+  PARAMETERS+=("ParameterKey=DatabaseBackupSecretArn,ParameterValue=$DATABASE_BACKUP_SECRET_ARN")
+fi
+if [[ -n "${RETAIN_LEGACY_DATABASE_SECRET_ACCESS:-}" && "$PARAMETER_KEYS" != *RetainLegacyDatabaseSecretAccess* ]]; then
+  PARAMETERS+=("ParameterKey=RetainLegacyDatabaseSecretAccess,ParameterValue=$RETAIN_LEGACY_DATABASE_SECRET_ACCESS")
 fi
 if [[ -n "$PORTAL_DOMAIN_NAME" && "$PARAMETER_KEYS" != *PortalDomainName* ]]; then
   PARAMETERS+=("ParameterKey=PortalDomainName,ParameterValue=$PORTAL_DOMAIN_NAME")

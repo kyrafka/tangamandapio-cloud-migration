@@ -40,11 +40,16 @@ def source_environment(region, root_certificate):
         raise RuntimeError("Application is not running")
     values = dict(item.split(b"=", 1) for item in Path(f"/proc/{pid}/environ").read_bytes().split(b"\0") if b"=" in item)
     host = values[b"DB_HOST"].decode()
-    secret_id = values[b"DB_SECRET_ARN"].decode()
+    backup_secret = values.get(b"DB_BACKUP_SECRET_ARN", b"").decode()
+    if values.get(b"DATABASE_SCHEMA_MODE") == b"verify" and not backup_secret:
+        raise RuntimeError("The restricted application requires a dedicated backup credential")
+    secret_id = backup_secret or values[b"DB_SECRET_ARN"].decode()
     database = values[b"DATABASE_NAME"].decode()
     if not host.endswith(f".{region}.rds.amazonaws.com") or not database:
         raise RuntimeError("Unexpected PostgreSQL source")
     credentials = json.loads(aws_text(region, ["secretsmanager", "get-secret-value", "--secret-id", secret_id, "--query", "SecretString"]))
+    if backup_secret and credentials.get("username") != "tangama_backup_reader":
+        raise RuntimeError("The dedicated backup credential must use the PostgreSQL reader role")
     return {
         "PATH": os.environ["PATH"], "PGHOST": host, "PGDATABASE": database,
         "PGUSER": credentials["username"], "PGPASSWORD": credentials["password"],

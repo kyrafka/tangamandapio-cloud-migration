@@ -1,0 +1,341 @@
+{
+  "checkedUTC": "2026-11-21T04:06:48.389026+00:00",
+  "release": "20261120-erp-db-runtime",
+  "stack": "tangamandapio-live-20261116",
+  "cloudFormation": {
+    "Status": "UPDATE_COMPLETE",
+    "Revision": "20261120-erp-db-runtime",
+    "Master": "false"
+  },
+  "rollout": {
+    "start": "2026-11-20T23:42:59.4855799Z",
+    "end": "2026-11-20T23:58:28.5051168Z",
+    "http200": 35,
+    "samples": 35
+  },
+  "rds": {
+    "Status": "available",
+    "MultiAZ": true,
+    "Engine": "18.3",
+    "Days": 1
+  },
+  "credentialStack": {
+    "Status": "UPDATE_COMPLETE",
+    "Protected": true,
+    "Drift": "IN_SYNC"
+  },
+  "appPolicies": [
+    "tangamandapio-app-runtime",
+    "tangamandapio-scheduled-blob-backup"
+  ],
+  "provisionCommandIds": {
+    "inspect": "b49387b8-f336-41e8-b600-65b69915aa9f",
+    "apply": "8625440a-89f3-4e72-81bf-e602a9a54e02"
+  },
+  "readOnlyBackupProof": [
+    {
+      "CommandId": "07812d99-863c-418c-972e-d6e19d1c698c",
+      "Proof": {
+        "release": "20261120-erp-db-runtime",
+        "ready": 200,
+        "schemaMode": "verify",
+        "tangama_app_runtime": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": true
+        },
+        "backupDumpVerified": true,
+        "tangama_backup_reader": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": false
+        },
+        "tlsVerified": true
+      },
+      "Zone": "us-east-2a"
+    },
+    {
+      "CommandId": "07812d99-863c-418c-972e-d6e19d1c698c",
+      "Proof": {
+        "release": "20261120-erp-db-runtime",
+        "ready": 200,
+        "schemaMode": "verify",
+        "tangama_app_runtime": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": true
+        },
+        "backupDumpVerified": true,
+        "tangama_backup_reader": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": false
+        },
+        "tlsVerified": true
+      },
+      "Zone": "us-east-2b"
+    }
+  ],
+  "postRetirementProof": [
+    {
+      "CommandId": "46a4cbab-c265-489c-9e46-6942de197c96",
+      "Proof": {
+        "release": "20261120-erp-db-runtime",
+        "ready": 200,
+        "schemaMode": "verify",
+        "masterSecretDenied": true,
+        "tangama_app_runtime": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": true
+        },
+        "tangama_backup_reader": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": false
+        },
+        "tlsVerified": true
+      },
+      "Zone": "us-east-2a"
+    },
+    {
+      "CommandId": "46a4cbab-c265-489c-9e46-6942de197c96",
+      "Proof": {
+        "release": "20261120-erp-db-runtime",
+        "ready": 200,
+        "schemaMode": "verify",
+        "masterSecretDenied": true,
+        "tangama_app_runtime": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": true
+        },
+        "tangama_backup_reader": {
+          "authenticated": true,
+          "canCreateInSchema": false,
+          "canEditMigrationLedger": false,
+          "canWriteOrders": false
+        },
+        "tlsVerified": true
+      },
+      "Zone": "us-east-2b"
+    }
+  ],
+  "browserRoles": {
+    "startedUTC": "2026-11-21T04:02:54.294Z",
+    "finishedUTC": "2026-11-21T04:06:05.856Z",
+    "sessions": 10,
+    "checks": 297,
+    "profiles": [
+      {
+        "profile": "Administrador",
+        "portalRole": "admin",
+        "erpRole": "erp_admin",
+        "checks": 49,
+        "passed": 49,
+        "failed": []
+      },
+      {
+        "profile": "Cliente B2B",
+        "portalRole": "customer",
+        "erpRole": null,
+        "checks": 27,
+        "passed": 27,
+        "failed": []
+      },
+      {
+        "profile": "Comercial",
+        "portalRole": "sales",
+        "erpRole": "erp_sales",
+        "checks": 36,
+        "passed": 36,
+        "failed": []
+      },
+      {
+        "profile": "Operador WMS",
+        "portalRole": "warehouse",
+        "erpRole": null,
+        "checks": 34,
+        "passed": 34,
+        "failed": []
+      },
+      {
+        "profile": "Operaciones TI",
+        "portalRole": "operations",
+        "erpRole": null,
+        "checks": 37,
+        "passed": 37,
+        "failed": []
+      },
+      {
+        "profile": "Auditor",
+        "portalRole": "auditor",
+        "erpRole": "erp_auditor",
+        "checks": 39,
+        "passed": 39,
+        "failed": []
+      },
+      {
+        "profile": "Finanzas ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_finance",
+        "checks": 20,
+        "passed": 20,
+        "failed": []
+      },
+      {
+        "profile": "Compras ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_purchasing",
+        "checks": 18,
+        "passed": 18,
+        "failed": []
+      },
+      {
+        "profile": "Datos maestros ERP",
+        "portalRole": "warehouse",
+        "erpRole": "erp_master_data",
+        "checks": 17,
+        "passed": 17,
+        "failed": []
+      },
+      {
+        "profile": "Administrador ERP delegado",
+        "portalRole": "warehouse",
+        "erpRole": "erp_admin",
+        "checks": 20,
+        "passed": 20,
+        "failed": []
+      }
+    ],
+    "temporaryAccountSuspended": true
+  },
+  "browserMail": {
+    "checkedAt": "2026-11-21T00:05:17.277Z",
+    "tests": {
+      "azure_private_wms": {
+        "pass": true,
+        "result": {
+          "status": "ok"
+        }
+      },
+      "sales_cannot_open_finance": {
+        "pass": true,
+        "result": {
+          "sales": 200,
+          "finance": 403
+        }
+      },
+      "send": {
+        "pass": true,
+        "result": {
+          "http": 201,
+          "transport": "portal_only"
+        }
+      },
+      "sender_sees_sent": {
+        "pass": true,
+        "result": true
+      },
+      "warehouse_overview_forbidden": {
+        "pass": true,
+        "result": 403
+      },
+      "inbox_unread": {
+        "pass": true,
+        "result": true
+      },
+      "unread_badge": {
+        "pass": true,
+        "result": 1
+      },
+      "read": {
+        "pass": true,
+        "result": 200
+      },
+      "warehouse_displays_message": {
+        "pass": true,
+        "result": true
+      },
+      "unread_badge_cleared": {
+        "pass": true,
+        "result": true
+      },
+      "read_state_persists": {
+        "pass": true,
+        "result": true
+      },
+      "private_to_participants": {
+        "pass": true,
+        "result": true
+      }
+    },
+    "cleanup": {
+      "created": 2,
+      "disabled": 2
+    },
+    "transport": {
+      "status": "portal_only",
+      "smtpConfigured": false
+    },
+    "finishedAt": "2026-11-21T00:05:45.565Z"
+  },
+  "initialBrowserFailure": {
+    "waf": {
+      "time": "2026-11-21T00:06:39.463000+00:00",
+      "ms": 1795219599463,
+      "method": "GET",
+      "action": "ALLOW",
+      "rule": "Default_Action",
+      "code": null,
+      "id": "1-6b00e08f-7a4550e41501d5e04fa850b3"
+    },
+    "filesChecked": 6,
+    "alb": [
+      {
+        "matchedTrace": "1-6b00e08f-7a4550e41501d5e04fa850b3",
+        "time": "2026-11-21T00:06:39.463692Z",
+        "elbStatus": "502",
+        "targetStatus": "-",
+        "requestProcessingTime": "0.001",
+        "targetProcessingTime": "0.000",
+        "responseProcessingTime": "-1",
+        "request": "GET https://tangamandapio.kendellnm.me:443/api/erp/partners HTTP/2.0",
+        "actions": "waf,forward",
+        "errorReason": "-",
+        "targetAssigned": true,
+        "targetStatusList": "-"
+      }
+    ],
+    "browserRun": {
+      "passed": 296,
+      "total": 297,
+      "role": "Operador WMS",
+      "expected": 403,
+      "observedALB": 502
+    },
+    "keepalive": {
+      "albIdleSeconds": 60,
+      "appInstances": [
+        {
+          "explicitKeepAlive": false,
+          "gunicornDefaultSeconds": 2,
+          "threads4": true
+        },
+        {
+          "explicitKeepAlive": false,
+          "gunicornDefaultSeconds": 2,
+          "threads4": true
+        }
+      ],
+      "causeConfirmed": false
+    }
+  }
+}

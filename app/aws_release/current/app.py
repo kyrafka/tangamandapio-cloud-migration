@@ -44,6 +44,7 @@ from erp_service import (
     SKU_PATTERN,
     grant_default_erp_roles,
     initialize_erp_database,
+    seed_erp_database,
     register_erp_routes,
 )
 
@@ -329,6 +330,7 @@ def create_app(test_config=None):
     app = Flask(__name__, static_folder=str(static_folder), static_url_path="")
     app.config.from_mapping(
         DATABASE_URL=os.getenv("DATABASE_URL", "").strip(),
+        DATABASE_SCHEMA_MODE=os.getenv("DATABASE_SCHEMA_MODE", "migrate").strip(),
         DATABASE_NAME=os.getenv("DATABASE_NAME", "tangamandapio").strip(),
         DATABASE_PATH=os.getenv(
             "DATABASE_PATH", str(local_data_root / "tangamandapio.db")
@@ -456,7 +458,13 @@ def create_app(test_config=None):
         app.config["VOICE_RECORDINGS_DIR"] = str(recordings_root)
     if not is_postgresql(database_path):
         Path(database_path).parent.mkdir(parents=True, exist_ok=True)
-    initialize_database(database_path)
+    schema_mode = app.config["DATABASE_SCHEMA_MODE"]
+    if schema_mode == "migrate":
+        initialize_database(database_path)
+    elif schema_mode == "verify":
+        verify_database_migrations(database_path)
+    else:
+        raise ValueError("DATABASE_SCHEMA_MODE must be migrate or verify")
 
     app.extensions["voice_recording_purge_last"] = 0.0
 
@@ -480,9 +488,9 @@ def create_app(test_config=None):
     ensure_portal_bootstrap(app, database_path)
     if app.config["INTERNAL_ERP_ENABLED"]:
         with connect(database_path) as connection:
-            initialize_erp_database(
-                connection, postgres=isinstance(connection, PostgreSQLConnection)
-            )
+            if schema_mode == "migrate":
+                initialize_erp_database(connection, postgres=isinstance(connection, PostgreSQLConnection))
+            seed_erp_database(connection)
             for user in connection.execute(
                 "SELECT id, role FROM portal_users WHERE active = TRUE"
             ).fetchall():
@@ -3298,14 +3306,6 @@ def ensure_portal_bootstrap(app, database_path):
                 "BOOTSTRAP_ADMIN_PASSWORD_RESET_VERSION", ""
             ).strip()
             if app.config.get("RESET_BOOTSTRAP_ADMIN_PASSWORD") and reset_version:
-                connection.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS portal_admin_recovery_events (
-                        secret_version TEXT PRIMARY KEY,
-                        applied_at TEXT NOT NULL
-                    )
-                    """
-                )
                 normalized_username = app.config["BOOTSTRAP_ADMIN_USERNAME"].strip().lower()
                 admin_row = connection.execute(
                     "SELECT id FROM portal_users WHERE username = ? AND active = TRUE",
@@ -3455,6 +3455,20 @@ def initialize_database(database_path):
         ensure_column(connection, "orders", "reference", "TEXT")
         ensure_column(connection, "orders", "status", "TEXT NOT NULL DEFAULT 'created'")
         connection.commit()
+
+
+def verify_database_migrations(database_path):
+    """Fail startup on unapplied migrations without using schema write privileges."""
+    dialect = "postgres" if is_postgresql(database_path) else "sqlite"
+    required = {path.stem for path in (migrations_directory() / dialect).glob("*.sql")}
+    if not required:
+        raise RuntimeError("Database migration files are missing")
+    with connect(database_path) as connection:
+        applied = {row["version"] for row in connection.execute("SELECT version FROM schema_migrations").fetchall()}
+        missing = sorted(required - applied)
+        if missing:
+            raise RuntimeError("Database migrations required: " + ", ".join(missing))
+        connection.execute("SELECT company_id, created_by, reference, status FROM orders WHERE 1 = 0")
 
 
 def normalize_portal_order_items(raw):

@@ -180,7 +180,7 @@ def _deliver_smtp(app, *, sender_username, recipient_username, subject, body, me
 
 
 def initialize_erp_database(connection, postgres=False):
-    """Create ERP tables and idempotent synthetic masters at app startup."""
+    """Create ERP tables and indexes with the schema owner's connection."""
     identity = "BIGSERIAL PRIMARY KEY" if postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
     number = "BIGINT" if postgres else "INTEGER"
     timestamp = "TIMESTAMPTZ" if postgres else "TEXT"
@@ -314,6 +314,10 @@ def initialize_erp_database(connection, postgres=False):
     connection.execute("CREATE INDEX IF NOT EXISTS idx_erp_finance_status ON erp_financial_documents(kind, status, due_date)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_internal_mail_recipient ON internal_messages(recipient_user_id, created_at)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_internal_mail_sender ON internal_messages(sender_user_id, created_at)")
+
+
+def seed_erp_database(connection):
+    """Keep the synthetic masters available using ordinary data permissions."""
     for sku, name, unit, sale_price, purchase_cost in ERP_DEMO_PRODUCTS:
         connection.execute(
             """INSERT INTO erp_products(sku,name,unit,sale_price,purchase_cost,active,updated_at)
@@ -326,7 +330,6 @@ def initialize_erp_database(connection, postgres=False):
                VALUES (?,?,?,?,?,?,TRUE,?) ON CONFLICT(tax_id) DO NOTHING""",
             (kind, name, tax_id, email, phone, address, now_text()),
         )
-    connection.commit()
 
 
 def grant_default_erp_roles(connection, user_id, portal_role, granted_by=None):

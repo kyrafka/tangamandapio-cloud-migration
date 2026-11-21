@@ -1,5 +1,6 @@
 import os
 import socketserver
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -105,6 +106,37 @@ class ErpReleaseTests(unittest.TestCase):
         with portal.connect(self.database) as connection:
             names = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
         self.assertTrue({"erp_products", "erp_sales_orders", "erp_purchase_orders", "erp_financial_documents", "internal_messages"}.issubset(names))
+
+    def test_runtime_can_boot_manage_users_and_open_erp_without_schema_changes(self):
+        forbidden = {sqlite3.SQLITE_CREATE_TABLE, sqlite3.SQLITE_CREATE_INDEX, sqlite3.SQLITE_ALTER_TABLE}
+        original_connect = sqlite3.connect
+
+        def guarded_connect(*args, **kwargs):
+            connection = original_connect(*args, **kwargs)
+            connection.set_authorizer(
+                lambda action, *_: sqlite3.SQLITE_DENY if action in forbidden else sqlite3.SQLITE_OK
+            )
+            return connection
+
+        config = dict(self.application.config, DATABASE_SCHEMA_MODE="verify")
+        with patch.object(portal.sqlite3, "connect", side_effect=guarded_connect):
+            runtime = portal.create_app(config)
+            client = runtime.test_client()
+            self.login(client, config["BOOTSTRAP_ADMIN_USERNAME"], config["BOOTSTRAP_ADMIN_PASSWORD"])
+            user = self.post(client, "/api/admin/users", {
+                "username": "warehouse@release.test",
+                "password": "Warehouse-Test-Password-2026!",
+                "role": "warehouse",
+            })
+            self.assertEqual(user.status_code, 201)
+            self.assertEqual(client.get("/api/erp/finance/documents").status_code, 200)
+
+    def test_runtime_rejects_database_with_pending_migration(self):
+        with portal.connect(self.database) as connection:
+            connection.execute("DELETE FROM schema_migrations WHERE version = ?", ("0009_outbox_created_event_id_index",))
+            connection.commit()
+        with self.assertRaisesRegex(RuntimeError, "0009_outbox_created_event_id_index"):
+            portal.create_app(dict(self.application.config, DATABASE_SCHEMA_MODE="verify"))
 
     def test_operational_results_require_administration(self):
         path = "/api/admin/technical-tests"

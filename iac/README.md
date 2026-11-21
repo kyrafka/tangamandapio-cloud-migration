@@ -113,6 +113,10 @@ representativo de RDS 18.3, usa binarios de PostgreSQL 18.
 python iac/scripts/rehearse_erp_recovery_from_blob.py --manifest evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json --postgres-bin "C:/Program Files/PostgreSQL/18/bin"
 ```
 
+Agrega `--restricted-runtime` para arrancar el ERP como usuario SQL de
+ejecución, comprobar que PostgreSQL deniega operaciones administrativas y
+probar `pg_dump` con el lector dedicado. [Procedimiento de roles de producción](cloudformation/README.md#separar-los-permisos-de-postgresql).
+
 Para otra fecha, usa como `--manifest` el JSON exportado de
 `dr/postgres/manifests/YYYYMMDD.json` del bucket de respaldo de AWS y conserva
 una copia confiable fuera de AWS antes de simular la pérdida de la región. El
