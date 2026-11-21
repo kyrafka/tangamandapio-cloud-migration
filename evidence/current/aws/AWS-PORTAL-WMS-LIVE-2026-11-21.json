@@ -1,0 +1,125 @@
+{
+  "release": "20261121-wms-live-console",
+  "artifactSha256": "a20d7a920afa59d6952445f40b28e970cad40959d249cd115ecf6a0b013e70cc",
+  "directCloudFormationChanges": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/Policies/0/PolicyDocument"
+      ]
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/LaunchTemplateData"
+      ]
+    }
+  ],
+  "availabilitySamples": {
+    "count": 29,
+    "http200": 29,
+    "first": {
+      "utc": "2026-11-21T21:17:20.4645094Z",
+      "ready": 200,
+      "revision": "20261121-wms-live-console",
+      "state": "UPDATE_IN_PROGRESS"
+    },
+    "last": {
+      "utc": "2026-11-21T21:32:42.6745589Z",
+      "ready": 200,
+      "revision": "20261121-wms-live-console",
+      "state": "UPDATE_COMPLETE"
+    }
+  },
+  "productionNodes": {
+    "nodes": [
+      {
+        "assets": {
+          "platform-console.js": "4cf554dc3bd6d469fbd039b5296acb1b24dcd68755695702fe2756c4426394de",
+          "admin-console.js": "c8485e692af22e229b6203e894b5b3c0206a4bfd904885906d614e53c79bf5e0",
+          "visible-refresh.mjs": "292e8c12d697a5e8b3fc461bc37a9306bd088e76aab8fa1761c28a26611a6920"
+        },
+        "ready": 200,
+        "release": "20261121-wms-live-console",
+        "zone": "us-east-2a"
+      },
+      {
+        "assets": {
+          "platform-console.js": "4cf554dc3bd6d469fbd039b5296acb1b24dcd68755695702fe2756c4426394de",
+          "admin-console.js": "c8485e692af22e229b6203e894b5b3c0206a4bfd904885906d614e53c79bf5e0",
+          "visible-refresh.mjs": "292e8c12d697a5e8b3fc461bc37a9306bd088e76aab8fa1761c28a26611a6920"
+        },
+        "ready": 200,
+        "release": "20261121-wms-live-console",
+        "zone": "us-east-2b"
+      }
+    ],
+    "commandId": "849c2d1d-eaaf-42b4-a9ad-5d907c2a717c"
+  },
+  "productionBrowser": {
+    "checkedUTC": "2026-11-21T21:33:24.679Z",
+    "anonymousProtectedRoutes": 4,
+    "azureBackup": {
+      "name": "20261121-daily.json",
+      "bytes": 97878,
+      "available": 5,
+      "encryptedEnvelope": true,
+      "manifestSHA256Matches": true
+    },
+    "backupCatalogAutoRefresh": true,
+    "wms": {
+      "outbox": {
+        "exhausted": 0,
+        "oldest": null,
+        "pending": 0
+      },
+      "azureQueues": {
+        "pending": 0,
+        "poison": 0,
+        "status": "ok"
+      },
+      "selectedId": "evt-dce8944d04a64ea78484bf226ca876ef",
+      "azureResult": "demo_fulfillment_completed",
+      "automaticHistoryAndQueueReads": true
+    }
+  },
+  "actualWmsPreflight": {
+    "snapshot": {
+      "azure_queue": {
+        "pending": 0,
+        "poison": 0,
+        "status": "ok"
+      },
+      "checked_at": "2026-11-21T21:25:30.906203+00:00",
+      "outbox": {
+        "exhausted": 0,
+        "oldest": null,
+        "pending": 0
+      }
+    },
+    "outboxTotal": 2,
+    "selected": {
+      "eventId": "evt-dce8944d04a64ea78484bf226ca876ef",
+      "orderId": 2,
+      "status": "demo_fulfillment_completed",
+      "processedAt": "2026-11-19T15:14:36.662696+00:00"
+    }
+  },
+  "localBrowserChecks": {
+    "automaticQueueAndOutbox": true,
+    "pendingToProcessed": true,
+    "exactZeroVersusMissing": true,
+    "terminalStopsPolling": true,
+    "manualSelection": true,
+    "backupsRefreshWhenOpen": true,
+    "pausesOutsideBackupView": true,
+    "retainsLastCatalogOnFailure": true
+  },
+  "releaseUnitTests": 31,
+  "platformConsoleTests": 29,
+  "recoveryEvidence": "../azure/AZURE-PORTAL-SCHEDULED-RECOVERY-2026-11-21.json"
+}

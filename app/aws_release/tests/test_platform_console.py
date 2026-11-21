@@ -473,8 +473,9 @@ class PlatformConsoleTestCase(unittest.TestCase):
     def test_queue_health_reports_outbox_and_preserves_partial_azure_data(self):
         self.app.config.update(AZURE_FULFILLMENT_URL="https://wms.example.test/api/fulfillment/events",
                                AZURE_FUNCTION_KEY="test-key")
-        with patch.object(portal, "urlopen", return_value=FakeJsonResponse({"pending": 0, "poison": None})):
+        with patch("platform_routes.urlopen", return_value=FakeJsonResponse({"pending": 0, "poison": None})) as upstream:
             response = self.admin.get("/api/platform/fulfillment-health").get_json()
+        upstream.assert_called_once()
         self.assertEqual(response["outbox"]["pending"], 0)
         self.assertEqual(response["azure_queue"], {"status": "degraded", "pending": 0, "poison": None})
 
