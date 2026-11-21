@@ -1,0 +1,94 @@
+{
+  "release": "20261121-wms-inventory-views",
+  "artifactSha256": "ce5f63736e5a602cda8318c2d846bda47f3ba251261d8e3495397c06b84c50a8",
+  "directCloudFormationChanges": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/Policies/0/PolicyDocument"
+      ]
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/LaunchTemplateData"
+      ]
+    }
+  ],
+  "readiness": {
+    "samples": 30,
+    "http200": 30,
+    "first": {
+      "state": "UPDATE_IN_PROGRESS",
+      "utc": "2026-11-21T21:40:34.5807051Z",
+      "revision": "20261121-wms-inventory-views",
+      "ready": 200
+    },
+    "last": {
+      "state": "UPDATE_COMPLETE",
+      "utc": "2026-11-21T21:56:25.2740412Z",
+      "revision": "20261121-wms-inventory-views",
+      "ready": 200
+    }
+  },
+  "productionNodes": {
+    "nodes": [
+      {
+        "zone": "us-east-2b",
+        "assets": {
+          "assets/platform-console.js": "bf1bc3499edeebf32a6ea15b113b12c2149dd23281f5d1f260dc1730afa36ff7",
+          "assets/platform-console.css": "2940308bc8aa67912c7a86578525266e762f09b008de89b846623c0a2228167e",
+          "platform/index.html": "5341d3bba14c1efd88d3215c38c222e1bc6e841ad2f4a2a4ba35c7d8f006a095",
+          "images/wms-products-v1.webp": "4563cdaa3cfb239558542fb837782b75cd7f3618ed5d773fbb3932e0548602ef"
+        },
+        "ready": 200,
+        "release": "20261121-wms-inventory-views"
+      },
+      {
+        "zone": "us-east-2a",
+        "assets": {
+          "assets/platform-console.js": "bf1bc3499edeebf32a6ea15b113b12c2149dd23281f5d1f260dc1730afa36ff7",
+          "assets/platform-console.css": "2940308bc8aa67912c7a86578525266e762f09b008de89b846623c0a2228167e",
+          "platform/index.html": "5341d3bba14c1efd88d3215c38c222e1bc6e841ad2f4a2a4ba35c7d8f006a095",
+          "images/wms-products-v1.webp": "4563cdaa3cfb239558542fb837782b75cd7f3618ed5d773fbb3932e0548602ef"
+        },
+        "ready": 200,
+        "release": "20261121-wms-inventory-views"
+      }
+    ],
+    "commandId": "57371abf-3912-4917-9e51-af3d5803ba12"
+  },
+  "liveInventory": {
+    "checkedUTC": "2026-11-21T21:58:33.775Z",
+    "inventorySource": "demo-inventory-ledger",
+    "products": 17,
+    "productsWithReferenceImages": 12,
+    "example": {
+      "sku": "SKU-ARROZ-001",
+      "stock": "14 sacos",
+      "price": "S/ 42.50"
+    },
+    "accessibleInventoryTable": true,
+    "allTableAndCardValuesMatch": true,
+    "automaticRefreshWhileVisible": true,
+    "anonymousDenied": true,
+    "mobileNoOverflow": true
+  },
+  "localChecks": {
+    "sameStockAndPricesInBothViews": true,
+    "keyboardSwitch": true,
+    "photoAtlasCspCompatible": true,
+    "unknownSkuStillVisible": true,
+    "stockZeroMarkedExhausted": true,
+    "updatedStockInBothViews": true,
+    "preservesSelectedSku": true,
+    "staleStockMarkedAndSubmitDisabled": true,
+    "mobileFitsScreen": true
+  },
+  "platformUnitTests": 29,
+  "portalReleaseUnitTests": 31
+}
