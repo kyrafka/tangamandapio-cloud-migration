@@ -38,9 +38,19 @@ Desde **Seguimiento de pedidos**, selecciona un pedido o abre `/seguimiento?pedi
 El orden de trabajo es **registro en el portal → entrega al almacén → resultado**.
 En producción, el portal registra las líneas y el outbox en una transacción y
 responde al comprador antes de esperar a Azure. El worker usa el mismo ID de
-evento en cada intento. **Verificar en almacén** consulta el resultado de Azure
-bajo demanda. Los pedidos antiguos sin líneas pueden requerir revisión y el
+evento en cada intento. La lista se actualiza cada 15 segundos y el pedido
+seleccionado cada 10 mientras la pestaña está visible. El portal consulta Azure
+cuando el pedido se ha entregado al almacén y detiene esa consulta automática
+tras recibir un resultado final. **Verificar en almacén** permite una consulta
+inmediata. Los pedidos antiguos sin líneas pueden requerir revisión y el
 resultado del inventario de laboratorio se etiqueta como demostración.
+
+El correo interno actualiza la bandeja, las confirmaciones de lectura y el
+contador cada cinco segundos por HTTPS. La redacción conserva su contenido
+durante las actualizaciones. Las tablas de Ventas y Compras consultan cada
+15 segundos los estados registrados en el ERP. **Consultar Azure** aplica la
+conciliación de esos documentos. Las consultas en segundo plano se reanudan al
+volver a la pestaña o recuperar la conexión.
 
 ```mermaid
 flowchart LR

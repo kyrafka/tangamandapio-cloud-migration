@@ -1,4 +1,5 @@
 import { createPortalApi } from "./portal-api.mjs";
+import { startVisibleRefresh } from "./visible-refresh.mjs";
 
 import { parseInventoryCsv } from "./catalogCsv.js";
 
@@ -12,6 +13,9 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     catalogRows: [], catalogFileName: "", catalogError: "", catalogImporting: false,
   };
   let renderedSection;
+  let mailRevision = 0;
+  let pendingReads = 0;
+  let sectionRevision = 0;
   const roleLabels = { customer: "Cliente", sales: "Comercial", warehouse: "Operaciones WMS", operations: "Operaciones TI", admin: "Administración", auditor: "Auditoría" };
   const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -66,6 +70,8 @@ import { parseInventoryCsv } from "./catalogCsv.js";
   }
 
   async function loadSection(section = state.section) {
+    sectionRevision++;
+    mailRevision++;
     state.busy = true;
     renderTabs();
     $("#erp-content").innerHTML = `<div class="erp-loading"><span class="erp-spinner" aria-hidden="true"></span> Cargando ${esc(section)}…</div>`;
@@ -111,7 +117,65 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     state.mail = messages; state.recipients = recipients; state.mailStatus = mailStatus;
     const inboxUnread = state.folder === "inbox" ? messages.filter(message => message.unread).length : state.unreadMessages;
     state.unreadMessages = mailStatus.unread_messages ?? inboxUnread;
-    if (state.selectedMail && !messages.some((item) => item.id === state.selectedMail.id)) state.selectedMail = null;
+    if (state.selectedMail) state.selectedMail = messages.find((item) => item.id === state.selectedMail.id) || null;
+  }
+
+  function updateUnreadCount(count) {
+    if (state.unreadMessages === count) return;
+    state.unreadMessages = count;
+    const tab = $('#erp-tabs [data-section="mail"]');
+    let badge = tab?.querySelector(".tab-count");
+    if (tab && count && !badge) {
+      badge = document.createElement("span");
+      badge.className = "tab-count";
+      tab.append(badge);
+    }
+    if (badge && count) badge.textContent = count;
+    else badge?.remove();
+    const launch = $("[data-mail-launch]");
+    if (launch) launch.textContent = `Abrir buzón · ${count} sin leer`;
+  }
+
+  async function refreshLiveMail(signal) {
+    if (state.busy || pendingReads) return;
+    const revision = mailRevision;
+    const folder = state.folder;
+    if (state.section !== "mail") {
+      const status = await api("/api/erp/mail/status", { signal });
+      if (revision === mailRevision) updateUnreadCount(status.unread_messages);
+      return;
+    }
+    const { payload, headers } = await api(`/api/erp/mail?folder=${folder}`, { signal, includeMeta: true });
+    if (revision !== mailRevision || state.busy || state.folder !== folder || state.section !== "mail") return;
+    const unread = headers.get("X-Unread-Messages");
+    if (unread !== null) updateUnreadCount(Number(unread));
+    if (JSON.stringify(payload) === JSON.stringify(state.mail)) return;
+
+    state.mail = payload;
+    if (state.selectedMail) state.selectedMail = payload.find((item) => item.id === state.selectedMail.id) || null;
+    const list = $(".erp-mail-list");
+    if (!list) return;
+    const focused = list.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+    const scroll = list.scrollTop;
+    list.innerHTML = renderMailList();
+    if (focused) $(`button[data-id="${focused}"]`, list)?.focus({ preventScroll: true });
+    list.scrollTop = scroll;
+    if (!state.compose) $(".erp-mail-reading").innerHTML = renderMailReading();
+  }
+
+  async function refreshLiveOrders(signal) {
+    const section = state.section;
+    if (state.busy || !["sales", "purchases"].includes(section)) return;
+    const revision = sectionRevision;
+    const orders = await api(`/api/erp/${section}/orders`, { signal });
+    if (revision !== sectionRevision || state.section !== section || !$("[data-order-rows]")) return;
+    if (JSON.stringify(state[section]) === JSON.stringify(orders)) return;
+    const rows = $("[data-order-rows]");
+    // Let a focused action finish before replacing the row that owns it.
+    if (rows.contains(document.activeElement)) return;
+    state[section] = orders;
+    rows.innerHTML = renderOrderRows(section);
+    $("[data-order-total]").textContent = `${orders.length} documentos`;
   }
 
   function updateWmsState() {
@@ -158,7 +222,7 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       <section class="erp-card">${sectionHeading("Propiedad de datos", "El ERP coordina; Azure mantiene el inventario", "Pedidos, precios, socios y documentos financieros se guardan en la base administrada por AWS. Las existencias se consultan en Azure y no se duplican aquí.")}
         <p class="erp-note">${esc(state.overview?.wms?.note || "El inventario es un ledger ficticio de laboratorio. Las ventas y recepciones muestran el flujo técnico, no stock comercial real.")}</p>
       </section>
-      <section class="erp-card">${sectionHeading("Mensajería", "Correo interno del portal", "Mensajes entre cuentas internas, con bandeja de entrada, enviados y confirmación de lectura.")}<button class="erp-button erp-button--primary" type="button" data-action="section" data-section="mail">Abrir buzón · ${state.unreadMessages} sin leer</button></section>
+      <section class="erp-card">${sectionHeading("Mensajería", "Correo interno del portal", "Mensajes entre cuentas internas, con bandeja de entrada, enviados y confirmación de lectura.")}<button class="erp-button erp-button--primary" type="button" data-action="section" data-section="mail" data-mail-launch>Abrir buzón · ${state.unreadMessages} sin leer</button></section>
     </div>`;
   }
 
@@ -221,7 +285,8 @@ import { parseInventoryCsv } from "./catalogCsv.js";
 
   function renderOrders(type) {
     const sales = type === "sales";
-    return `<div class="erp-grid"><section class="erp-card">${sectionHeading(sales ? "Ciclo comercial" : "Abastecimiento", sales ? "Pedidos de venta" : "Órdenes de compra", sales ? "Pedido persistido en AWS y evento de cumplimiento enviado a Azure." : "Orden, recepción y evento de entrada al WMS.", chip((sales ? state.sales : state.purchases).length + " documentos"))}${renderOrderRows(type)}</section><section class="erp-card">${sectionHeading("Nuevo documento", sales ? "Registrar venta" : "Crear orden")}${orderForm(type)}</section></div>`;
+    const total = `<span class="erp-chip" data-order-total>${state[type].length} documentos</span>`;
+    return `<div class="erp-grid"><section class="erp-card">${sectionHeading(sales ? "Ciclo comercial" : "Abastecimiento", sales ? "Pedidos de venta" : "Órdenes de compra", sales ? "Pedido persistido en AWS y evento de cumplimiento enviado a Azure." : "Orden, recepción y evento de entrada al WMS.", total)}<div data-order-rows>${renderOrderRows(type)}</div></section><section class="erp-card">${sectionHeading("Nuevo documento", sales ? "Registrar venta" : "Crear orden")}${orderForm(type)}</section></div>`;
   }
 
   function renderFinance() {
@@ -238,14 +303,23 @@ import { parseInventoryCsv } from "./catalogCsv.js";
     return `<section class="erp-card">${sectionHeading("Control de acceso", "Permisos ERP por cuenta", "Estos permisos son independientes del rol general del portal.", chip(`${state.users.length} cuentas`))}<div class="erp-table-wrap"><table class="erp-table erp-access-table"><thead><tr><th>Cuenta</th><th>Rol portal</th>${roles.map(([, label]) => `<th>${esc(label)}</th>`).join("")}</tr></thead><tbody>${state.users.map((user) => `<tr><td><strong>${esc(user.username)}</strong><small>${esc(user.company || "")}</small></td><td>${esc(roleLabels[user.role] || user.role)}</td>${roles.map(([key, label]) => `<td><label class="erp-access-check"><input class="erp-check" type="checkbox" data-action="role-toggle" data-user="${user.id}" data-role="${esc(key)}" aria-label="${esc(label)} para ${esc(user.username)}" ${user.erp_roles.includes(key) ? "checked" : ""} ${user.role === "admin" && key === "erp_admin" ? "disabled" : ""} /></label></td>`).join("")}</tr>`).join("")}</tbody></table></div><p class="erp-note">El administrador del portal mantiene siempre el permiso Administración ERP. No asignes privilegios financieros o de maestros a cuentas que no los requieran.</p></section>`;
   }
 
+  function renderMailList() {
+    return state.mail.length ? state.mail.map((m) => `<button class="erp-mail-row ${m.unread ? "unread" : ""}" type="button" data-action="open-mail" data-id="${m.id}" aria-current="${state.selectedMail?.id === m.id}"><strong>${esc(state.folder === "inbox" ? m.sender : m.recipient)}</strong><span>${esc(m.subject)}</span><small>${date(m.created_at)} · ${m.smtp_status === "accepted_by_smtp" ? "SMTP aceptó copia" : m.smtp_status === "smtp_failed" ? "SMTP no disponible" : m.smtp_status === "recipient_address_missing" ? "Cuenta sin dirección SMTP" : "Buzón del portal"}</small></button>`).join("") : empty(state.folder === "inbox" ? "Tu bandeja de entrada está vacía." : "Aún no enviaste mensajes.");
+  }
+
+  function renderMailReading() {
+    if (state.compose) return renderCompose();
+    const message = state.selectedMail;
+    if (!message) return empty("Elige un mensaje o redacta uno nuevo.");
+    return `<p class="eyebrow">${state.folder === "inbox" ? `De ${esc(message.sender)}` : `Para ${esc(message.recipient)}`}</p><h3>${esc(message.subject)}</h3><small>${date(message.created_at)}${message.read_at ? " · leído" : ""} · ${message.smtp_status === "accepted_by_smtp" ? "SMTP aceptó copia" : message.smtp_status === "smtp_failed" ? "SMTP no disponible" : "Buzón del portal"}</small><p class="erp-mail-body">${esc(message.body)}</p>`;
+  }
+
   function renderMail() {
     const folders = `<aside class="erp-mail-folders" aria-label="Carpetas"><button class="erp-button ${state.folder === "inbox" ? "erp-button--primary" : "erp-button--quiet"}" type="button" data-action="mail-folder" data-folder="inbox">Entrada</button><button class="erp-button ${state.folder === "sent" ? "erp-button--primary" : "erp-button--quiet"}" type="button" data-action="mail-folder" data-folder="sent">Enviados</button><button class="erp-button" type="button" data-action="compose">Redactar</button></aside>`;
     const status = state.mailStatus?.smtp_configured ? "SMTP configurado" : "Solo buzón del portal";
     const testButton = state.user?.role === "admin" && state.mailStatus?.smtp_configured ? `<button class="erp-button" type="button" data-action="test-smtp">Probar SMTP</button>` : "";
     const previewLink = ["localhost", "127.0.0.1"].includes(location.hostname) && state.mailStatus?.smtp_configured ? `<a class="erp-button" href="http://localhost:8025" target="_blank" rel="noreferrer">Ver correo de prueba</a>` : "";
-    const list = state.mail.length ? state.mail.map((m) => `<button class="erp-mail-row ${m.unread ? "unread" : ""}" type="button" data-action="open-mail" data-id="${m.id}" aria-current="${state.selectedMail?.id === m.id}"><strong>${esc(state.folder === "inbox" ? m.sender : m.recipient)}</strong><span>${esc(m.subject)}</span><small>${date(m.created_at)} · ${m.smtp_status === "accepted_by_smtp" ? "SMTP aceptó copia" : m.smtp_status === "smtp_failed" ? "SMTP no disponible" : m.smtp_status === "recipient_address_missing" ? "Cuenta sin dirección SMTP" : "Buzón del portal"}</small></button>`).join("") : empty(state.folder === "inbox" ? "Tu bandeja de entrada está vacía." : "Aún no enviaste mensajes.");
-    const message = state.compose ? renderCompose() : state.selectedMail ? `<p class="eyebrow">${state.folder === "inbox" ? `De ${esc(state.selectedMail.sender)}` : `Para ${esc(state.selectedMail.recipient)}`}</p><h3>${esc(state.selectedMail.subject)}</h3><small>${date(state.selectedMail.created_at)}${state.selectedMail.read_at ? " · leído" : ""} · ${state.selectedMail.smtp_status === "accepted_by_smtp" ? "SMTP aceptó copia" : state.selectedMail.smtp_status === "smtp_failed" ? "SMTP no disponible" : "Buzón del portal"}</small><p class="erp-mail-body">${esc(state.selectedMail.body)}</p>` : `<div class="erp-empty">Elige un mensaje o redacta uno nuevo.</div>`;
-    return `<section class="erp-card">${sectionHeading("Mensajería privada", "Buzón interno", "El mensaje queda guardado en el portal; si hay un relay configurado, se envía también una copia SMTP.", chip(status))}<div class="erp-actions erp-mail-transport-actions">${testButton}${previewLink}</div><div class="erp-mail-layout">${folders}<div class="erp-mail-list" aria-label="Mensajes">${list}</div><article class="erp-mail-reading">${message}</article></div><p class="erp-note">La aceptación SMTP no garantiza entrega final. Para correo público se necesitan buzones reales, dominio verificado y políticas SPF/DKIM/DMARC.</p></section>`;
+    return `<section class="erp-card">${sectionHeading("Mensajería privada", "Buzón interno", "El mensaje queda guardado en el portal; si hay un relay configurado, se envía también una copia SMTP.", chip(status))}<div class="erp-actions erp-mail-transport-actions">${testButton}${previewLink}</div><div class="erp-mail-layout">${folders}<div class="erp-mail-list" aria-label="Mensajes">${renderMailList()}</div><article class="erp-mail-reading">${renderMailReading()}</article></div><p class="erp-note">La aceptación SMTP no garantiza entrega final. Para correo público se necesitan buzones reales, dominio verificado y políticas SPF/DKIM/DMARC.</p></section>`;
   }
 
   function renderCompose() {
@@ -301,7 +375,8 @@ import { parseInventoryCsv } from "./catalogCsv.js";
         state.section = action.dataset.section; state.compose = false; state.selectedMail = null;
         renderTabs(); await loadSection(state.section);
       } else if (kind === "refresh") {
-        await loadSection(state.section);
+        if (state.section === "mail" && state.compose) await refreshLiveMail();
+        else await loadSection(state.section);
       } else if (kind === "import-catalog") {
         if (!state.catalogRows.length || state.catalogImporting) return;
         state.catalogImporting = true; renderSection();
@@ -338,14 +413,18 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       } else if (kind === "cancel-compose") {
         state.compose = false; await loadSection("mail");
       } else if (kind === "open-mail") {
+        mailRevision++;
         const message = state.mail.find((item) => item.id === Number(action.dataset.id)) || null;
         state.selectedMail = message;
         if (state.folder === "inbox" && message && !message.read_at) {
-          const result = await api(`/api/erp/mail/${message.id}/read`, { method: "POST" });
-          const wasUnread = !message.read_at;
-          message.read_at ||= new Date().toISOString();
-          message.unread = false;
-          state.unreadMessages = result.unread_messages ?? Math.max(0, state.unreadMessages - Number(wasUnread));
+          pendingReads++;
+          try {
+            const result = await api(`/api/erp/mail/${message.id}/read`, { method: "POST" });
+            const wasUnread = !message.read_at;
+            message.read_at ||= new Date().toISOString();
+            message.unread = false;
+            updateUnreadCount(result.unread_messages ?? Math.max(0, state.unreadMessages - Number(wasUnread)));
+          } finally { pendingReads--; }
         }
         if (state.section === "mail" && state.selectedMail === message) renderSection();
       } else if (kind === "test-smtp") {
@@ -406,6 +485,8 @@ import { parseInventoryCsv } from "./catalogCsv.js";
       const candidates = tabs();
       state.section = candidates.some((item) => item[0] === "overview") ? "overview" : "mail";
       await loadSection(state.section);
+      startVisibleRefresh(refreshLiveMail, 5000);
+      startVisibleRefresh(refreshLiveOrders, 15000);
     } catch (error) {
       $("#erp-identity").textContent = "Acceso limitado";
       $("#erp-content").innerHTML = `<section class="erp-card">${sectionHeading("No disponible", "No se pudo abrir el módulo")}${empty(error.message)}<a class="erp-button" href="/">Volver al portal</a></section>`;

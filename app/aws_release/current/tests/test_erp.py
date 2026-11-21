@@ -398,6 +398,9 @@ class ErpReleaseTests(unittest.TestCase):
         self.login(mailbox, username, password)
         self.assertEqual(mailbox.get("/api/erp/overview").status_code, 403)
         self.assertEqual(mailbox.get("/api/erp/mail/status").get_json()["unread_messages"], 1)
+        self.assertEqual(mailbox.get("/api/erp/mail?folder=inbox").headers["X-Unread-Messages"], "1")
+        self.assertEqual(mailbox.get("/api/erp/mail?folder=sent").headers["X-Unread-Messages"], "1")
+        self.assertEqual(self.client.get("/api/erp/mail?folder=sent").headers["X-Unread-Messages"], "0")
         path = f"/api/erp/mail/{sent.get_json()['id']}/read"
         for _ in range(2):
             read = self.post(mailbox, path, {})
@@ -405,6 +408,7 @@ class ErpReleaseTests(unittest.TestCase):
             self.assertTrue(read.get_json()["read"])
             self.assertEqual(read.get_json()["unread_messages"], 0)
         self.assertEqual(mailbox.get("/api/erp/mail/status").get_json()["unread_messages"], 0)
+        self.assertEqual(mailbox.get("/api/erp/mail?folder=inbox").headers["X-Unread-Messages"], "0")
 
 
 if __name__ == "__main__":

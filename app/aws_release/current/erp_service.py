@@ -1113,11 +1113,12 @@ def register_erp_routes(
                     LEFT JOIN internal_mail_delivery delivery ON delivery.message_id=m.id
                     WHERE m.{column}=? ORDER BY m.id DESC LIMIT 100""", (user_id,)
             ).fetchall()
+            unread = unread_mail_count(connection, user_id)
         result = [dict(row) for row in rows]
         if folder == "inbox":
             for item in result:
                 item["unread"] = item["read_at"] is None
-        return jsonify(result)
+        return jsonify(result), 200, {"X-Unread-Messages": str(unread)}
 
     @bp.post("/mail")
     @internal_user

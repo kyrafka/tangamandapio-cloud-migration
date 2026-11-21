@@ -1,4 +1,5 @@
 import { createPortalApi } from "./portal-api.mjs";
+import { startVisibleRefresh } from "./visible-refresh.mjs";
 
 (() => {
   const get = (id) => document.getElementById(id);
@@ -20,7 +21,7 @@ import { createPortalApi } from "./portal-api.mjs";
     insufficient_role: "Tu rol no permite esta acción.",
     invalid_order_items: "Revisa los SKU, elimina los duplicados y usa cantidades entre 1 y 1.000.",
   };
-  let role, records = [], selected, detail, loadNumber = 0;
+  let role, records = [], selected, detail, loadNumber = 0, listNumber = 0, detailBusy = false;
 
   function node(tag, value, className) {
     const element = document.createElement(tag);
@@ -50,6 +51,7 @@ import { createPortalApi } from "./portal-api.mjs";
     for (const order of filtered) {
       const button = node("button", order.reference || `Pedido #${order.id}`);
       button.type = "button";
+      button.dataset.orderId = order.id;
       button.setAttribute("aria-current", String(selected === order.id));
       button.append(node("small", `${order.customer} · ${formatDate(order.created_at)}`));
       button.addEventListener("click", () => loadOrder(order.id));
@@ -58,18 +60,28 @@ import { createPortalApi } from "./portal-api.mjs";
     if (filtered.length === 0) container.append(node("p", search ? "Sin resultados para esta búsqueda." : "Aún no hay pedidos."));
   }
 
-  async function refreshList() {
-    get("order-list").setAttribute("aria-busy", "true");
+  async function refreshList({ signal, silent = false } = {}) {
+    const list = get("order-list");
+    if (silent && list.getAttribute("aria-busy") === "true") return;
+    const sequence = ++listNumber;
+    if (!silent) list.setAttribute("aria-busy", "true");
     try {
-      records = await request("/api/orders");
-      renderList();
+      const updated = await request("/api/orders", { signal });
+      if (sequence !== listNumber) return;
+      if (!list.children.length || JSON.stringify(updated) !== JSON.stringify(records)) {
+        const focusOrder = list.contains(document.activeElement) ? document.activeElement.dataset.orderId : null;
+        records = updated;
+        renderList();
+        if (focusOrder) list.querySelector(`[data-order-id="${focusOrder}"]`)?.focus({ preventScroll: true });
+      }
     } finally {
-      get("order-list").setAttribute("aria-busy", "false");
+      if (sequence === listNumber) list.setAttribute("aria-busy", "false");
     }
   }
 
   function renderOrder(record) {
     const container = get("order-detail");
+    const technicalOpen = container.querySelector(".technical")?.open;
     const flow = node("ol", "", "flow");
     const reached = record.stage === "processed" ? 3 : record.queued_at || ["queued", "needs_items"].includes(record.stage) ? 2 : 1;
     const steps = [
@@ -97,6 +109,7 @@ import { createPortalApi } from "./portal-api.mjs";
     }
     if (record.technical) {
       const technical = node("details", "", "technical");
+      technical.open = !!technicalOpen;
       const signal = record.technical;
       technical.append(node("summary", "Registro técnico"), node("p", `Evento ${signal.event_id} · ${signal.attempts} intento(s)`));
       if (signal.last_error) technical.append(node("p", `Último error: ${signal.last_error}`));
@@ -111,6 +124,7 @@ import { createPortalApi } from "./portal-api.mjs";
   async function loadOrder(id, verify = false) {
     const sequence = ++loadNumber;
     selected = id;
+    detailBusy = true;
     if (!verify) detail = null;
     const url = new URL(location.href);
     url.searchParams.set("pedido", id);
@@ -128,7 +142,23 @@ import { createPortalApi } from "./portal-api.mjs";
       if (!verify) get("detail-actions").hidden = true;
       announce(error.message, true);
     } finally {
-      if (sequence === loadNumber) for (const button of [get("verify"), get("retry")]) button.disabled = false;
+      if (sequence === loadNumber) {
+        detailBusy = false;
+        for (const button of [get("verify"), get("retry")]) button.disabled = false;
+      }
+    }
+  }
+
+  async function refreshLiveDetail(signal) {
+    const previous = detail;
+    if (detailBusy || !previous || get("retry").disabled) return;
+    if (previous.verification === "checked" && ["processed", "needs_items", "review"].includes(previous.stage)) return;
+    const version = loadNumber;
+    const record = await request(`/api/orders/${selected}/tracking?verify=1`, { signal });
+    if (version !== loadNumber || detail !== previous || detailBusy || get("retry").disabled) return;
+    if (JSON.stringify(record) !== JSON.stringify(previous)) {
+      detail = record;
+      renderOrder(record);
     }
   }
 
@@ -218,6 +248,8 @@ import { createPortalApi } from "./portal-api.mjs";
     const requested = Number(new URLSearchParams(location.search).get("pedido"));
     if (Number.isSafeInteger(requested) && requested > 0) await loadOrder(requested);
     else if (records.length) await loadOrder(records[0].id);
+    startVisibleRefresh((signal) => refreshList({ signal, silent: true }), 15000);
+    startVisibleRefresh(refreshLiveDetail, 10000);
   }
 
   init().catch((error) => announce(error.message, true));
