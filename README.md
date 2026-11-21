@@ -2,14 +2,20 @@
 
 Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
 
-## Estado operativo al 20/11/2026
+## Estado operativo al 21/11/2026
 
-El release vigente en AWS Ohio es `20261120-erp-db-runtime`. El balanceador
-mantiene dos destinos sanos. El ERP usa su propio usuario PostgreSQL y el
-exportador cifrado usa un lector separado. Las dos EC2 reciben acceso denegado
-al secreto maestro. Pasaron 297 comprobaciones en diez sesiones y se verificó
-el envío de Comercial a Almacén dentro del buzón del ERP.
-[Verificación en producción](evidence/current/aws/AWS-ERP-SQL-ACCESS-2026-11-20.json).
+El release vigente en AWS Ohio es `20261121-portal-auto-refresh`. El correo
+interno actualiza cada cinco segundos la bandeja, los mensajes sin leer y la
+confirmación de lectura. Seguimiento consulta cada diez segundos el pedido
+seleccionado. Las listas de Ventas y Compras se actualizan cada quince segundos
+con los estados registrados en el ERP. Las consultas se pausan en pestañas en
+segundo plano. [Pruebas de las actualizaciones](evidence/current/aws/AWS-PORTAL-AUTO-REFRESH-2026-11-21.json).
+
+El ERP usa su propio usuario PostgreSQL y el exportador cifrado usa un lector
+separado. En la verificación del 20/11 ambas EC2 recibieron acceso denegado al
+secreto maestro, pasaron 297 comprobaciones en diez sesiones y se comprobó el
+envío de Comercial a Almacén dentro del buzón del ERP.
+[Verificación de permisos](evidence/current/aws/AWS-ERP-SQL-ACCESS-2026-11-20.json).
 
 El 20/11 también se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
 terminó la actualización y el balanceador quedó con dos destinos sanos.

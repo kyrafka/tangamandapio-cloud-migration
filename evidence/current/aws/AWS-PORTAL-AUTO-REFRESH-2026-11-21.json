@@ -1,0 +1,82 @@
+{
+  "release": "20261121-portal-auto-refresh",
+  "artifactSha256": "045a9794177ec8dad3844b6d7af28ba13526e6bd17a258595b758dfd723112eb",
+  "stack": "tangamandapio-live-20261116",
+  "stackStatus": "UPDATE_COMPLETE",
+  "plan": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False"
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False"
+    }
+  ],
+  "nodes": {
+    "nodes": [
+      {
+        "release": "20261121-portal-auto-refresh",
+        "assets": {
+          "erp.js": "02020d7b2454a3fe1055aa6336ca684796670c7f315ac71dfcbc8be65e9fac00",
+          "order-tracking.js": "1f97198b166608bab1cc5ee38ad5a4b9c3ce3ed1abd00a2440f8d234ddc119ab",
+          "visible-refresh.mjs": "292e8c12d697a5e8b3fc461bc37a9306bd088e76aab8fa1761c28a26611a6920"
+        },
+        "zone": "us-east-2b",
+        "ready": 200
+      },
+      {
+        "release": "20261121-portal-auto-refresh",
+        "assets": {
+          "erp.js": "02020d7b2454a3fe1055aa6336ca684796670c7f315ac71dfcbc8be65e9fac00",
+          "order-tracking.js": "1f97198b166608bab1cc5ee38ad5a4b9c3ce3ed1abd00a2440f8d234ddc119ab",
+          "visible-refresh.mjs": "292e8c12d697a5e8b3fc461bc37a9306bd088e76aab8fa1761c28a26611a6920"
+        },
+        "zone": "us-east-2a",
+        "ready": 200
+      }
+    ],
+    "commandId": "bbd8c242-e64d-47f5-8492-7c879e1e8596"
+  },
+  "rollout": {
+    "startedUTC": "2026-11-21T18:21:00.6273348Z",
+    "completedUTC": "2026-11-21T18:36:50.3135069Z",
+    "samples": 35,
+    "http200": 35
+  },
+  "rollingStaticCompatibility": {
+    "commandId": "2e7ef58a-b721-4725-9d3a-296fa0d2869f",
+    "hash": "292e8c12d697a5e8b3fc461bc37a9306bd088e76aab8fa1761c28a26611a6920",
+    "oldNodes": 2
+  },
+  "local": {
+    "mailboxFirstUpdateMs": 4690,
+    "draftPreserved": true,
+    "readReceiptInOtherSession": true,
+    "trackingUpdateMs": 10000,
+    "salesTableUpdatePreservesForm": true,
+    "noRequestsWhileHidden": true,
+    "resumedWithinMs": 14,
+    "releaseUnitTests": 31,
+    "wms": "simulated fixture"
+  },
+  "browserProduction": {
+    "checkedUTC": "2026-11-21T18:38:39.518Z",
+    "checks": {
+      "incomingMs": 3879,
+      "preservedDraft": true,
+      "receiptAndRole": true,
+      "tracking": {
+        "http": 200,
+        "stage": "processed",
+        "verification": "checked"
+      },
+      "salesListPoll": 200,
+      "purchaseListPoll": 200
+    },
+    "temporaryAccountDeactivated": true,
+    "completedUTC": "2026-11-21T18:39:51.011Z"
+  }
+}
