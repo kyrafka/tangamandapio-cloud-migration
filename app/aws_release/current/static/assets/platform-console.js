@@ -26,6 +26,17 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
   let outboxVersion = 0;
   let outboxSnapshot;
   let azureSelection;
+  let inventoryVersion = 0;
+  let inventorySnapshot;
+  let inventoryAvailable = false;
+  let demoSubmitting = false;
+  // Orden por filas del mosaico de cuatro columnas wms-products-v1.webp.
+  const productPhotoSlots = [
+    "SKU-ARROZ-001", "SKU-AZUCAR-001", "SKU-ACEITE-001", "SKU-CAFE-001",
+    "SKU-FREJOL-001", "SKU-QUINUA-001", "SKU-AVENA-001", "SKU-FIDEOS-001",
+    "SKU-LECHE-001", "SKU-ATUN-001", "SKU-GALLETAS-001", "SKU-MAIZ-001",
+  ];
+  const stockNumber = new Intl.NumberFormat("es-PE");
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -449,38 +460,87 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     if ($("#azure-event") && latestDelivered && !azureSelection?.manual) selectAzureEvent(latestDelivered);
   }
 
+  function inventoryPrice(item) {
+    return new Intl.NumberFormat("es-PE", { style: "currency", currency: item.currency || "PEN" }).format(item.unit_price);
+  }
+
+  function inventoryStock(item) {
+    const quantity = Number(item.on_hand);
+    const unit = item.unit || "unidad";
+    const plural = { saco: "sacos", caja: "cajas", unidad: "unidades" };
+    return `${stockNumber.format(quantity)} ${quantity === 1 ? unit : plural[unit] || unit}`;
+  }
+
+  function productCard(item, stock, price) {
+    const card = element("article", "wms-product-card");
+    const photo = element("div", "wms-product-photo");
+    const slot = productPhotoSlots.indexOf(item.sku);
+    if (slot === -1) {
+      photo.textContent = "Sin imagen de referencia";
+    } else {
+      photo.dataset.reference = "";
+      photo.style.setProperty("--product-x", `${(slot % 4) * 100 / 3}%`);
+      photo.style.setProperty("--product-y", `${Math.floor(slot / 4) * 50}%`);
+      photo.setAttribute("role", "img");
+      photo.setAttribute("aria-label", `Imagen de referencia de ${item.name}`);
+    }
+    const copy = element("div", "wms-product-copy");
+    const meta = element("div", "wms-product-meta");
+    const empty = Number(item.on_hand) < 1;
+    const availability = element("span", "wms-product-stock", empty ? "Agotado" : stock);
+    if (empty) availability.dataset.empty = "";
+    meta.append(availability, element("span", "", price));
+    copy.append(element("small", "wms-product-code", item.sku), element("h4", "", item.name), meta);
+    card.append(photo, copy);
+    return card;
+  }
+
+  function setDemoInventoryAvailability() {
+    const available = inventoryAvailable && state.inventory.some((item) => Number(item.on_hand) > 0);
+    $("#wms-demo-sku").disabled = !available || demoSubmitting;
+    $("#wms-demo-quantity").disabled = !available || demoSubmitting;
+    $("#wms-demo-submit").disabled = !available || demoSubmitting;
+  }
+
   function renderInventory(inventory) {
-    state.inventory = Array.isArray(inventory.items) ? inventory.items : [];
-    const body = $("#wms-inventory-body");
-    const select = $("#wms-demo-sku");
-    body.replaceChildren();
-    select.replaceChildren();
-    for (const item of state.inventory) {
-      const row = document.createElement("tr");
-      row.append(
-        element("td", "", item.name),
-        element("td", "", item.sku),
-        element("td", "", new Intl.NumberFormat("es-PE").format(item.on_hand)),
-        element("td", "", new Intl.NumberFormat("es-PE", { style: "currency", currency: item.currency || "PEN" }).format(item.unit_price)),
-      );
-      body.append(row);
-      const option = document.createElement("option");
-      option.value = item.sku;
-      option.textContent = `${item.name} · ${item.on_hand} ${item.unit || "unid."}`;
-      option.disabled = Number(item.on_hand) < 1;
-      select.append(option);
+    const items = Array.isArray(inventory.items) ? inventory.items : [];
+    const snapshot = JSON.stringify(items);
+    if (snapshot !== inventorySnapshot) {
+      state.inventory = items;
+      const select = $("#wms-demo-sku");
+      const selectedSku = select.value;
+      const rows = document.createDocumentFragment();
+      const cards = document.createDocumentFragment();
+      const options = document.createDocumentFragment();
+      for (const item of items) {
+        const stock = inventoryStock(item);
+        const price = inventoryPrice(item);
+        const row = document.createElement("tr");
+        row.append(element("td", "", item.name), element("td", "", item.sku), element("td", "", stock), element("td", "", price));
+        rows.append(row);
+        if ($("#wms-inventory-cards")) cards.append(productCard(item, stock, price));
+        const option = new Option(`${item.name} · ${stock}`, item.sku);
+        option.disabled = Number(item.on_hand) < 1;
+        options.append(option);
+      }
+      $("#wms-inventory-body").replaceChildren(rows);
+      $("#wms-inventory-cards")?.replaceChildren(cards);
+      select.replaceChildren(items.length ? options : new Option("Catálogo sin productos", ""));
+      const selection = items.find((item) => item.sku === selectedSku && Number(item.on_hand) > 0);
+      select.value = selection?.sku || items.find((item) => Number(item.on_hand) > 0)?.sku || "";
+      inventorySnapshot = snapshot;
     }
-    const available = state.inventory.some((item) => Number(item.on_hand) > 0);
-    const selectedItem = state.inventory.find((item) => item.sku === select.value);
-    if (!selectedItem || Number(selectedItem.on_hand) < 1) {
-      select.value = state.inventory.find((item) => Number(item.on_hand) > 0)?.sku || "";
+    inventoryAvailable = true;
+    const empty = $("#wms-inventory-empty");
+    if (empty) {
+      empty.hidden = !!items.length;
+      empty.textContent = "Azure todavía no tiene productos en el catálogo.";
     }
+    const available = items.some((item) => Number(item.on_hand) > 0);
     const chip = $("#wms-inventory-state");
-    chip.textContent = available ? "Stock demo" : "Sin existencias";
+    chip.textContent = available ? "Stock de Azure" : "Sin existencias";
     chip.dataset.state = available ? "ok" : "warning";
-    select.disabled = !available;
-    $("#wms-demo-quantity").disabled = !available;
-    $("#wms-demo-submit").disabled = !available;
+    setDemoInventoryAvailability();
     updateDemoProductNote();
   }
 
@@ -492,29 +552,31 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     if (Number(quantity.value) > max) quantity.value = String(max);
     const note = $("#wms-demo-product-note");
     note.textContent = item
-      ? `Precio de laboratorio: ${new Intl.NumberFormat("es-PE", { style: "currency", currency: item.currency || "PEN" }).format(item.unit_price)} por ${item.unit}. Máximo por pedido: ${max}.`
+      ? `Precio de laboratorio: ${inventoryPrice(item)} por ${item.unit}. Máximo por pedido: ${max}.`
       : "El pedido aparecerá en el outbox después de generarlo.";
   }
 
-  async function refreshInventory() {
+  async function refreshInventory(signal = AbortSignal.timeout(10000), automatic = false) {
+    const version = ++inventoryVersion;
     const button = $("#wms-inventory-refresh");
     button.disabled = true;
     try {
-      const inventory = await request("/api/wms/inventory");
-      renderInventory(inventory);
+      const inventory = await request("/api/wms/inventory", { signal });
+      if (version === inventoryVersion) renderInventory(inventory);
       return inventory;
     } catch (error) {
+      if (version !== inventoryVersion) throw error;
+      inventoryAvailable = false;
       const chip = $("#wms-inventory-state");
-      chip.textContent = "Sin conexión";
-      chip.dataset.state = "error";
-      $("#wms-inventory-body").replaceChildren();
-      $("#wms-demo-sku").replaceChildren(new Option("Inventario no disponible", ""));
-      $("#wms-demo-sku").disabled = true;
-      $("#wms-demo-quantity").disabled = true;
-      $("#wms-demo-submit").disabled = true;
-      announce(error.message, "warning");
+      chip.textContent = inventorySnapshot ? "Última lectura · Azure sin conexión" : "Sin conexión";
+      chip.dataset.state = inventorySnapshot ? "warning" : "error";
+      if (!inventorySnapshot) $("#wms-demo-sku").replaceChildren(new Option("Inventario no disponible", ""));
+      setDemoInventoryAvailability();
+      if (!automatic) announce(error.status === 401 ? error.message : "No se pudo actualizar el inventario de Azure.", "warning");
       throw error;
-    } finally { button.disabled = false; }
+    } finally {
+      if (version === inventoryVersion) button.disabled = false;
+    }
   }
 
   function showWmsResult(message, tone = "success") {
@@ -539,10 +601,11 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
 
   async function createDemoOrder(event) {
     event.preventDefault();
-    const button = $("#wms-demo-submit");
+    if (demoSubmitting || !inventoryAvailable) return;
     const sku = $("#wms-demo-sku").value;
     const quantity = Number($("#wms-demo-quantity").value);
-    button.disabled = true;
+    demoSubmitting = true;
+    setDemoInventoryAvailability();
     $("#wms-demo-result").hidden = true;
     try {
       const order = await request("/api/wms/demo-orders", {
@@ -568,7 +631,8 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
       showWmsResult(error.message, "error");
       announce(error.message);
     } finally {
-      button.disabled = !state.inventory.some((item) => Number(item.on_hand) > 0);
+      demoSubmitting = false;
+      setDemoInventoryAvailability();
     }
   }
 
@@ -628,6 +692,26 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
         refreshOutbox().catch((error) => announce(error.message));
       });
       $("#wms-inventory-refresh").addEventListener("click", () => refreshInventory().catch(() => null));
+      const inventoryViewPicker = $(".wms-view-picker");
+      if (inventoryViewPicker) {
+        inventoryViewPicker.hidden = false;
+        const views = [...inventoryViewPicker.querySelectorAll("[data-inventory-view]")];
+        for (const view of views) {
+          view.addEventListener("click", () => {
+            for (const option of views) {
+              const active = option === view;
+              option.setAttribute("aria-pressed", String(active));
+              $(`#${option.getAttribute("aria-controls")}`).hidden = !active;
+            }
+          });
+        }
+        startVisibleRefresh((signal) => {
+          const bounds = inventoryViewPicker.closest(".wms-inventory-panel").getBoundingClientRect();
+          if (bounds.top < window.innerHeight && bounds.bottom > 0 && !$("#wms-inventory-refresh").disabled && !demoSubmitting) {
+            return refreshInventory(signal, true);
+          }
+        }, 30000);
+      }
       $("#wms-demo-sku").addEventListener("change", updateDemoProductNote);
       $("#wms-demo-quantity").addEventListener("input", updateDemoProductNote);
       $("#wms-demo-form").addEventListener("submit", createDemoOrder);

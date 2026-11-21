@@ -37,6 +37,13 @@ recuentos de Azure Queue Storage son aproximados y la vista distingue el valor
 cero de una lectura no disponible. Los reintentos requieren confirmación y solo
 Operaciones TI o Administración pueden ejecutarlos.
 
+En **Inventario de demostración → Existencias disponibles**, **Tabla** y
+**Fichas** muestran los mismos SKU, precios y existencias de Azure. Las fotos
+de los 12 SKU base son referenciales. El inventario se consulta cada 30 segundos
+mientras el panel está a la vista. Si Azure falla, se identifica la última
+lectura y el formulario de demostración queda deshabilitado hasta recuperar la
+conexión.
+
 ## Seguimiento de pedidos por rol
 
 Desde **Seguimiento de pedidos**, selecciona un pedido o abre `/seguimiento?pedido=<id>`.

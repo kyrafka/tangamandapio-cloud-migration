@@ -50,9 +50,17 @@
             <div id="wms-demo-result" class="wms-demo-result" role="status" aria-live="polite" hidden></div>
           </form>
           <article class="platform-panel wms-inventory-panel">
-            <div class="panel-heading"><div><p class="eyebrow">Stock por SKU</p><h3>Existencias disponibles</h3></div><span id="wms-inventory-state" class="state-chip" data-state="warning">Consultando</span></div>
-            <div class="table-wrap"><table class="users-table wms-inventory-table"><thead><tr><th>Producto</th><th>SKU</th><th>Disponible</th><th>Precio demo</th></tr></thead><tbody id="wms-inventory-body"></tbody></table></div>
-            <p class="panel-note">Es un ledger de laboratorio persistido en Azure Blob Storage. No se conecta al inventario de un ERP ni afecta operaciones reales.</p>
+            <div class="panel-heading wms-inventory-heading">
+              <div><h3>Existencias disponibles</h3><span id="wms-inventory-state" class="state-chip" data-state="warning" role="status">Consultando</span></div>
+              <div class="wms-view-picker" role="group" aria-label="Vista del inventario" hidden>
+                <button type="button" data-inventory-view="data" aria-pressed="true" aria-controls="wms-inventory-data">Tabla</button>
+                <button type="button" data-inventory-view="cards" aria-pressed="false" aria-controls="wms-inventory-cards">Fichas</button>
+              </div>
+            </div>
+            <div id="wms-inventory-data" class="table-wrap"><table class="users-table wms-inventory-table"><thead><tr><th scope="col">Producto</th><th scope="col">SKU</th><th scope="col">Disponible</th><th scope="col">Precio demo</th></tr></thead><tbody id="wms-inventory-body"></tbody></table></div>
+            <div id="wms-inventory-cards" class="wms-product-grid" aria-label="Fichas de productos" hidden></div>
+            <p id="wms-inventory-empty" class="panel-note" hidden></p>
+            <p class="panel-note">Inventario de demostración de Azure. Las imágenes son referenciales.</p>
           </article>
         </div>
       </section>
