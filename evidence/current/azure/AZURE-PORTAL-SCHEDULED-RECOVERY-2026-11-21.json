@@ -1,0 +1,92 @@
+{
+  "capturedUTC": "2026-11-21T21:10:27.028500+00:00",
+  "backup": "postgres/20261121-daily.json",
+  "backupCreatedUTC": "2026-11-21T08:01:29.257033+00:00",
+  "verifiedManifest": {
+    "object": "postgres/20261121-daily.json",
+    "source_started_utc": "2026-11-21T08:01:29.257033+00:00",
+    "archive_sha256": "79c604f1185cea067b5d3f9eeeaef9c5f08710011a7d0069d2798077d9c6b1ba",
+    "cipher_sha256": "c2ddebc29b3014484bc6eafd50a40d701a2eecd665c433f8b3b0909588754fd4",
+    "archive_bytes": 72834
+  },
+  "release": "20261121-portal-auto-refresh",
+  "destination": "workstation loopback, isolated from production",
+  "azureBlobAndKeyVault": true,
+  "archiveAndCiphertextSHA256Verified": true,
+  "awsApisDuringExercise": false,
+  "externalIntegrationsEnabled": false,
+  "postgreSQL": {
+    "tables": 21,
+    "orders": 2,
+    "outbox": 2,
+    "listen": "127.0.0.1",
+    "engine": "17.5"
+  },
+  "restrictedRoleChecks": {
+    "runtimeCannotCreateTables": true,
+    "runtimeCannotChangeMigrations": true,
+    "backupCannotChangeOrders": true,
+    "backupIncludesOrdersAndSequences": true
+  },
+  "ordersSeenByERP": 2,
+  "http": {
+    "http_health": 200,
+    "http_ready": 200,
+    "erp_without_session": 401,
+    "admin_csrf": 200,
+    "admin_login": 200,
+    "admin_session": 200,
+    "restored_orders": 200,
+    "erp_html": 200,
+    "erp_overview": 200,
+    "erp_sales": 200,
+    "erp_finance": 200,
+    "create_erp_partner": 201,
+    "create_erp_sale": 201,
+    "create_erp_purchase": 201,
+    "queue_purchase_receipt": 202,
+    "create_erp_expense": 201,
+    "settle_erp_expense": 200,
+    "create_isolated_user": 201,
+    "send_internal_mail": 201,
+    "warehouse_csrf": 200,
+    "warehouse_login": 200,
+    "warehouse_session": 200,
+    "warehouse_finance_forbidden": 403,
+    "receive_internal_mail": 200,
+    "read_internal_mail": 200
+  },
+  "seconds": {
+    "downloadAndDecrypt": 8.25,
+    "isolatedPostgresRestored": 16.047,
+    "erpAndChecksCompleted": 26.063
+  },
+  "ephemeralClusterRemoved": true,
+  "portal": {
+    "checkedUTC": "2026-11-21T21:19:46.261Z",
+    "anonymousProtectedRoutes": 4,
+    "azureBackup": {
+      "name": "20261121-daily.json",
+      "bytes": 97878,
+      "available": 5,
+      "encryptedEnvelope": true,
+      "manifestSHA256Matches": true
+    },
+    "manualAWSBackup": {
+      "name": "20261121T211956Z-7ef7db07053e.json",
+      "orders": 2,
+      "outbox": 2,
+      "downloadSHA256Matches": true,
+      "bytes": 1973,
+      "encryptionAtRest": "AES256",
+      "lifecycleRule": "ExpireManualPostgresCheckpoints",
+      "expiresAtUTC": "2026-12-22T00:00:00Z"
+    }
+  },
+  "dailySchedule": {
+    "timezone": "America/Lima",
+    "scheduledAt": "03:00",
+    "state": "Success",
+    "lastExecutionUTC": "2026-11-21T08:01:32.805Z"
+  }
+}
