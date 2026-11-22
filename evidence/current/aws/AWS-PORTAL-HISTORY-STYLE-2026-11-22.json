@@ -1,0 +1,86 @@
+{
+  "revision": "20261122-portal-history-contrast",
+  "sha256": "d547b023a8ae262548c0fc023ccf31e5fbee8af68f45099eeafec5f4cbbcf177",
+  "directChanges": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/Policies/0/PolicyDocument"
+      ]
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/LaunchTemplateData"
+      ]
+    }
+  ],
+  "availability": {
+    "samples": 30,
+    "http200": 30,
+    "first": {
+      "ready": 200,
+      "state": "UPDATE_IN_PROGRESS",
+      "utc": "2026-11-22T19:34:47.4031502Z",
+      "revision": "20261122-portal-history-contrast"
+    },
+    "last": {
+      "ready": 200,
+      "state": "UPDATE_COMPLETE",
+      "utc": "2026-11-22T19:50:34.7810552Z",
+      "revision": "20261122-portal-history-contrast"
+    }
+  },
+  "targets": {
+    "commandId": "6a830627-cc05-45d2-937e-cf594672f42a",
+    "nodes": [
+      {
+        "ready": 200,
+        "assets": {
+          "assets/platform-console.js": "1997f569aa73343dfb3514db8230a40587a029ec51981a3a0a15e631c46ec6b0",
+          "assets/portal-interface.css": "ec9b3a92363553501f802ea1ad48b4c20e4cce8d9583da9bc6110ab3319486a1",
+          "assets/voice-history.js": "43c453c6a5f0338817e4e9809a41101e09c75f89d3c8d7a08e6a258263dbd0a6",
+          "platform/index.html": "34a906f39acbb7a66ce2ce822594049804b315026eb9ca1472ce89be5bae79c8"
+        },
+        "zone": "us-east-2b",
+        "release": "20261122-portal-history-contrast"
+      },
+      {
+        "ready": 200,
+        "assets": {
+          "assets/platform-console.js": "1997f569aa73343dfb3514db8230a40587a029ec51981a3a0a15e631c46ec6b0",
+          "assets/portal-interface.css": "ec9b3a92363553501f802ea1ad48b4c20e4cce8d9583da9bc6110ab3319486a1",
+          "assets/voice-history.js": "43c453c6a5f0338817e4e9809a41101e09c75f89d3c8d7a08e6a258263dbd0a6",
+          "platform/index.html": "34a906f39acbb7a66ce2ce822594049804b315026eb9ca1472ce89be5bae79c8"
+        },
+        "zone": "us-east-2a",
+        "release": "20261122-portal-history-contrast"
+      }
+    ]
+  },
+  "browser": {
+    "utc": "2026-11-22T19:50:54.373Z",
+    "environment": "production",
+    "sidebarAndTheme": true,
+    "voiceCalls": 2,
+    "adminLightAndDark": true,
+    "metricsStatus": "ok",
+    "historicalMetrics": 1173,
+    "mobileFits": true
+  },
+  "tests": {
+    "portal": 31,
+    "platform": 31,
+    "voice": 16
+  },
+  "dateScope": {
+    "timeZone": "America/Lima",
+    "calendarDaysPerQuery": 31,
+    "cloudWatchAggregationSeconds": 3600,
+    "callsPageSize": 30
+  }
+}
