@@ -1,6 +1,9 @@
 import { createPortalApi } from "/assets/portal-api.mjs";
 import { startVisibleRefresh } from "/assets/visible-refresh.mjs";
-import { maxRequestsPerSecond, runRequestLoad } from "/assets/request-load.mjs";
+import * as requestLoad from "/assets/request-load.mjs";
+
+const { maxRequestsPerSecond, maxRunSeconds, runRequestLoad } = requestLoad;
+const maxRequestsPerRun = requestLoad.maxRequestsPerRun ?? maxRequestsPerSecond * maxRunSeconds;
 
 (() => {
   // Older cached pages still load this controller as a separate asset.
@@ -447,7 +450,17 @@ import { maxRequestsPerSecond, runRequestLoad } from "/assets/request-load.mjs";
         }
       });
       $("#technical-wms-probe").addEventListener("click", probePrivateWms);
-      $("#scaling-form").addEventListener("submit", startScalingLoad);
+      const scalingForm = $("#scaling-form");
+      function updateLoadLimit() {
+        const minutes = Math.min(5, Math.max(1, scalingForm.elements.minutes.valueAsNumber || 1));
+        const max = Math.min(maxRequestsPerSecond, Math.floor(maxRequestsPerRun / (minutes * 60)));
+        scalingForm.elements.rate.max = max;
+        const hint = $("#scaling-load-limit");
+        if (hint) hint.textContent = `Con ${minutes} min puedes enviar hasta ${max} solicitudes/s.`;
+      }
+      updateLoadLimit();
+      scalingForm.elements.minutes.addEventListener("input", updateLoadLimit);
+      scalingForm.addEventListener("submit", startScalingLoad);
       $("#scaling-stop").addEventListener("click", () => scalingRun?.abort());
       document.addEventListener("visibilitychange", () => { if (document.hidden) scalingRun?.abort(); });
       window.addEventListener("pagehide", () => scalingRun?.abort());

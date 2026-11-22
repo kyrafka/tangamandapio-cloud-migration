@@ -118,8 +118,9 @@ y se registra en la auditoría.
   `/<proyecto>/dr/blob-read/portal`. La autorización actual vence el 12 de
   diciembre de 2026. Renueva ese parámetro antes de su vencimiento. La
   autorización de escritura del respaldo diario se renueva por separado.
-- **Carga y autoescalado** permite elegir de 1 a 95 solicitudes por segundo
-  durante 1 a 5 minutos. Envía solicitudes `GET /api` desde el navegador y
+- **Carga y autoescalado** permite elegir hasta 115 solicitudes por segundo
+  durante 1 a 4 minutos y hasta 95 durante 5 minutos. Envía solicitudes
+  `GET /api` desde el navegador y
   muestra el ritmo efectivo, las respuestas y la capacidad deseada y sana del
   ASG. AWS ajusta la capacidad a través de sus políticas. El ensayo se detiene
   al salir de la vista, ocultar la pestaña, encontrar un bloqueo de tráfico o

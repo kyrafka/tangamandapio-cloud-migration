@@ -146,7 +146,7 @@
                 <h3>Enviar solicitudes</h3>
                 <form id="scaling-form" class="admin-form">
                   <div class="admin-load-fields">
-                    <label>Solicitudes por segundo<input type="number" name="rate" min="1" max="95" step="1" value="20" required></label>
+                    <label>Solicitudes por segundo<input type="number" name="rate" min="1" max="115" step="1" value="20" aria-describedby="scaling-load-limit" required></label>
                     <label>Duración (minutos)<input type="number" name="minutes" min="1" max="5" step="1" value="1" required></label>
                   </div>
                   <div class="admin-load-actions">
@@ -154,6 +154,7 @@
                     <button type="button" id="scaling-stop" class="admin-button secondary" disabled>Detener carga</button>
                   </div>
                 </form>
+                <p id="scaling-load-limit" class="admin-form-hint"></p>
                 <p class="admin-form-hint">Mantén esta pestaña visible durante el ensayo. Las solicitudes son de solo lectura.</p>
                 <p id="scaling-traffic" role="status"></p>
               </section>

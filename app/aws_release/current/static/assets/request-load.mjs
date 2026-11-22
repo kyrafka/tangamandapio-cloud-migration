@@ -1,10 +1,12 @@
-export const maxRequestsPerSecond = 95;
+export const maxRequestsPerSecond = 115;
 export const maxRunSeconds = 300;
-const maxInFlight = 24;
+export const maxRequestsPerRun = 28500;
+const maxInFlight = 40;
 
 export async function runRequestLoad({ rate, seconds, signal, progress = () => {} }) {
   if (!Number.isInteger(rate) || rate < 1 || rate > maxRequestsPerSecond ||
-      !Number.isInteger(seconds) || seconds < 1 || seconds > maxRunSeconds) {
+      !Number.isInteger(seconds) || seconds < 1 || seconds > maxRunSeconds ||
+      rate * seconds > maxRequestsPerRun) {
     throw new RangeError("Carga fuera de los límites del ensayo.");
   }
   const pending = new AbortController();
