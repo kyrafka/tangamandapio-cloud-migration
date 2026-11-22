@@ -1,6 +1,6 @@
 """Authenticated operational read endpoints for the portal and administration consoles."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 import json
 import socket
 from urllib.request import Request, urlopen
@@ -9,6 +9,25 @@ from flask import jsonify, request
 
 from admin_cloud_tools import technical_test_results
 from cloud_observability import collect_cloudwatch_metrics
+
+
+LIMA = timezone(timedelta(hours=-5))
+
+
+def history_range(start, end):
+    """Convert inclusive calendar dates in Lima to a half-open UTC interval."""
+    if start is None and end is None:
+        return None
+    if not start or not end or len(start) != 10 or len(end) != 10:
+        raise ValueError("invalid_history_range")
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+    if first.isoformat() != start or last.isoformat() != end:
+        raise ValueError("invalid_history_range")
+    if not first <= last <= datetime.now(LIMA).date() or (last - first).days >= 31:
+        raise ValueError("invalid_history_range")
+    midnight = datetime.combine(first, time.min, LIMA)
+    days = (last - first).days + 1
+    return midnight.astimezone(timezone.utc), (midnight + timedelta(days=days)).astimezone(timezone.utc)
 
 
 def _queue_health(service_url, key, inventory_url):
@@ -65,9 +84,19 @@ def register_platform_routes(app, database_path, *, connect, require_roles, azur
     def platform_overview():
         try:
             window_minutes = int(request.args.get("window", "60"))
-            cloudwatch = collect_cloudwatch_metrics(app.config, window_minutes)
         except (TypeError, ValueError):
             return jsonify(error="invalid_metrics_window"), 400
+        start, end = request.args.get("from"), request.args.get("to")
+        try:
+            dates = history_range(start, end)
+        except ValueError:
+            return jsonify(error="invalid_history_range"), 400
+        try:
+            cloudwatch = collect_cloudwatch_metrics(app.config, window_minutes, history=dates)
+        except ValueError:
+            return jsonify(error="invalid_metrics_window"), 400
+        if dates:
+            cloudwatch["history"] = {"from": start, "to": end}
         return jsonify(
             cloudwatch=cloudwatch,
             application={

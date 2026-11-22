@@ -5,7 +5,7 @@ import re
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -627,6 +627,50 @@ class PlatformConsoleTestCase(unittest.TestCase):
 
     def test_unsupported_metrics_window_is_rejected(self):
         self.assertEqual(self.admin.get("/api/platform/overview?window=5").status_code, 400)
+
+    def test_metrics_resolve_inclusive_lima_dates(self):
+        day = (datetime.now(timezone.utc) - timedelta(days=4)).date()
+        response = self.admin.get(f"/api/platform/overview?from={day}&to={day}")
+        self.assertEqual(response.status_code, 200)
+        call = self.cloudwatch.calls[0]
+        self.assertEqual(call["StartTime"].isoformat(), f"{day}T05:00:00+00:00")
+        self.assertEqual(call["EndTime"] - call["StartTime"], timedelta(days=1))
+        self.assertEqual(call["MetricDataQueries"][0]["MetricStat"]["Period"], 3600)
+        self.assertEqual(response.json["cloudwatch"]["history"], {"from": str(day), "to": str(day)})
+        for query in (f"from={day}", f"from={day}&to=bad", f"from=2000-01-01&to={day}"):
+            self.assertEqual(self.admin.get(f"/api/platform/overview?{query}").status_code, 400)
+        self.assertEqual(len(self.cloudwatch.calls), 1)
+
+    def test_voice_history_filters_by_call_date_and_participant_before_pagination(self):
+        admin_id = self.admin.get("/api/auth/session").json["user"]["id"]
+        with portal.connect(self.app.config["DATABASE_PATH"]) as connection:
+            calls = [
+                ("before", admin_id, self.sales_id, "2020-01-02T04:59:59+00:00"),
+                ("start", admin_id, self.sales_id, "2020-01-02T05:00:00+00:00"),
+                ("other", self.sales_id, self.operations_id, "2020-01-02T05:10:00+00:00"),
+                ("end", self.sales_id, admin_id, "2020-01-03T04:59:59+00:00"),
+                ("after", admin_id, self.sales_id, "2020-01-03T05:00:00+00:00"),
+            ]
+            calls.extend(
+                (f"middle-{minute}", admin_id, self.sales_id, f"2020-01-02T08:{minute:02}:00+00:00")
+                for minute in range(29)
+            )
+            for call, caller, callee, stamp in calls:
+                connection.execute(
+                    "INSERT INTO voice_calls(id, caller_user_id, callee_user_id, status, created_at, updated_at) "
+                    "VALUES (?, ?, ?, 'ended', ?, ?)",
+                    (call, caller, callee, stamp, stamp),
+                )
+            connection.commit()
+        path = "/api/voice/calls?from=2020-01-02&to=2020-01-02"
+        result = self.admin.get(path).json
+        self.assertEqual([item["id"] for item in result["calls"]], ["end", *(f"middle-{i}" for i in range(28, -1, -1))])
+        self.assertTrue(result["has_more"])
+        last = self.admin.get(path + "&page=2").json
+        self.assertEqual([item["id"] for item in last["calls"]], ["start"])
+        self.assertFalse(last["has_more"])
+        self.assertIsInstance(self.admin.get("/api/voice/calls").json, list)
+        self.assertEqual(self.admin.get("/api/voice/calls?from=2020-01-02").status_code, 400)
 
     def test_administration_console_is_an_admin_only_full_view(self):
         admin_response = self.admin.get("/administracion")

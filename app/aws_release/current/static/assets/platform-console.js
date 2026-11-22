@@ -30,6 +30,7 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
   let inventorySnapshot;
   let inventoryAvailable = false;
   let demoSubmitting = false;
+  let overviewVersion = 0;
   // Orden por filas del mosaico de cuatro columnas wms-products-v1.webp.
   const productPhotoSlots = [
     "SKU-ARROZ-001", "SKU-AZUCAR-001", "SKU-ACEITE-001", "SKU-CAFE-001",
@@ -60,6 +61,7 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     invalid_demo_sku: "El SKU no pertenece al catálogo de laboratorio.",
     invalid_demo_quantity: "La cantidad debe ser un número entero entre 1 y 10.",
     insufficient_demo_stock: "No hay suficiente stock demo para esa cantidad.",
+    invalid_history_range: "Elige dos fechas válidas en orden, hasta hoy y con un máximo de 31 días.",
     azure_inventory_unavailable: "No se pudo consultar el inventario de Azure; no se creó el pedido.",
   });
 
@@ -102,13 +104,13 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     for (const [label, key, render, note] of definitions) {
       const data = metric(cloudwatch, key);
       const tile = element("article", "metric-tile");
-      tile.append(element("small", "", label), element("strong", "", data ? render(data.latest) : "No configurado"));
+      tile.append(element("small", "", label), element("strong", "", data ? data.latest == null ? "Sin datos" : render(data.latest) : "No configurado"));
       tile.append(element("span", "", data?.points?.length ? note : `${note} · sin serie reciente`));
       container.append(tile);
     }
   }
 
-  function renderChart(target, first, second, firstLabel, secondLabel, firstScale = (v) => v) {
+  function renderChart(target, first, second, firstLabel, secondLabel, interval, firstScale = (v) => v) {
     const container = $(target);
     container.replaceChildren();
     const seriesA = first?.points || [];
@@ -127,14 +129,21 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
       line.setAttribute("y1", String(y)); line.setAttribute("y2", String(y));
       line.setAttribute("class", "chart-grid"); svg.append(line);
     }
+    const timeStart = Date.parse(interval.start_at);
+    const timeEnd = Date.parse(interval.end_at);
+    const duration = timeEnd - timeStart;
+    const hasTimeline = Number.isFinite(duration) && duration > 0;
+    const step = interval.period_seconds * 1000;
     const pathFor = (points, scale) => {
       if (!points.length) return "";
-      const normalized = points.slice(-60);
-      const max = Math.max(1, ...normalized.map((point) => Math.max(0, scale(point.value))));
-      return normalized.map((point, index) => {
-        const x = 32 + (index / Math.max(1, normalized.length - 1)) * 592;
+      const max = Math.max(1, ...points.map((point) => Math.max(0, scale(point.value))));
+      return points.map((point, index) => {
+        const time = Date.parse(point.timestamp);
+        const fraction = hasTimeline && Number.isFinite(time) ? (time - timeStart) / duration : index / Math.max(1, points.length - 1);
+        const x = 32 + Math.max(0, Math.min(1, fraction)) * 592;
         const y = 128 - (Math.max(0, scale(point.value)) / max) * 104;
-        return `${index ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`;
+        const gap = index > 0 && hasTimeline && time - Date.parse(points[index - 1].timestamp) > step * 1.5;
+        return `${index && !gap ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}${!index || gap ? "l.1,0" : ""}`;
       }).join(" ");
     };
     for (const [points, scale, className, label] of [
@@ -145,6 +154,21 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
       const path = document.createElementNS(svg.namespaceURI, "path");
       path.setAttribute("d", pathFor(points, scale)); path.setAttribute("class", className);
       path.setAttribute("aria-label", label); svg.append(path);
+    }
+    if (hasTimeline) {
+      const tickFormat = new Intl.DateTimeFormat("es-PE", {
+        timeZone: "America/Lima", ...(interval.history && interval.history.from !== interval.history.to
+          ? { day: "numeric", month: "short" } : { hour: "2-digit", minute: "2-digit" }),
+      });
+      for (const fraction of [0, .25, .5, .75, 1]) {
+        const tick = document.createElementNS(svg.namespaceURI, "text");
+        tick.setAttribute("class", "chart-label");
+        tick.setAttribute("x", String(32 + fraction * 592));
+        tick.setAttribute("y", "151");
+        tick.setAttribute("text-anchor", fraction === 0 ? "start" : fraction === 1 ? "end" : "middle");
+        tick.textContent = tickFormat.format(timeStart + fraction * (duration - 1));
+        svg.append(tick);
+      }
     }
     const legend = element("div", "chart-legend");
     if (seriesA.length) legend.append(element("span", "legend-primary", firstLabel));
@@ -178,9 +202,11 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     source.dataset.state = cw.status === "ok" ? "ok" : cw.status === "unavailable" || cw.status === "access_denied" ? "error" : "warning";
     source.lastElementChild.textContent = sourceCopy;
     renderMetricTiles(cw);
-    renderChart("#traffic-chart", metric(cw, "alb_requests"), null, "Solicitudes", "");
-    renderChart("#latency-chart", metric(cw, "alb_p95"), metric(cw, "alb_5xx"), "Latencia p95", "Errores 5xx", (value) => Number(value));
-    $("#traffic-note").textContent = cw.status === "ok" ? `Ventana: ${cw.window_minutes} min. Los huecos representan periodos sin métricas publicadas, no tráfico inventado.` : sourceCopy;
+    renderChart("#traffic-chart", metric(cw, "alb_requests"), null, "Solicitudes", "", cw);
+    renderChart("#latency-chart", metric(cw, "alb_p95"), metric(cw, "alb_5xx"), "Latencia p95", "Errores 5xx", cw, (value) => Number(value));
+    const range = cw.history ? `${cw.history.from} a ${cw.history.to} · muestras de 1 h (Lima)` : `Últimos ${cw.window_minutes} min · hora de Lima`;
+    $("#traffic-note").textContent = cw.status === "ok" || cw.status === "partial"
+      ? `${range}. Los huecos indican periodos sin métricas publicadas.` : cw.history ? `${range}. ${sourceCopy}` : sourceCopy;
     $("#latency-note").textContent = cw.status === "ok" ? "Cada línea muestra su propia tendencia; no compares sus alturas. La latencia p95 se presenta en milisegundos en la tarjeta." : "No se generan valores de ejemplo cuando el proveedor no entrega métricas.";
 
     const capacity = $("#capacity-details"); capacity.replaceChildren();
@@ -198,8 +224,8 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     const database = $("#database-details"); database.replaceChildren();
     database.append(
       detailRow("Motor conectado", data.security.database === "postgresql" ? "PostgreSQL" : "SQLite · demo local"),
-      detailRow("CPU actual", latest(cw, "rds_cpu") === null ? "Sin datos" : formatted(latest(cw, "rds_cpu"), "%", 1)),
-      detailRow("Conexiones actuales", latest(cw, "rds_connections") === null ? "Sin datos" : formatted(latest(cw, "rds_connections"), "", 0)),
+      detailRow(cw.history ? "Última CPU del periodo" : "CPU actual", latest(cw, "rds_cpu") === null ? "Sin datos" : formatted(latest(cw, "rds_cpu"), "%", 1)),
+      detailRow(cw.history ? "Últimas conexiones del periodo" : "Conexiones actuales", latest(cw, "rds_connections") === null ? "Sin datos" : formatted(latest(cw, "rds_connections"), "", 0)),
     );
     setChip("#database-state", data.security.database === "postgresql" ? "RDS" : "Demo", data.security.database === "postgresql" ? "ok" : "warning");
 
@@ -636,18 +662,22 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     }
   }
 
+  async function refreshOverview() {
+    const version = ++overviewVersion;
+    const query = new URLSearchParams(state.history || { window: state.window });
+    const [data, azure] = await Promise.all([
+      request(`/api/platform/overview?${query}`),
+      request("/api/multicloud").catch(() => ({ status: "unavailable" })),
+    ]);
+    if (version === overviewVersion) renderOverview(data, azure);
+  }
+
   async function refresh() {
     if (state.loading) return;
     state.loading = true;
     $("#platform-refresh").disabled = true;
     try {
-      const [data, azure] = await Promise.all([
-        request(`/api/platform/overview?window=${state.window}`),
-        fetch("/api/multicloud", { credentials: "same-origin", cache: "no-store" })
-          .then((response) => response.json())
-          .catch(() => ({ status: "unavailable" })),
-      ]);
-      renderOverview(data, azure);
+      await refreshOverview();
       await refreshOutbox();
       await refreshInventory().catch(() => null);
       if (state.role === "admin") await refreshUsers();
@@ -670,8 +700,38 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
       for (const button of document.querySelectorAll("[data-window]")) {
         button.addEventListener("click", () => {
           state.window = Number(button.dataset.window);
+          state.history = null;
           for (const sibling of document.querySelectorAll("[data-window]")) sibling.setAttribute("aria-pressed", sibling === button ? "true" : "false");
-          refresh();
+          refreshOverview().catch((error) => announce(error.message));
+        });
+      }
+      const history = $("#metrics-history");
+      const historyForm = $("#metrics-history-form");
+      if (history && historyForm) {
+        history.hidden = false;
+        for (const field of historyForm.querySelectorAll('input[type="date"]')) {
+          field.max = new Intl.DateTimeFormat("fr-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format();
+        }
+        historyForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const selection = Object.fromEntries(new FormData(historyForm));
+          const button = historyForm.querySelector("button");
+          const oldSelection = state.history;
+          state.history = selection;
+          button.disabled = true;
+          try {
+            await refreshOverview();
+            if (state.history === selection) {
+              for (const preset of document.querySelectorAll("[data-window]")) preset.setAttribute("aria-pressed", "false");
+            }
+          } catch (error) {
+            if (state.history === selection) {
+              state.history = oldSelection;
+              announce(error.message);
+            }
+          } finally {
+            button.disabled = false;
+          }
         });
       }
       $("#platform-refresh").addEventListener("click", refresh);

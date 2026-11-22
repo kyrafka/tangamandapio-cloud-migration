@@ -24,6 +24,15 @@
         <div class="section-heading"><div><p class="eyebrow">Visibilidad operativa</p><h2 id="health-heading">Servicios y tráfico</h2><p class="section-copy">Métricas agregadas del balanceador y servicios administrados; el detalle por proceso se identifica por separado.</p></div>
           <div class="section-actions"><div class="range-picker" role="group" aria-label="Periodo de métricas"><button type="button" data-window="60" aria-pressed="true">1 h</button><button type="button" data-window="360" aria-pressed="false">6 h</button><button type="button" data-window="1440" aria-pressed="false">24 h</button></div><button id="platform-refresh" class="platform-button" type="button">Actualizar</button></div>
         </div>
+        <details id="metrics-history" class="history-picker" hidden>
+          <summary>Histórico por fecha</summary>
+          <form id="metrics-history-form" class="history-form">
+            <label>Desde<input type="date" name="from" required /></label>
+            <label>Hasta<input type="date" name="to" required /></label>
+            <button class="platform-button" type="submit">Consultar histórico</button>
+            <small>Hora de Lima · hasta 31 días por consulta.</small>
+          </form>
+        </details>
         <div id="cloud-source" class="source-state" data-state="loading"><span class="status-dot"></span><span>Consultando CloudWatch…</span></div>
         <div id="cloud-metrics" class="platform-metrics" aria-live="polite"></div>
         <div class="platform-charts">

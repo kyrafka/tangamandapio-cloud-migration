@@ -39,7 +39,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import admin_cloud_tools
-from platform_routes import register_platform_routes
+from platform_routes import history_range, register_platform_routes
 from erp_service import (
     SKU_PATTERN,
     grant_default_erp_roles,
@@ -2011,7 +2011,20 @@ def create_app(test_config=None):
     @require_roles(*VOICE_ROLES)
     def list_voice_calls():
         user = g.portal_user
-        expire_voice_calls(database_path)
+        try:
+            dates = history_range(request.args.get("from"), request.args.get("to"))
+            page = int(request.args.get("page", "1"))
+            if not 1 <= page <= 1000:
+                raise ValueError("invalid_history_page")
+        except ValueError:
+            return jsonify(error="invalid_history_range"), 400
+        args = (user["id"], user["id"])
+        if dates:
+            selection = "AND vc.created_at >= ? AND vc.created_at < ? ORDER BY vc.created_at DESC, vc.id DESC LIMIT 31 OFFSET ?"
+            args += (dates[0].isoformat(), dates[1].isoformat(), (page - 1) * 30)
+        else:
+            expire_voice_calls(database_path)
+            selection = "ORDER BY vc.updated_at DESC LIMIT 30"
         with connect(database_path) as connection:
             rows = connection.execute(
                 """
@@ -2021,13 +2034,14 @@ def create_app(test_config=None):
                 FROM voice_calls AS vc
                 JOIN portal_users AS caller ON caller.id = vc.caller_user_id
                 JOIN portal_users AS callee ON callee.id = vc.callee_user_id
-                WHERE vc.caller_user_id = ? OR vc.callee_user_id = ?
-                ORDER BY vc.updated_at DESC
-                LIMIT 30
-                """,
-                (user["id"], user["id"]),
+                WHERE (vc.caller_user_id = ? OR vc.callee_user_id = ?)
+                """ + selection,
+                args,
             ).fetchall()
-        return jsonify([voice_call_for_view(row, user["id"]) for row in rows])
+        calls = [voice_call_for_view(row, user["id"]) for row in rows[:30]]
+        if dates:
+            return jsonify(calls=calls, has_more=len(rows) > 30 and page < 1000, page=page)
+        return jsonify(calls)
 
     @app.post("/api/voice/calls")
     @require_roles(*VOICE_ROLES)

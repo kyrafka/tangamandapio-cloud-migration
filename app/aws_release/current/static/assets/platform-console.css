@@ -51,7 +51,7 @@
 .source-state[data-state="ok"] { color: var(--platform-good); }
 .source-state[data-state="error"] { color: var(--platform-bad); }
 .status-dot { background: currentColor; border-radius: 50%; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent); height: 8px; width: 8px; }
-.platform-metrics { display: grid; gap: 11px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 13px; }
+.platform-metrics { display: grid; gap: 11px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 13px; }
 .metric-tile, .platform-panel { background: var(--platform-surface); border: 1px solid var(--platform-line); border-radius: 13px; min-width: 0; }
 .metric-tile { padding: 16px; }
 .metric-tile small { color: var(--platform-muted); display: block; font-size: .76rem; line-height: 1.35; min-height: 2em; }

@@ -60,7 +60,12 @@
       label.className = "nav-label";
       label.textContent = "Seguimiento de pedidos";
       link.title = label.textContent;
-      link.append(label);
+      link.setAttribute("aria-label", label.textContent);
+      const icon = document.createElement("span");
+      icon.className = "nav-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h16"/><path d="m7 10 3 3 5-5"/></svg>';
+      link.append(icon, label);
       nav.insertBefore(link, nav.querySelector(".admin-nav-label") || null);
     }
   }

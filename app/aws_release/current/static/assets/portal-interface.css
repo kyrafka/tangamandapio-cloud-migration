@@ -160,6 +160,47 @@ body { font-family: var(--ui-font); }
 #root .app-shell .sidebar :is(nav button, nav a)[aria-current="page"] :is(.nav-label, .nav-icon) { color: #112c22; }
 #root .app-shell .sidebar :is(button, a):focus-visible { outline-color: var(--ui-mint); }
 #root .app-shell .sidebar .admin-nav-label { border-color: #3b574a; }
+#root .workspace .sidebar-toggle {
+  min-height: 44px;
+  border-radius: 12px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  cursor: pointer;
+  box-shadow: var(--ui-shadow);
+  transition: background-color var(--ui-quick), color var(--ui-quick), transform var(--ui-quick) var(--ui-ease) !important;
+}
+#root .workspace .sidebar-toggle:hover { background: var(--ui-soft); color: var(--ui-accent); }
+#root .workspace .sidebar-toggle:active { transform: scale(.95); }
+#root .sidebar .portal-theme-toggle { gap: 10px; min-height: 44px; border-radius: 10px; cursor: pointer; background: transparent; }
+#root .sidebar .portal-theme-toggle::after { content: "Modo oscuro"; font-weight: 650; }
+:root[data-theme="dark"] #root .sidebar .portal-theme-toggle::after { content: "Modo claro"; }
+#root .sidebar-collapsed .sidebar .portal-theme-toggle::after { display: none; }
+#root .sidebar .portal-theme-toggle:hover { background: var(--ui-forest-raised); }
+#root .workspace :is(.voice-history, .voice-content > .card, .voice-hero) { padding: clamp(16px, 2vw, 23px); }
+#root .workspace .voice-content { align-items: start; }
+#root .workspace :is(.voice-content, .voice-history) .eyebrow { color: var(--ui-accent); }
+
+:root:not([data-theme="dark"]) #root .app-shell .sidebar {
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+  color: var(--ui-ink);
+}
+:root:not([data-theme="dark"]) #root .sidebar :is(.logo strong, .identity strong) { color: var(--ui-ink); }
+:root:not([data-theme="dark"]) #root .sidebar :is(small, .sidebar-group-label) { color: var(--ui-muted); }
+:root:not([data-theme="dark"]) #root .sidebar :is(.identity, .avatar, .logo > span) { background: var(--ui-soft); border-color: var(--ui-line); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(nav button, nav a, .sidebar-action, .portal-theme-toggle) { color: var(--ui-ink); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(.nav-icon, .sidebar-action svg, .avatar, .logo > span) { color: var(--ui-accent); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(nav button, nav a, .sidebar-action, .portal-theme-toggle):hover { background: var(--ui-soft); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(nav button, nav a)[aria-current="page"] {
+  background: var(--ui-soft);
+  box-shadow: inset 3px 0 var(--ui-accent);
+}
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(nav button, nav a)[aria-current="page"] :is(.nav-label, .nav-icon) { color: var(--ui-accent); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar .admin-nav-label { border-color: var(--ui-line); }
+:root:not([data-theme="dark"]) #root .app-shell .sidebar :is(button, a):focus-visible { outline-color: var(--ui-focus); }
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  #root .app-shell { transition: grid-template-columns 250ms var(--ui-ease) !important; }
+}
 #root .app-shell .workspace { color: var(--ui-ink); }
 #root .workspace .topbar {
   align-items: center;
@@ -255,6 +296,44 @@ body { font-family: var(--ui-font); }
 .admin-page .admin-summary strong { color: var(--ui-on-forest); font-variant-numeric: tabular-nums; }
 .admin-page .admin-summary :is(small, .admin-summary-icon) { color: var(--ui-on-forest-muted); }
 .admin-page .admin-summary > div + div { border-color: #577365; }
+:root:not([data-theme="dark"]) .admin-page .admin-intro {
+  background: linear-gradient(100deg, var(--ui-surface) 25%, transparent), radial-gradient(circle, #17624621 1px, transparent 1.3px) right top / 13px 13px, var(--ui-soft);
+  color: var(--ui-ink);
+  border-color: var(--ui-line);
+}
+:root:not([data-theme="dark"]) .admin-page .admin-intro :is(h1, .admin-summary strong) { color: var(--ui-ink); }
+:root:not([data-theme="dark"]) .admin-page .admin-intro :is(.eyebrow, .admin-summary-icon) { color: var(--ui-accent); }
+:root:not([data-theme="dark"]) .admin-page .admin-intro > div:first-child > p:last-child,
+:root:not([data-theme="dark"]) .admin-page .admin-intro .admin-summary small { color: var(--ui-muted); }
+:root:not([data-theme="dark"]) .admin-page .admin-summary { background: var(--ui-surface); }
+:root:not([data-theme="dark"]) .admin-page .admin-summary,
+:root:not([data-theme="dark"]) .admin-page .admin-summary > div + div { border-color: var(--ui-line); }
+.admin-page .admin-table select { width: 100%; min-width: 8.6rem; }
+.admin-page .admin-table-actions { align-items: center; }
+
+.history-picker {
+  margin-block: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 13px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+}
+.history-picker summary { cursor: pointer; padding: 12px 16px; min-height: 44px; color: var(--ui-accent); font-weight: 700; }
+.history-picker[open] summary { border-bottom: 1px solid var(--ui-line); }
+.history-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding: 13px 16px; }
+.history-form label { display: grid; gap: 5px; min-width: 0; font-size: .8rem; font-weight: 650; }
+.history-form input, .voice-history-picker button { min-height: 44px; padding: 8px 10px; border: 1px solid var(--ui-line); border-radius: 8px; background: var(--ui-page); color: var(--ui-ink); font: inherit; }
+.history-form small, .voice-history-picker [role="status"] { color: var(--ui-muted); font-size: .8rem; }
+.history-form small { flex-basis: 100%; }
+.voice-history-picker button { cursor: pointer; }
+.voice-history-picker button:hover:not(:disabled) { background: var(--ui-soft); }
+.voice-history-picker [role="status"] { margin: 0; padding-inline: 16px; }
+.voice-history-picker [role="status"]:empty { display: none; }
+.voice-history-picker .table-wrap { margin: 12px 16px; overflow-x: auto; }
+.voice-history-picker .table-wrap[hidden], .voice-history-picker .history-pages[hidden] { display: none; }
+.voice-history-picker table { min-width: 530px; }
+.voice-history-picker .history-pages { display: flex; align-items: center; gap: 10px; padding: 0 16px 12px; }
+.voice-history-picker { margin-bottom: 20px; }
 .admin-page :is(.admin-nav, .admin-card),
 .platform-body :is(.erp-card, .erp-kpi, .platform-panel, .chart-panel) {
   border-radius: var(--ui-radius);

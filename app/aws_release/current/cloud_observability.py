@@ -80,17 +80,31 @@ def build_queries(config, period):
     return queries
 
 
-def collect_cloudwatch_metrics(config, window_minutes=60, now=None):
+def collect_cloudwatch_metrics(config, window_minutes=60, now=None, history=None):
     """Return CloudWatch datapoints without leaking provider error details."""
     if window_minutes not in WINDOWS:
         raise ValueError("unsupported_metrics_window")
-    period = 60 if window_minutes == 60 else 300 if window_minutes == 360 else 3600
+    end_time = now or datetime.now(timezone.utc)
+    if end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=timezone.utc)
+    period = {60: 60, 360: 300, 1440: 3600}[window_minutes]
+    start_time = end_time - timedelta(minutes=window_minutes)
+    if history is not None:
+        start_time, last_day_end = history
+        end_time = min(end_time, last_day_end)
+        period = 3600
+        window_minutes = int((last_day_end - start_time).total_seconds() / 60)
+    interval = {
+        "window_minutes": window_minutes,
+        "period_seconds": period,
+        "start_at": start_time.isoformat(),
+        "end_at": end_time.isoformat(),
+    }
     queries = build_queries(config, period)
     if not queries:
         return {
             "status": "not_configured",
-            "window_minutes": window_minutes,
-            "period_seconds": period,
+            **interval,
             "metrics": {},
         }
 
@@ -101,12 +115,9 @@ def collect_cloudwatch_metrics(config, window_minutes=60, now=None):
 
             region = config.get("CLOUDWATCH_REGION_NAME") or config.get("AWS_REGION_NAME") or None
             client = boto3.client("cloudwatch", region_name=region)
-        end_time = now or datetime.now(timezone.utc)
-        if end_time.tzinfo is None:
-            end_time = end_time.replace(tzinfo=timezone.utc)
         response = client.get_metric_data(
             MetricDataQueries=queries,
-            StartTime=end_time - timedelta(minutes=window_minutes),
+            StartTime=start_time,
             EndTime=end_time,
             ScanBy="TimestampAscending",
         )
@@ -115,8 +126,7 @@ def collect_cloudwatch_metrics(config, window_minutes=60, now=None):
         status = "access_denied" if error_code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation"} else "unavailable"
         return {
             "status": status,
-            "window_minutes": window_minutes,
-            "period_seconds": period,
+            **interval,
             "metrics": {},
         }
 
@@ -140,7 +150,6 @@ def collect_cloudwatch_metrics(config, window_minutes=60, now=None):
     has_datapoints = any(item["points"] for item in metrics.values())
     return {
         "status": "partial" if partial_data else "ok" if has_datapoints else "no_data",
-        "window_minutes": window_minutes,
-        "period_seconds": period,
+        **interval,
         "metrics": metrics,
     }
