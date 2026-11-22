@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import os
 import re
 import tempfile
@@ -131,6 +133,26 @@ class StaticCachePolicyTests(unittest.TestCase):
             self.assertNotIn(b"data-landing-art", page.data)
         finally:
             page.close()
+
+    def test_admin_replaces_older_cached_document_and_serves_matching_script(self):
+        csrf = self.client.get("/api/auth/session").get_json()["csrf_token"]
+        self.assertEqual(self.client.post(
+            "/api/auth/login",
+            json={"username": "admin@cache.test", "password": "Cache-Policy-Test-Only-2026!"},
+            headers={"X-CSRF-Token": csrf},
+        ).status_code, 200)
+
+        with self.client.get("/administracion", headers={
+            "If-Modified-Since": "Thu, 01 Jan 2026 00:00:00 GMT",
+            "If-None-Match": "*",
+        }) as page:
+            self.assertEqual(page.status_code, 200)
+            self.assertEqual(page.headers["Cache-Control"], "private, no-store")
+            self.assertIn(b'id="scaling-stop"', page.data)
+            script = re.search(rb'<script type="module">(.*?)</script>', page.data, re.S)
+            self.assertIsNotNone(script)
+            digest = base64.b64encode(hashlib.sha256(script[1]).digest()).decode("ascii")
+            self.assertIn(f"'sha256-{digest}'", page.headers["Content-Security-Policy"])
 
     def test_admin_and_platform_pages_reference_existing_styles(self):
         csrf = self.client.get("/api/auth/session").get_json()["csrf_token"]

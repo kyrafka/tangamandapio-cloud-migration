@@ -1,8 +1,25 @@
-import { createPortalApi } from "./portal-api.mjs";
-import { startVisibleRefresh } from "./visible-refresh.mjs";
-import { maxRequestsPerSecond, runRequestLoad } from "./request-load.mjs";
+import { createPortalApi } from "/assets/portal-api.mjs";
+import { startVisibleRefresh } from "/assets/visible-refresh.mjs";
+import { maxRequestsPerSecond, runRequestLoad } from "/assets/request-load.mjs";
 
 (() => {
+  // Older cached pages still load this controller as a separate asset.
+  if (!document.querySelector("#scaling-stop")) {
+    const current = new URL(window.location.href);
+    if (!current.searchParams.has("actualizar-vista")) {
+      const fresh = new URL("/administracion?actualizar-vista=1", current.origin);
+      window.location.replace(fresh);
+    } else {
+      const warning = document.querySelector("#admin-notice");
+      if (warning) {
+        warning.textContent = "La vista quedó desactualizada. Abre Administración desde el portal.";
+        warning.dataset.tone = "error";
+        warning.hidden = false;
+      }
+    }
+    return;
+  }
+
   const roleLabels = {
     admin: "Administrador",
     operations: "Operaciones TI",

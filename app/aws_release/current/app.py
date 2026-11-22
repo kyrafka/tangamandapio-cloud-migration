@@ -585,9 +585,11 @@ def create_app(test_config=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
+        admin_script_hash = g.get("admin_script_hash")
+        script_sources = "'self'" + (f" 'sha256-{admin_script_hash}'" if admin_script_hash else "")
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; base-uri 'self'; object-src 'none'; "
-            "frame-ancestors 'none'; form-action 'self'; script-src 'self'; "
+            f"frame-ancestors 'none'; form-action 'self'; script-src {script_sources}; "
             "style-src 'self'; media-src 'self' blob:"
         )
         # La llamada interna usa únicamente audio WebRTC iniciado por una
@@ -1373,7 +1375,14 @@ def create_app(test_config=None):
             return redirect("/", code=303)
         if user["role"] != "admin":
             return "Acceso restringido a Administración.", 403
-        return send_from_directory(static_folder / "admin", "index.html")
+        # Ship the markup and its controller from the same release, even if
+        # the load balancer is serving two application versions during rollout.
+        page = (static_folder / "admin" / "index.html").read_bytes()
+        controller = (static_folder / "assets" / "admin-console.js").read_text(encoding="utf-8")
+        script = f"\n{controller}\n".encode("utf-8")
+        g.admin_script_hash = base64.b64encode(hashlib.sha256(script).digest()).decode("ascii")
+        page = page.replace(b"<!-- admin-console-script -->", b'<script type="module">' + script + b"</script>", 1)
+        return app.response_class(page, mimetype="text/html", headers={"Cache-Control": "private, no-store"})
 
     @app.get("/api/admin/backups")
     @require_roles("admin")
