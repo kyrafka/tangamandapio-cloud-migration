@@ -1,0 +1,447 @@
+{
+  "date": "2026-11-22",
+  "region": "us-east-2",
+  "endpoint": "https://tangamandapio.kendellnm.me/api",
+  "method": "Read-only browser trials, followed by a bounded direct public k6 client. Existing WAF, limits and ASG policies were active. No desired-capacity writes.",
+  "settings": {
+    "minimumInstances": 2,
+    "maximumInstances": 5,
+    "requestsPerTargetPerMinute": 2500,
+    "highAlarmPeriods": 3,
+    "periodSeconds": 60,
+    "defaultWarmupSeconds": 420
+  },
+  "browserTrials": [
+    {
+      "utc": "2026-11-22T21:44:59.318Z",
+      "event": "stage-complete",
+      "rate": 70,
+      "minutes": 4,
+      "started": "2026-11-22T21:40:58.155Z",
+      "finished": "2026-11-22T21:44:59.307Z",
+      "effectiveRate": 69.4,
+      "sent": 16659,
+      "http": {
+        "200": 16640
+      },
+      "transport": {
+        "net::ERR_ABORTED": 19
+      },
+      "p95ms": 295,
+      "capacityWrites": 0,
+      "view": "Carga finalizada · 16659 enviadas (69.4/s) · 16640 correctas · 0 con error · 19 sin respuesta al detener."
+    },
+    {
+      "utc": "2026-11-22T21:50:36.472Z",
+      "event": "stage-complete",
+      "rate": 94,
+      "minutes": 5,
+      "started": "2026-11-22T21:45:35.231Z",
+      "finished": "2026-11-22T21:50:36.461Z",
+      "effectiveRate": 78.2,
+      "sent": 23451,
+      "http": {
+        "200": 23431
+      },
+      "transport": {
+        "net::ERR_ABORTED": 20
+      },
+      "p95ms": 304,
+      "capacityWrites": 0,
+      "view": "Carga finalizada · 23451 enviadas (78.2/s) · 23431 correctas · 0 con error · 20 sin respuesta al detener."
+    }
+  ],
+  "fixedRateTrial": {
+    "configuredRate": 91,
+    "baselineCapacity": 2,
+    "finished": "2026-11-22T21:56:04.7044343Z",
+    "seconds": 300,
+    "start": "2026-11-22T21:51:04.0383472Z",
+    "exitCode": 0,
+    "metrics": {
+      "requests": 27298,
+      "effectiveRequestsPerSecond": 90.95351506683276,
+      "failureRate": 0,
+      "p95Ms": 135.92652,
+      "droppedBeforeSending": 3,
+      "thresholdsPassed": true
+    }
+  },
+  "capacityTransitions": [
+    {
+      "utc": "2026-11-22T21:41:23.4825186Z",
+      "desired": 2,
+      "inService": 2,
+      "albHealthy": 2
+    },
+    {
+      "utc": "2026-11-22T21:57:28.1257015Z",
+      "desired": 3,
+      "inService": 2,
+      "albHealthy": 2
+    },
+    {
+      "utc": "2026-11-22T21:57:46.0343185Z",
+      "desired": 3,
+      "inService": 3,
+      "albHealthy": 2
+    },
+    {
+      "utc": "2026-11-22T21:59:13.0584032Z",
+      "desired": 3,
+      "inService": 3,
+      "albHealthy": 3
+    },
+    {
+      "utc": "2026-11-22T22:13:31.5282295Z",
+      "desired": 2,
+      "inService": 3,
+      "albHealthy": 3
+    },
+    {
+      "utc": "2026-11-22T22:13:49.2404227Z",
+      "desired": 2,
+      "inService": 2,
+      "albHealthy": 2
+    }
+  ],
+  "finalPortalReadinessHttp": 200,
+  "alarmStateHistory": [
+    {
+      "kind": "high",
+      "history": [
+        {
+          "at": "2026-11-22T16:59:17.632-05:00",
+          "summary": "Alarm updated from ALARM to OK"
+        },
+        {
+          "at": "2026-11-22T16:57:17.634-05:00",
+          "summary": "Alarm updated from OK to ALARM"
+        }
+      ]
+    },
+    {
+      "kind": "low",
+      "history": [
+        {
+          "at": "2026-11-22T17:13:30.188-05:00",
+          "summary": "Alarm updated from OK to ALARM"
+        },
+        {
+          "at": "2026-11-22T16:44:30.188-05:00",
+          "summary": "Alarm updated from ALARM to OK"
+        }
+      ]
+    }
+  ],
+  "highAlarmEvaluation": [
+    {
+      "state": "ALARM",
+      "at": "2026-11-22T16:57:17.634000-05:00",
+      "evaluation": {
+        "version": "1.0",
+        "queryDate": "2026-11-22T21:57:17.632+0000",
+        "startDate": "2026-11-22T21:52:00.000+0000",
+        "unit": "None",
+        "statistic": "Sum",
+        "period": 60,
+        "recentDatapoints": [
+          2730,
+          2730.5,
+          2729
+        ],
+        "threshold": 2500,
+        "evaluatedDatapoints": [
+          {
+            "timestamp": "2026-11-22T21:54:00.000+0000",
+            "sampleCount": 5464,
+            "value": 2729
+          },
+          {
+            "timestamp": "2026-11-22T21:53:00.000+0000",
+            "sampleCount": 5465,
+            "value": 2730.5
+          },
+          {
+            "timestamp": "2026-11-22T21:52:00.000+0000",
+            "sampleCount": 5466,
+            "value": 2730
+          }
+        ]
+      }
+    }
+  ],
+  "activities": [
+    {
+      "start": "2026-11-22T17:13:37.388-05:00",
+      "end": null,
+      "status": "WaitingForELBConnectionDraining",
+      "cause": "At 2026-11-22T22:13:30Z a monitor alarm TargetTracking-tangamandapio-asg-AlarmLow-b2fbe3c3-d472-49c4-b44e-a8781205fe30 in state ALARM triggered policy tangamandapio-live-20261116-RequestScalingPolicy-GnQXsXj6Iy95 changing the desired capacity from 3 to 2.  At 2026-11-22T22:13:37Z an instance was taken out of service in response to a difference between desired and actual capacity, shrinking the capacity from 3 to 2.  At 2026-11-22T22:13:37Z instance [instance] was selected for termination."
+    },
+    {
+      "start": "2026-11-22T16:57:30.709-05:00",
+      "end": "2026-11-22T17:04:35-05:00",
+      "status": "Successful",
+      "cause": "At 2026-11-22T21:57:17Z a monitor alarm TargetTracking-tangamandapio-asg-AlarmHigh-c3c23f17-9fe5-4ecc-971e-de9945d3d54a in state ALARM triggered policy tangamandapio-live-20261116-RequestScalingPolicy-GnQXsXj6Iy95 changing the desired capacity from 2 to 3.  At 2026-11-22T21:57:29Z an instance was started in response to a difference between desired and actual capacity, increasing the capacity from 2 to 3."
+    }
+  ],
+  "cloudWatchMinutes": [
+    {
+      "utc": "2026-11-22T21:38:00Z",
+      "alb_requests": 14,
+      "per_target": 7,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:39:00Z",
+      "alb_requests": 4,
+      "per_target": 2,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:40:00Z",
+      "alb_requests": 16,
+      "per_target": 8,
+      "healthy": 2,
+      "cpu": 3.310309089428263,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:41:00Z",
+      "alb_requests": 4157,
+      "per_target": 2078.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:42:00Z",
+      "alb_requests": 4197,
+      "per_target": 2098.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:43:00Z",
+      "alb_requests": 4150,
+      "per_target": 2075,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:44:00Z",
+      "alb_requests": 4171,
+      "per_target": 2085.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:45:00Z",
+      "alb_requests": 1806,
+      "per_target": 903,
+      "healthy": 2,
+      "cpu": 4.362871395337022,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:46:00Z",
+      "alb_requests": 4592,
+      "per_target": 2296,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:47:00Z",
+      "alb_requests": 4739,
+      "per_target": 2369.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:48:00Z",
+      "alb_requests": 4715,
+      "per_target": 2357.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:49:00Z",
+      "alb_requests": 4763,
+      "per_target": 2381.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:50:00Z",
+      "alb_requests": 2872,
+      "per_target": 1436,
+      "healthy": 2,
+      "cpu": 4.80906155351956,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:51:00Z",
+      "alb_requests": 4910,
+      "per_target": 2455,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:52:00Z",
+      "alb_requests": 5460,
+      "per_target": 2730,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:53:00Z",
+      "alb_requests": 5461,
+      "per_target": 2730.5,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:54:00Z",
+      "alb_requests": 5458,
+      "per_target": 2729,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:55:00Z",
+      "alb_requests": 5462,
+      "per_target": 2731,
+      "healthy": 2,
+      "cpu": 2.679234464032297,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:56:00Z",
+      "alb_requests": 548,
+      "per_target": 274,
+      "healthy": 2,
+      "desired": 2
+    },
+    {
+      "utc": "2026-11-22T21:57:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 2,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T21:58:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 2,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T21:59:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:00:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "cpu": 1.1190208304623024,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:01:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:02:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:03:00Z",
+      "alb_requests": 1,
+      "per_target": 0.333333,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:04:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:05:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "cpu": 1.0752996529155383,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:06:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:07:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:08:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:09:00Z",
+      "alb_requests": 0,
+      "per_target": 0,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:10:00Z",
+      "alb_requests": 1,
+      "per_target": 0.333333,
+      "healthy": 3,
+      "cpu": 1.0715134348871473,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:11:00Z",
+      "alb_requests": 1,
+      "per_target": 0.333333,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:12:00Z",
+      "alb_requests": 1,
+      "per_target": 0.333333,
+      "healthy": 3,
+      "desired": 3
+    },
+    {
+      "utc": "2026-11-22T22:13:00Z",
+      "desired": 2
+    }
+  ],
+  "earlierAbovePanelLimitReference": "AWS-ASG-SCALE-2-5-2026-11-16-cloud.json"
+}
