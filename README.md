@@ -96,8 +96,8 @@ El portal reúne funciones B2B para distribuidores y módulos ERP para equipos i
 
 ## Documentación principal
 
-- [Entregable final](deliverables/Proyecto_Final_Tangamandapio_2026-11-20.docx)
-- [Manual técnico](deliverables/Manual_Tecnico_Tangamandapio_2026-11-20.docx)
+- [Entregable final con evidencias](deliverables/Proyecto_Final_Tangamandapio_2026-11-22.docx)
+- [Manual técnico y rutas de configuración](deliverables/Manual_Tecnico_Tangamandapio_2026-11-22.docx)
 - [Infraestructura y estado de AWS/Azure](iac/README.md)
 - [CloudFormation de AWS: despliegue y recuperación](iac/cloudformation/README.md)
 - [Terraform: entornos y módulos](iac/)
