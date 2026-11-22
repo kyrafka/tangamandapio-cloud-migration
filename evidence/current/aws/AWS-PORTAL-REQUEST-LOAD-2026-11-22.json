@@ -1,0 +1,115 @@
+{
+  "revision": "20261122-portal-request-load",
+  "sha256": "0a86fe3cb94bbb8a1874340798137fdb3fb82e7104523f2599b4ef9aa2ca9440",
+  "directChanges": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Metadata/com.aws.cloudformation.Context",
+        "/Properties/Policies/0/PolicyDocument"
+      ]
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/LaunchTemplateData"
+      ]
+    }
+  ],
+  "rollout": {
+    "probes": 30,
+    "http200": 30,
+    "first": {
+      "state": "UPDATE_IN_PROGRESS",
+      "ready": 200,
+      "revision": "20261122-portal-request-load",
+      "utc": "2026-11-22T19:59:54.3418185Z"
+    },
+    "last": {
+      "state": "UPDATE_COMPLETE",
+      "ready": 200,
+      "revision": "20261122-portal-request-load",
+      "utc": "2026-11-22T20:15:42.6168549Z"
+    }
+  },
+  "targets": {
+    "nodes": [
+      {
+        "zone": "us-east-2b",
+        "assets": {
+          "assets/request-load.mjs": "d37d8aad51e84318d3389b9a57dc7fe2c39b36ea6dfda02ca1829b2fdeee2d17",
+          "assets/admin-console.js": "95119950f13f206a1824c428551a9e39005989d7b057039604652ff3d5787368",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "13d253a8819f751d78b90497016819215c85dbfc2e0cc430f3a173e9b5d88008"
+        },
+        "release": "20261122-portal-request-load",
+        "ready": 200
+      },
+      {
+        "zone": "us-east-2a",
+        "assets": {
+          "assets/request-load.mjs": "d37d8aad51e84318d3389b9a57dc7fe2c39b36ea6dfda02ca1829b2fdeee2d17",
+          "assets/admin-console.js": "95119950f13f206a1824c428551a9e39005989d7b057039604652ff3d5787368",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "13d253a8819f751d78b90497016819215c85dbfc2e0cc430f3a173e9b5d88008"
+        },
+        "release": "20261122-portal-request-load",
+        "ready": 200
+      }
+    ],
+    "commandId": "7a3550a6-52fd-4218-bb18-b7f237d659c5"
+  },
+  "productionSmokeTest": {
+    "production": true,
+    "utc": "2026-11-22T20:16:09.692Z",
+    "target": 2500,
+    "desired": 2,
+    "sent": 5,
+    "responses200": 4,
+    "capacityWrites": 0,
+    "stopped": true,
+    "mobileFits": true
+  },
+  "productionLoadRun": "Brief 4 requests/second smoke test; no sustained production load was executed.",
+  "iamSimulation": [
+    {
+      "action": "autoscaling:DescribePolicies",
+      "decision": "allowed"
+    },
+    {
+      "action": "autoscaling:UpdateAutoScalingGroup",
+      "decision": "implicitDeny"
+    },
+    {
+      "action": "autoscaling:PutScheduledUpdateGroupAction",
+      "decision": "implicitDeny"
+    }
+  ],
+  "scalingConfiguration": {
+    "requestsPerTargetPerMinute": 2500,
+    "evaluationPeriods": 3,
+    "minInstances": 2,
+    "maxInstances": 5,
+    "warmupSeconds": 420
+  },
+  "localThroughput": {
+    "configuredRate": 90,
+    "requests": 750,
+    "responses200": 750
+  },
+  "verifierLimits": {
+    "maxRequestsPerSecond": 95,
+    "maxRunMinutes": 5
+  },
+  "validation": {
+    "runtimeTestsPassed": 31,
+    "releaseTestsPassed": 55,
+    "requestLoadTestsPassed": 3,
+    "templateLintPassed": true,
+    "preExistingFailure": "test_password_version_without_explicit_flag_does_not_reset"
+  }
+}
