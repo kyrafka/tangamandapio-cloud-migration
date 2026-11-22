@@ -1,5 +1,6 @@
 import { createPortalApi } from "./portal-api.mjs";
 import { startVisibleRefresh } from "./visible-refresh.mjs";
+import { maxRequestsPerSecond, runRequestLoad } from "./request-load.mjs";
 
 (() => {
   const roleLabels = {
@@ -37,9 +38,7 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     backup_too_large: "La copia excede el límite del panel. Usa el respaldo completo de PostgreSQL.",
     backup_storage_unavailable: "No se pudo acceder al almacenamiento del respaldo.",
     scaling_not_configured: "Este entorno no tiene un grupo de escalado configurado.",
-    scaling_restore_pending: "Hay una prueba pendiente de restauración o el grupo tiene suspendida la programación.",
-    invalid_capacity: "Elige una capacidad válida dentro del rango del grupo.",
-    scaling_unavailable: "AWS no pudo completar la solicitud de escalado.",
+    scaling_unavailable: "AWS no pudo consultar el grupo de escalado.",
     technical_tests_unavailable: "Este entorno todavía no tiene resultados registrados.",
   });
 
@@ -238,30 +237,82 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
     }
   }
 
-  let scalingRefresh;
-  async function loadScaling() {
+  let scalingGroup;
+  let scalingRun;
+  let scalingBaseline;
+  async function loadScaling(signal) {
     const form = $("#scaling-form");
     const status = $("#scaling-status");
-    const submit = form.querySelector("button[type=submit]");
-    submit.disabled = true;
+    const policy = $("#scaling-policy");
     try {
-      const group = await api("/api/admin/scaling");
-      status.textContent = `${group.healthy} sanas de ${group.desired} solicitadas. Capacidad mínima ${group.minimum}, máxima ${group.maximum}.` +
-        (group.restore_at ? ` Regreso programado para ${friendlyDate(group.restore_at)}.` : "");
-      for (const option of form.elements.capacity.options) {
-        option.disabled = Number(option.value) < Math.max(group.minimum, group.desired) || Number(option.value) > group.maximum;
+      scalingGroup = await api("/api/admin/scaling", { signal });
+      const { healthy, desired, minimum, maximum, requests_per_target, request_target_active, restore_at } = scalingGroup;
+      status.textContent = `${healthy} en servicio y sanas · capacidad deseada ${desired} · rango ${minimum} a ${maximum}.`;
+      if (restore_at) policy.textContent = `Hay un cambio manual anterior programado hasta ${friendlyDate(restore_at)}.`;
+      else if (request_target_active) {
+        const target = new Intl.NumberFormat("es-PE").format(requests_per_target);
+        const totalRate = Math.floor(requests_per_target * desired / 60) + 1;
+        const limit = totalRate > maxRequestsPerSecond ? ` El panel aporta hasta ${maxRequestsPerSecond} por segundo.` : "";
+        policy.textContent = `Objetivo de AWS: ${target} solicitudes por minuto por instancia. Con ${desired} instancias, el tráfico total debe llegar a unas ${totalRate} solicitudes por segundo de forma sostenida para superar el objetivo.${limit}`;
+      } else policy.textContent = "La política de escalado por solicitudes está inactiva.";
+      if (scalingBaseline !== undefined) {
+        $("#scaling-observed").textContent = `Desde el inicio del ensayo: ${scalingBaseline} → ${desired} instancias deseadas.`;
       }
-      const selected = form.elements.capacity.selectedOptions[0];
-      if (!selected || selected.disabled) form.elements.capacity.value = Array.from(form.elements.capacity.options).find((option) => !option.disabled)?.value || "";
-      submit.disabled = Boolean(group.restore_at || !group.restore_enabled || !form.elements.capacity.value);
-      if (state.section === "scaling" && group.restore_at) scalingRefresh = setTimeout(() => loadScaling().catch(() => {}), 10000);
+    } catch (error) {
+      scalingGroup = undefined;
+      status.textContent = error.message;
+      policy.textContent = "";
+    } finally {
+      form.querySelector("button[type=submit]").disabled = Boolean(scalingRun || !scalingGroup?.request_target_active || scalingGroup.restore_at);
+    }
+  }
+
+  async function startScalingLoad(event) {
+    event.preventDefault();
+    if (scalingRun || !scalingGroup?.request_target_active || scalingGroup.restore_at || document.hidden) return;
+    const form = event.currentTarget;
+    const rate = form.elements.rate.valueAsNumber;
+    const seconds = form.elements.minutes.valueAsNumber * 60;
+    const submit = form.querySelector("button[type=submit]");
+    const stop = $("#scaling-stop");
+    const status = $("#scaling-traffic");
+    const controller = new AbortController();
+    const render = ({ sent, succeeded, failed, elapsed, reason }) => {
+      const labels = { complete: "Carga finalizada", stopped: "Carga detenida",
+        limited: "Carga detenida por el límite de tráfico", errors: "Carga detenida por errores" };
+      const pace = elapsed > 0 ? (sent / elapsed).toFixed(1) : "0";
+      const pending = sent - succeeded - failed;
+      const unanswered = pending ? ` · ${pending} ${reason ? "sin respuesta al detener" : "en curso"}` : "";
+      status.textContent = `${labels[reason] || "Enviando solicitudes"} · ${sent} enviadas (${pace}/s) · ${succeeded} correctas · ${failed} con error${unanswered}.`;
+    };
+    scalingRun = controller;
+    submit.disabled = form.elements.rate.disabled = form.elements.minutes.disabled = true;
+    stop.disabled = false;
+    try {
+      const run = async () => {
+        scalingBaseline = scalingGroup?.desired;
+        $("#scaling-observed").textContent = "";
+        render({sent: 0, succeeded: 0, failed: 0, elapsed: 0});
+        render(await runRequestLoad({ rate, seconds, signal: controller.signal, progress: render }));
+      };
+      if (navigator.locks) {
+        await navigator.locks.request("tangamandapio-admin-load", { ifAvailable: true }, async (lock) => {
+          if (lock) await run();
+          else status.textContent = "Ya hay un ensayo en otra pestaña.";
+        });
+      } else await run();
     } catch (error) {
       status.textContent = error.message;
+    } finally {
+      scalingRun = undefined;
+      stop.disabled = true;
+      form.elements.rate.disabled = form.elements.minutes.disabled = false;
+      if (state.section === "scaling") await loadScaling();
     }
   }
 
   async function loadSection(section) {
-    clearTimeout(scalingRefresh);
+    if (section !== "scaling") scalingRun?.abort();
     hideNotice();
     state.section = section;
     $$("[data-section]").forEach((button) => button.setAttribute("aria-current", button.dataset.section === section ? "page" : "false"));
@@ -379,23 +430,11 @@ import { startVisibleRefresh } from "./visible-refresh.mjs";
         }
       });
       $("#technical-wms-probe").addEventListener("click", probePrivateWms);
-      $("#scaling-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const capacity = Number(form.elements.capacity.value);
-        if (!window.confirm(`¿Solicitar ${capacity} instancias durante unos diez minutos?`)) return;
-        const button = form.querySelector("button[type=submit]");
-        setBusy(button, true);
-        try {
-          await api("/api/admin/scaling", { method: "POST", body: JSON.stringify({ capacity }) });
-          notice(`AWS recibió la solicitud de ${capacity} instancias.`);
-        } catch (error) { notice(error.message, "error"); }
-        finally {
-          setBusy(button, false);
-          clearTimeout(scalingRefresh);
-          await loadScaling();
-        }
-      });
+      $("#scaling-form").addEventListener("submit", startScalingLoad);
+      $("#scaling-stop").addEventListener("click", () => scalingRun?.abort());
+      document.addEventListener("visibilitychange", () => { if (document.hidden) scalingRun?.abort(); });
+      window.addEventListener("pagehide", () => scalingRun?.abort());
+      startVisibleRefresh((signal) => state.section === "scaling" && loadScaling(signal), 20000);
       $("#user-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const button = event.currentTarget.querySelector("button[type=submit]");

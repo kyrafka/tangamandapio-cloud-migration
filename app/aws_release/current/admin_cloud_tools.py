@@ -1,7 +1,7 @@
 import hashlib
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlencode
@@ -14,14 +14,9 @@ AZURE_PREFIX = "postgres/"
 MANUAL_NAME = re.compile(r"\d{8}T\d{6}Z-[a-f0-9]{12}\.json")
 AZURE_NAME = re.compile(r"(?:\d{8}-(?:daily|manual-validation)|\d{8}T\d{6}Z-[a-f0-9]{12})\.json")
 RESTORE_ACTION = "portal-capacity-test-restore"
-RESTORE_MINUTES = 10
 
 
 class BackupTooLarge(Exception):
-    pass
-
-
-class ScalingConflict(Exception):
     pass
 
 
@@ -135,22 +130,17 @@ def read_scaling_group(client, group_name):
     group = groups[0]
     actions = client.describe_scheduled_actions(AutoScalingGroupName=group_name,
                                                 ScheduledActionNames=[RESTORE_ACTION])["ScheduledUpdateGroupActions"]
-    restore = actions[0]["StartTime"].isoformat() if actions else None
+    policies = client.describe_policies(AutoScalingGroupName=group_name,
+                                       PolicyTypes=["TargetTrackingScaling"])["ScalingPolicies"]
+    tracking = (policy.get("TargetTrackingConfiguration", {}) for policy in policies
+                if policy.get("Enabled", True))
+    request_target = next((config["TargetValue"] for config in tracking if
+                           config.get("PredefinedMetricSpecification", {}).get("PredefinedMetricType")
+                           == "ALBRequestCountPerTarget"), None)
     active = sum(instance["LifecycleState"] == "InService" and instance["HealthStatus"] == "Healthy"
                  for instance in group["Instances"])
     return {"minimum": group["MinSize"], "maximum": group["MaxSize"], "desired": group["DesiredCapacity"],
-            "healthy": active, "restore_at": restore,
-            "restore_enabled": all(item["ProcessName"] != "ScheduledActions" for item in group.get("SuspendedProcesses", []))}
-
-
-def hold_scaling_capacity(client, group_name, target):
-    group = read_scaling_group(client, group_name)
-    if target < max(group["minimum"], group["desired"]) or target > group["maximum"]:
-        raise ValueError("invalid_capacity")
-    if group["restore_at"] or not group["restore_enabled"]:
-        raise ScalingConflict
-    restore_at = datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=RESTORE_MINUTES + 1)
-    client.put_scheduled_update_group_action(AutoScalingGroupName=group_name, ScheduledActionName=RESTORE_ACTION,
-                                             StartTime=restore_at, MinSize=group["minimum"], DesiredCapacity=group["desired"])
-    client.update_auto_scaling_group(AutoScalingGroupName=group_name, MinSize=target, DesiredCapacity=target)
-    return {"desired": target, "restore_at": restore_at.isoformat()}
+            "healthy": active, "request_target_active": request_target is not None and not any(
+                item["ProcessName"] in {"AlarmNotification", "Launch"} for item in group.get("SuspendedProcesses", [])
+            ), "requests_per_target": request_target,
+            "restore_at": actions[0]["StartTime"].isoformat() if actions else None}

@@ -549,6 +549,11 @@ Resources:
 
   AppInstanceRole:
     Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Permite que el portal consulte la capacidad y la política vigente del grupo de escalado.
+        must:
+          - El portal observa el escalado y las políticas de AWS ajustan la capacidad.
     Properties:
       RoleName: !Sub '${ProjectName}-app-role'
       Description: Rol de ejecucion acotado para las instancias del portal Tangamandapio.
@@ -591,12 +596,8 @@ Resources:
                 - !Ref 'AWS::NoValue'
               - Sid: ReadScalingTestStatus
                 Effect: Allow
-                Action: [autoscaling:DescribeAutoScalingGroups, autoscaling:DescribeScheduledActions]
+                Action: [autoscaling:DescribeAutoScalingGroups, autoscaling:DescribeScheduledActions, autoscaling:DescribePolicies]
                 Resource: '*'
-              - Sid: RunScalingTestOnProjectGroup
-                Effect: Allow
-                Action: [autoscaling:PutScheduledUpdateGroupAction, autoscaling:UpdateAutoScalingGroup]
-                Resource: !Sub 'arn:${AWS::Partition}:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${ProjectName}-asg'
               - Sid: ReadProjectSecrets
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue

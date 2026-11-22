@@ -118,11 +118,13 @@ y se registra en la auditoría.
   `/<proyecto>/dr/blob-read/portal`. La autorización actual vence el 12 de
   diciembre de 2026. Renueva ese parámetro antes de su vencimiento. La
   autorización de escritura del respaldo diario se renueva por separado.
-- **Prueba de escalado** permite pedir 3, 4 o 5 instancias y seguir la capacidad
-  sana del ASG. El sistema programa primero el regreso a la capacidad anterior
-  y luego sube el mínimo y el objetivo durante unos diez minutos. Completa una
-  prueba antes de iniciar otra. Un ajuste manual de capacidad resulta visible
-  en el panel. El comportamiento de la política bajo tráfico se mide con k6.
+- **Carga y autoescalado** permite elegir de 1 a 95 solicitudes por segundo
+  durante 1 a 5 minutos. Envía solicitudes `GET /api` desde el navegador y
+  muestra el ritmo efectivo, las respuestas y la capacidad deseada y sana del
+  ASG. AWS ajusta la capacidad a través de sus políticas. El ensayo se detiene
+  al salir de la vista, ocultar la pestaña, encontrar un bloqueo de tráfico o
+  superar el límite de errores. La actividad de AWS identifica la política
+  que produjo un cambio de capacidad.
 
 - **Pruebas técnicas** muestra las mediciones fechadas de conmutación, carga,
   recuperación y el cotejo entre la copia diaria y los pedidos de RDS.

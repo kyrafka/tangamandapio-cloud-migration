@@ -48,7 +48,7 @@
             <button type="button" data-section="companies"><span aria-hidden="true">⌂</span><span>Empresas</span></button>
             <button type="button" data-section="alerts"><span aria-hidden="true">♧</span><span>Alertas de nube</span></button>
             <button type="button" data-section="backups"><span aria-hidden="true">↓</span><span>Respaldos</span></button>
-            <button type="button" data-section="scaling"><span aria-hidden="true">↗</span><span>Prueba de escalado</span></button>
+            <button type="button" data-section="scaling"><span aria-hidden="true">↗</span><span>Carga y autoescalado</span></button>
             <button type="button" data-section="technical"><span aria-hidden="true">✓</span><span>Pruebas técnicas</span></button>
             <button type="button" data-section="audit"><span aria-hidden="true">≋</span><span>Auditoría</span></button>
             <div class="admin-nav-note"><span class="admin-live-dot" aria-hidden="true"></span><span>Control de acceso activo<br /><small>Las API validan el rol en el servidor.</small></span></div>
@@ -134,16 +134,28 @@
 
             <section class="admin-view" data-view="scaling" aria-labelledby="scaling-heading" hidden>
               <div class="admin-section-heading">
-                <div><h2 id="scaling-heading">Prueba de escalado</h2><p>Sube temporalmente la capacidad de la aplicación y verifica cuántas instancias quedan sanas.</p></div>
+                <div><h2 id="scaling-heading">Carga y autoescalado</h2><p>Envía solicitudes al ERP y observa cuándo AWS ajusta la capacidad.</p></div>
                 <button type="button" class="admin-button secondary" data-reload="scaling">Actualizar</button>
               </div>
               <section class="admin-card admin-form-card">
-                <p id="scaling-status" aria-live="polite"></p>
+                <div class="admin-card-heading"><div><h3>Capacidad en AWS</h3><p id="scaling-status" aria-live="polite">Consultando el grupo de escalado…</p></div></div>
+                <p id="scaling-policy" class="admin-form-hint"></p>
+                <p id="scaling-observed" class="admin-form-hint" aria-live="polite"></p>
+              </section>
+              <section class="admin-card admin-form-card admin-load-card">
+                <h3>Enviar solicitudes</h3>
                 <form id="scaling-form" class="admin-form">
-                  <label>Instancias solicitadas<select name="capacity" required><option>3</option><option>4</option><option>5</option></select></label>
-                  <button type="submit" class="admin-button primary" disabled>Forzar escalado</button>
+                  <div class="admin-load-fields">
+                    <label>Solicitudes por segundo<input type="number" name="rate" min="1" max="95" step="1" value="20" required></label>
+                    <label>Duración (minutos)<input type="number" name="minutes" min="1" max="5" step="1" value="1" required></label>
+                  </div>
+                  <div class="admin-load-actions">
+                    <button type="submit" class="admin-button primary" disabled>Iniciar carga</button>
+                    <button type="button" id="scaling-stop" class="admin-button secondary" disabled>Detener carga</button>
+                  </div>
                 </form>
-                <p class="admin-form-hint">AWS programa el regreso a la capacidad inicial unos diez minutos después. La prueba de tráfico se ejecuta por separado.</p>
+                <p class="admin-form-hint">Mantén esta pestaña visible durante el ensayo. Las solicitudes son de solo lectura.</p>
+                <p id="scaling-traffic" role="status"></p>
               </section>
             </section>
 

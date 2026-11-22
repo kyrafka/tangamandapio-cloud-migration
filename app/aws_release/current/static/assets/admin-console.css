@@ -69,6 +69,10 @@
 .admin-form-card label small,.admin-form-hint { color: var(--admin-muted); font-size: .69rem; font-weight: 450; line-height: 1.45; }
 .admin-form-card input,.admin-form-card select,.admin-table input,.admin-table select { min-width: 0; border: 1px solid var(--admin-line); border-radius: 8px; padding: 9px 10px; color: var(--admin-ink); background: var(--admin-page); font: inherit; font-size: .78rem; }
 .admin-form-card input:focus,.admin-form-card select:focus,.admin-table input:focus,.admin-table select:focus { border-color: var(--admin-accent); outline: 3px solid color-mix(in srgb, var(--admin-accent) 17%, transparent); }
+.admin-load-card { margin-top: 14px; }
+.admin-load-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.admin-load-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#scaling-traffic { font-variant-numeric: tabular-nums; }
 .admin-table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: .77rem; }
 .admin-table th { padding: 10px 8px; border-bottom: 1px solid var(--admin-line); color: var(--admin-muted); font-size: .64rem; letter-spacing: .07em; text-align: left; text-transform: uppercase; white-space: nowrap; }

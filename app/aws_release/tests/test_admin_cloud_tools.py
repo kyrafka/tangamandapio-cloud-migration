@@ -33,17 +33,29 @@ class CloudToolsTests(unittest.TestCase):
             self.assertEqual(download.get_data(), saved["Body"])
             self.assertIn("no-store", download.headers["Cache-Control"])
 
-    def test_scaling_records_restore_before_changing_capacity(self):
-        from admin_cloud_tools import hold_scaling_capacity
-
+    def test_admin_can_monitor_policy_without_setting_capacity(self):
+        self.application.config["ADMIN_SCALING_GROUP"] = "example-asg"
+        client = self.application.test_client()
+        self.assertEqual(client.get("/api/admin/scaling").status_code, 401)
+        login = client.post("/api/auth/login", json={
+            "username": "admin@recovery.test", "password": "Initial-Password-2026!",
+        })
+        self.assertEqual(login.status_code, 200)
+        csrf = client.get("/api/auth/session").json["csrf_token"]
         autoscaling = MagicMock()
         autoscaling.describe_auto_scaling_groups.return_value = {"AutoScalingGroups": [{
-            "MinSize": 2, "MaxSize": 5, "DesiredCapacity": 2, "Instances": [],
+            "MinSize": 2, "MaxSize": 5, "DesiredCapacity": 3, "Instances": [],
         }]}
         autoscaling.describe_scheduled_actions.return_value = {"ScheduledUpdateGroupActions": []}
-        hold_scaling_capacity(autoscaling, "example-asg", 5)
-        restore = autoscaling.put_scheduled_update_group_action.call_args.kwargs
-        self.assertEqual((restore["MinSize"], restore["DesiredCapacity"]), (2, 2))
-        self.assertEqual(autoscaling.update_auto_scaling_group.call_args.kwargs["MinSize"], 5)
-        called = [entry[0] for entry in autoscaling.mock_calls]
-        self.assertLess(called.index("put_scheduled_update_group_action"), called.index("update_auto_scaling_group"))
+        autoscaling.describe_policies.return_value = {"ScalingPolicies": [{"TargetTrackingConfiguration": {
+            "PredefinedMetricSpecification": {"PredefinedMetricType": "ALBRequestCountPerTarget"},
+            "TargetValue": 2500,
+        }}]}
+        with patch("admin_cloud_tools.aws_client", return_value=autoscaling):
+            self.assertEqual(client.post("/api/admin/scaling", json={"capacity": 4},
+                                        headers={"X-CSRF-Token": csrf}).status_code, 405)
+            group = client.get("/api/admin/scaling")
+        self.assertEqual(group.status_code, 200)
+        self.assertEqual(group.json["desired"], 3)
+        self.assertEqual(group.json["requests_per_target"], 2500)
+        self.assertIn("no-store", group.headers["Cache-Control"])

@@ -1435,38 +1435,18 @@ def create_app(test_config=None):
         response.headers["Cache-Control"] = "private, no-store"
         return response
 
-    @app.route("/api/admin/scaling", methods=["GET", "POST"])
+    @app.get("/api/admin/scaling")
     @require_roles("admin")
     def admin_scaling():
         group = app.config["ADMIN_SCALING_GROUP"]
         if not group:
             return jsonify(error="scaling_not_configured"), 503
-        if request.method == "POST":
-            payload = request.get_json(silent=True)
-            capacity = payload.get("capacity") if isinstance(payload, dict) else None
-            if type(capacity) is not int or capacity not in {3, 4, 5}:
-                return jsonify(error="invalid_capacity"), 400
         try:
             client = admin_cloud_tools.aws_client("autoscaling", app.config)
-            if request.method == "GET":
-                return jsonify(admin_cloud_tools.read_scaling_group(client, group)), 200, {"Cache-Control": "no-store"}
-            with connect(database_path) as connection:
-                if is_postgresql(database_path):
-                    if not connection.execute("SELECT pg_try_advisory_xact_lock(2026111901) AS locked").fetchone()["locked"]:
-                        raise admin_cloud_tools.ScalingConflict
-                else:
-                    connection.execute("BEGIN IMMEDIATE")
-                result = admin_cloud_tools.hold_scaling_capacity(client, group, capacity)
-                insert_audit(connection, g.portal_user["id"], "scaling_test_requested", "auto_scaling_group", group, result)
-                connection.commit()
-        except admin_cloud_tools.ScalingConflict:
-            return jsonify(error="scaling_restore_pending"), 409
-        except ValueError:
-            return jsonify(error="invalid_capacity"), 400
+            return jsonify(admin_cloud_tools.read_scaling_group(client, group)), 200, {"Cache-Control": "no-store"}
         except Exception as error:
-            app.logger.warning("Scaling test unavailable (%s)", type(error).__name__)
+            app.logger.warning("Scaling status unavailable (%s)", type(error).__name__)
             return jsonify(error="scaling_unavailable"), 503
-        return jsonify(result), 202
 
     @app.get("/api/admin/users")
     @require_roles("admin")
