@@ -1,0 +1,87 @@
+{
+  "revision": "20261122-admin-cache-fix",
+  "sha256": "eafb41d05254ca5f1cbcd07ecda84330b944ece32f8bcddabcf0576d141b26f0",
+  "directChanges": [
+    {
+      "Id": "AppInstanceRole",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/Policies/0/PolicyDocument"
+      ]
+    },
+    {
+      "Id": "LaunchTemplate",
+      "Action": "Modify",
+      "Replacement": "False",
+      "Paths": [
+        "/Properties/LaunchTemplateData"
+      ]
+    }
+  ],
+  "rollout": {
+    "probes": 29,
+    "http200": 29,
+    "first": {
+      "state": "UPDATE_IN_PROGRESS",
+      "revision": "20261122-admin-cache-fix",
+      "utc": "2026-11-22T20:52:44.3677158Z",
+      "ready": 200
+    },
+    "last": {
+      "state": "UPDATE_COMPLETE",
+      "revision": "20261122-admin-cache-fix",
+      "utc": "2026-11-22T21:08:02.8323197Z",
+      "ready": 200
+    }
+  },
+  "targets": {
+    "commandId": "0f2a7120-73a8-4963-8e0f-12e9a8ad7409",
+    "nodes": [
+      {
+        "ready": 200,
+        "assets": {
+          "assets/request-load.mjs": "d37d8aad51e84318d3389b9a57dc7fe2c39b36ea6dfda02ca1829b2fdeee2d17",
+          "assets/admin-console.js": "2bd2028ed16190da1c7eab436225361d67cf80e9f3458c82693398edabed6299",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "dbe42dcbf4786360edcf7de607df327caf06008231bc5ff688c1c0f5b0e57716"
+        },
+        "zone": "us-east-2b",
+        "release": "20261122-admin-cache-fix"
+      },
+      {
+        "ready": 200,
+        "assets": {
+          "assets/request-load.mjs": "d37d8aad51e84318d3389b9a57dc7fe2c39b36ea6dfda02ca1829b2fdeee2d17",
+          "assets/admin-console.js": "2bd2028ed16190da1c7eab436225361d67cf80e9f3458c82693398edabed6299",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "dbe42dcbf4786360edcf7de607df327caf06008231bc5ff688c1c0f5b0e57716"
+        },
+        "zone": "us-east-2a",
+        "release": "20261122-admin-cache-fix"
+      }
+    ]
+  },
+  "conditionalDocumentResponseBeforeFix": 304,
+  "browser": {
+    "freshConditionalResponse": 200,
+    "recoveredLegacyPage": true,
+    "matchedSecurityPolicy": true,
+    "thirdPartyBeaconBlocked": true,
+    "production": true,
+    "utc": "2026-11-22T21:10:19.002Z",
+    "target": 2500,
+    "desired": 2,
+    "sent": 5,
+    "responses200": 4,
+    "capacityWrites": 0,
+    "stopped": true,
+    "mobileFits": true
+  },
+  "tests": {
+    "runtimePassed": 32,
+    "requestLoadPassed": 3,
+    "releasePassed": 55,
+    "preexistingFailure": "test_password_version_without_explicit_flag_does_not_reset"
+  }
+}
