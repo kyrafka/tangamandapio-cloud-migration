@@ -1,0 +1,73 @@
+{
+  "revision": "20261122-portal-load-range",
+  "sha256": "65942508ae3004f67c9efc6dde58cb6cb48e9143166bdd527a6ac113102a9246",
+  "rollout": {
+    "probes": 30,
+    "http200": 30,
+    "first": {
+      "state": "UPDATE_IN_PROGRESS",
+      "revision": "20261122-portal-load-range",
+      "utc": "2026-11-22T23:55:10.2537191Z",
+      "ready": 200
+    },
+    "last": {
+      "state": "UPDATE_COMPLETE",
+      "revision": "20261122-portal-load-range",
+      "utc": "2026-11-23T00:10:47.3308889Z",
+      "ready": 200
+    }
+  },
+  "targets": {
+    "nodes": [
+      {
+        "ready": 200,
+        "release": "20261122-portal-load-range",
+        "zone": "us-east-2a",
+        "assets": {
+          "assets/request-load.mjs": "8e34cdbdb2667a48b83b87315adc14831532d1aab2e45b50ef0dfbc8eab3250f",
+          "assets/admin-console.js": "b2f7b91b3cb2d1135769e9241019fa40b986a35544ee2fca7053944edde44a7d",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "6a2bfda9782dce736456375949a5f62599c62977bae006b10e3d3da45ef580f3"
+        }
+      },
+      {
+        "ready": 200,
+        "release": "20261122-portal-load-range",
+        "zone": "us-east-2b",
+        "assets": {
+          "assets/request-load.mjs": "8e34cdbdb2667a48b83b87315adc14831532d1aab2e45b50ef0dfbc8eab3250f",
+          "assets/admin-console.js": "b2f7b91b3cb2d1135769e9241019fa40b986a35544ee2fca7053944edde44a7d",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "6a2bfda9782dce736456375949a5f62599c62977bae006b10e3d3da45ef580f3"
+        }
+      }
+    ],
+    "commandId": "67a1dc2f-0bdd-469e-92a3-5dc607e46009"
+  },
+  "browser": {
+    "production": true,
+    "utc": "2026-11-23T00:11:16.168Z",
+    "target": 2500,
+    "desired": 2,
+    "maxAtFourMinutes": 115,
+    "maxAtFiveMinutes": 95,
+    "autoRefresh": true,
+    "effective": 105.3,
+    "sent": 595,
+    "responses200": 565,
+    "capacityWrites": 0,
+    "stopped": true,
+    "mobileFits": true
+  },
+  "scope": "Brief live browser check for rate, stop and automatic 20-second status refresh.",
+  "limits": {
+    "requestsPerSecondAtFourMinutes": 115,
+    "requestsPerSecondAtFiveMinutes": 95,
+    "requestsPerRun": 28500,
+    "simultaneousRequests": 40
+  },
+  "tests": {
+    "portal": 32,
+    "browserEngine": 4
+  }
+}
