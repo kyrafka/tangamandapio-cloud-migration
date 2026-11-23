@@ -15,4 +15,8 @@
 
 Cada pila auxiliar debe tener un solo propietario de cambios, según el estado de Terraform o CloudFormation. El [orden detallado](../../iac/README.md#orden-de-reconstrucción) enumera las dependencias.
 
-CloudFormation está desplegado. La validación aislada cubre red y S3. El ciclo integral desde cuentas vacías y la recuperación regional siguen por validar.
+## Evidencia para el criterio 8
+
+La descripción del proyecto pide automatizar parte de la infraestructura. La rúbrica reconoce la automatización de una parte relevante y valora, en el nivel superior, la infraestructura reproducible y el código organizado.
+
+El stack principal y las pilas auxiliares de AWS están desplegados con CloudFormation. Terraform administra los servicios compartidos de Azure y la infraestructura de la Function Flex privada. El [ensayo en el emulador](../../evidence/current/aws/AWS-IAC-EMULATOR-2026-11-19.json) verificó el subconjunto de red y S3. Esa prueba acredita el subconjunto indicado. Un ensayo integral desde cuentas vacías queda como ampliación.

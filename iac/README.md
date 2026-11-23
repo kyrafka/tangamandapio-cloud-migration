@@ -80,7 +80,9 @@ presupuestar sus cargos continuos.
    una copia en un PostgreSQL aislado antes de dar por cerrada la recuperación.
 
 La prueba aislada disponible cubre red/S3 y una simulación de escalado.
-El ciclo completo entre nubes desde cuentas vacías sigue pendiente.
+El alcance académico y las pruebas del aprovisionamiento se detallan en la
+[sección de IaC de la entrega](../Proyecto_Cloud_Tangamandapio/04_IaC).
+El ensayo integral entre nubes desde cuentas vacías queda como ampliación.
 
 ### Repetir el respaldo manual de PostgreSQL
 

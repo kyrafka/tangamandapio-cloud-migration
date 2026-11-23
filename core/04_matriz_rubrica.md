@@ -1,5 +1,14 @@
 # Matriz de evidencia por criterio
 
+## Alcance de IaC y recuperación para la entrega
+
+| Criterio | Evidencia presentada | Ampliación |
+| --- | --- | --- |
+| 8. Infrastructure as Code | La descripción pide automatizar parte de la infraestructura. CloudFormation y Terraform cubren componentes principales de AWS y Azure. El emulador verificó el subconjunto de red y S3. [Alcance y evidencia](../Proyecto_Cloud_Tangamandapio/04_IaC). | Ensayo integral multinube desde cuentas vacías. |
+| 9. Backup, RTO/RPO y recuperación | Copia cifrada programada, RTO/RPO medidos y recuperación comprobada de PostgreSQL y del ERP en un entorno aislado. [Resultados y alcance](../Proyecto_Cloud_Tangamandapio/08_Backup_DR). | Recuperación en una segunda región. |
+
+Los cortes que siguen conservan resultados y tareas de seguimiento de cada fecha.
+
 ## Actualización del 20/11/2026
 
 - [Recorrido para tomar las capturas del portal, AWS y Azure](../evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026).
