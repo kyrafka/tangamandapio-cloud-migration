@@ -2,6 +2,8 @@
 
 [Verificación operativa del 22/11](Verificacion_Operativa_2026-11-22.json) del portal, ALB, RDS, WMS, respaldo y suscripciones.
 
+La versión `20261122-erp-form-fixes` está activa en las dos EC2. La ronda posterior al despliegue pasó **309 comprobaciones en 10 sesiones por rol**, incluidas las excepciones de JavaScript, el acceso a los módulos y las restricciones de permisos. El formulario SNS se comprobó con una dirección ya suscrita. Las escrituras de catálogo, ventas, compras y finanzas se probaron en una base aislada. [Registro de verificación del ERP](Verificacion_ERP_2026-11-22.json) · [Controles de GitHub](https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/45113172324).
+
 | Prueba | Resultado | Evidencia |
 |---|---|---|
 | Pedido AWS–Azure | Evento correlacionado entre ERP, cola, Blob e Insights. | [Registro del pedido](https://github.com/kyrafka/tangamandapio-cloud-migration/blob/bf864d8df0e954d0bba72a7c5098dafc525f2419/evidence/current/azure/AZURE-WMS-ORDER-TRACKING-2026-11-19.json) |

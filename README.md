@@ -16,6 +16,8 @@ Proyecto integrador de Cloud Computing. El ERP de pedidos opera en AWS Ohio y se
 | Respaldo | Systems Manager reportó Success en la ejecución diaria. La restauración se ensayó en PostgreSQL aislado. |
 | Alertas | Gmail y UPeU figuran confirmados como suscriptores en SNS. |
 
+La versión del ERP `20261122-erp-form-fixes` fue verificada en las dos EC2. Pasó 309 comprobaciones de navegador en diez sesiones por rol. [Resultados de la versión publicada](Proyecto_Cloud_Tangamandapio/06_Pruebas/Verificacion_ERP_2026-11-22.json).
+
 Los [registros de pruebas](Proyecto_Cloud_Tangamandapio/06_Pruebas/README.md) detallan la fecha y alcance de cada ensayo. Queda por probar la recuperación regional, la promoción de RDS y la reconstrucción integral desde cuentas vacías.
 
 ## Código y operación

@@ -1,0 +1,147 @@
+{
+  "release": "20261122-erp-form-fixes",
+  "production_verified_utc": "2026-11-23T04:47:01.193Z",
+  "rollout": {
+    "stack_status": "UPDATE_COMPLETE",
+    "http_ready_probe_count": 29,
+    "http_ready_non_200_samples": 0,
+    "nodes": [
+      {
+        "zone": "us-east-2b",
+        "ready": 200,
+        "release": "20261122-erp-form-fixes",
+        "assets": {
+          "assets/request-load.mjs": "7ee51e278154ae753a1b3fe268f792e280f532cdf6b727202dd21ba4b5d4f126",
+          "assets/admin-console.js": "ab8e51c528fb1d1d4f41d65d83636211980cd4931b6a8708960cce5500905f0b",
+          "assets/erp.js": "c104eae16cf4521d5f092ab33cc6ae8b14b7f5ceefc707613728c5bfecd5c715",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "81391092680c50cc1a9bf853885c99549b24a7eee70a7bccd200b999975860e2"
+        }
+      },
+      {
+        "zone": "us-east-2a",
+        "ready": 200,
+        "release": "20261122-erp-form-fixes",
+        "assets": {
+          "assets/request-load.mjs": "7ee51e278154ae753a1b3fe268f792e280f532cdf6b727202dd21ba4b5d4f126",
+          "assets/admin-console.js": "ab8e51c528fb1d1d4f41d65d83636211980cd4931b6a8708960cce5500905f0b",
+          "assets/erp.js": "c104eae16cf4521d5f092ab33cc6ae8b14b7f5ceefc707613728c5bfecd5c715",
+          "assets/admin-console.css": "0c7ef9b3bb5ec578fa0d556318799fd3971030f228a8f4b4954c63b47ca3e1d7",
+          "admin/index.html": "81391092680c50cc1a9bf853885c99549b24a7eee70a7bccd200b999975860e2"
+        }
+      }
+    ]
+  },
+  "browser_production": {
+    "sessions": 10,
+    "checks_passed": 309,
+    "checks_per_role": {
+      "Administrador": 51,
+      "Cliente B2B": 28,
+      "Comercial": 37,
+      "Operador WMS": 35,
+      "Operaciones TI": 39,
+      "Auditor": 40,
+      "Finanzas ERP": 21,
+      "Compras ERP": 19,
+      "Datos maestros ERP": 18,
+      "Administrador ERP delegado": 21
+    },
+    "temporary_role_account_suspended": true,
+    "forms": [
+      "Empresa: acepta guiones y rechaza barras",
+      "SNS: envío a destinatario ya confirmado sin crear suscripción",
+      "Catálogo ERP: SKU acepta guion y rechaza caracteres inválidos"
+    ],
+    "form_errors": []
+  },
+  "browser_isolated": {
+    "checks": [
+      "Empresa: acepta guiones y rechaza barras",
+      "Empresa: alta, limpieza y recarga de la lista",
+      "Usuario: alta, limpieza y recarga de la lista",
+      "Alertas: confirmación simulada, limpieza y actualización",
+      "Catálogo ERP: SKU acepta guion y rechaza caracteres inválidos",
+      "Maestros: socio comercial y producto guardados",
+      "Ventas: registro con evento WMS",
+      "Compras: orden y recepción con evento WMS",
+      "Finanzas: registro y liquidación de un gasto sintético"
+    ],
+    "exceptions": [],
+    "simulated": [
+      "SNS subscription delivery",
+      "WMS catalog and inventory responses"
+    ]
+  },
+  "production_service_checks": {
+    "internal_mail": {
+      "checks_passed": 9,
+      "transport": "portal_only",
+      "temporary_accounts_suspended": 2
+    },
+    "webrtc": {
+      "connected": true,
+      "synthetic_audio_frames_per_peer": [
+        12,
+        12
+      ],
+      "turn_configured": false,
+      "same_test_host": true,
+      "cleanup_confirmed": true
+    },
+    "backups_and_wms": {
+      "aws": {
+        "listed": 2,
+        "downloadHttp": 200,
+        "bytes": 1973
+      },
+      "azure": {
+        "listed": 6,
+        "downloadHttp": 200,
+        "bytes": 98554
+      },
+      "azureWmsQueues": {
+        "http": 200,
+        "status": "ok"
+      },
+      "authorizationAfterLogout": 401
+    },
+    "private_wms_by_ec2": [
+      {
+        "remoteIp": "10.20.1.4",
+        "http": 200
+      },
+      {
+        "remoteIp": "10.20.1.4",
+        "http": 200
+      }
+    ],
+    "historical_views": {
+      "cloudwatch_points": 1181,
+      "voice_calls_returned": 6,
+      "themes_verified": true,
+      "mobile_view_fits": true
+    },
+    "controlled_load": {
+      "initiated": 5,
+      "http_200_observed": 4,
+      "stopped": true,
+      "capacity_changes": 0
+    }
+  },
+  "local_suites": {
+    "python_unit_tests_passed": 185,
+    "node_tests_passed": 32,
+    "asset_scripts_parsed": 14,
+    "isolated_order_roundtrips": 40,
+    "frontend_audit": "passed",
+    "python_lock_audit": "passed"
+  },
+  "github_quality_gate": {
+    "run": "https://github.com/kyrafka/tangamandapio-cloud-migration/actions/runs/45113172324",
+    "backend": "success",
+    "frontend": "success",
+    "infrastructure": "success"
+  },
+  "scope": "The live browser checked all role-visible modules and permissions. Business transactions, new SNS delivery and handling of simulated cloud responses were exercised in an isolated database. This release did not test full-capacity production traffic or connection between restrictive external networks."
+}
