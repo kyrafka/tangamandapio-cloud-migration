@@ -12,15 +12,15 @@ locals {
 module "azure_operations" {
   source = "../../modules/azure_operations"
 
-  location                    = var.location
-  resource_group_name         = var.resource_group_name
-  create_resource_group       = true
-  storage_account_name        = var.storage_account_name
-  key_vault_name              = var.key_vault_name
-  name_prefix                 = var.name_prefix
-  function_app_name           = var.function_app_name
-  function_package_path       = abspath(var.function_package_path)
-  alert_email_receivers       = var.alert_email_receivers
-  enable_legacy_metric_alerts = false
-  tags                        = local.tags
+  location                  = var.location
+  resource_group_name       = var.resource_group_name
+  create_resource_group     = true
+  storage_account_name      = var.storage_account_name
+  key_vault_name            = var.key_vault_name
+  name_prefix               = var.name_prefix
+  function_app_name         = var.function_app_name
+  function_package_path     = abspath(var.function_package_path)
+  alert_email_receivers     = var.alert_email_receivers
+  deploy_legacy_consumption = false
+  tags                      = local.tags
 }

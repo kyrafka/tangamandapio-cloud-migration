@@ -57,3 +57,9 @@ variable "enable_legacy_metric_alerts" {
   type        = bool
   default     = true
 }
+
+variable "deploy_legacy_consumption" {
+  description = "Deploy the legacy Linux Consumption Function, its plan, IAM assignments and metrics alerts."
+  type        = bool
+  default     = true
+}

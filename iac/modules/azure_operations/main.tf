@@ -162,6 +162,8 @@ resource "azurerm_key_vault" "operations" {
 }
 
 resource "azurerm_service_plan" "function" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   name                = "${var.name_prefix}-wms-plan"
   resource_group_name = local.operations_resource_group_name
   location            = local.operations_location
@@ -171,10 +173,12 @@ resource "azurerm_service_plan" "function" {
 }
 
 resource "azurerm_linux_function_app" "wms" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   name                                           = coalesce(var.function_app_name, "${var.name_prefix}-wms-fn")
   resource_group_name                            = local.operations_resource_group_name
   location                                       = local.operations_location
-  service_plan_id                                = azurerm_service_plan.function.id
+  service_plan_id                                = azurerm_service_plan.function[0].id
   storage_account_name                           = azurerm_storage_account.this.name
   storage_account_access_key                     = azurerm_storage_account.this.primary_access_key
   functions_extension_version                    = "~4"
@@ -232,31 +236,38 @@ resource "azurerm_linux_function_app" "wms" {
 }
 
 resource "azurerm_role_assignment" "function_package_reader" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   scope                = azurerm_storage_container.function_packages.resource_manager_id
   role_definition_name = "Storage Blob Data Reader"
-  principal_id         = azurerm_linux_function_app.wms.identity[0].principal_id
+  principal_id         = azurerm_linux_function_app.wms[0].identity[0].principal_id
 }
 
 resource "azurerm_role_assignment" "function_blob" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   scope                = azurerm_storage_container.evidence.resource_manager_id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = azurerm_linux_function_app.wms.identity[0].principal_id
+  principal_id         = azurerm_linux_function_app.wms[0].identity[0].principal_id
 }
 
 resource "azurerm_role_assignment" "function_queue" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   scope                = azurerm_storage_queue.fulfillment.resource_manager_id
   role_definition_name = "Storage Queue Data Contributor"
-  principal_id         = azurerm_linux_function_app.wms.identity[0].principal_id
+  principal_id         = azurerm_linux_function_app.wms[0].identity[0].principal_id
 }
 
 resource "azurerm_role_assignment" "function_poison_queue_reader" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   scope                = azurerm_storage_queue.fulfillment_poison.resource_manager_id
   role_definition_name = "Storage Queue Data Reader"
-  principal_id         = azurerm_linux_function_app.wms.identity[0].principal_id
+  principal_id         = azurerm_linux_function_app.wms[0].identity[0].principal_id
 }
 
-# Alertas que existen en el entorno Azure vigente. Se declaran aquí para que
-# una recreación desde cero no pierda la señalización del WMS.
+# Destino de alertas compartido por la monitorización del WMS.
 resource "azurerm_monitor_action_group" "operations" {
   name                = "${var.name_prefix}-ops-ag"
   resource_group_name = local.operations_resource_group_name
@@ -280,9 +291,11 @@ resource "azurerm_monitor_action_group" "operations" {
 }
 
 resource "azurerm_monitor_metric_alert" "function_http_5xx" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   name                = "${var.name_prefix}-wms-fn-5xx"
   resource_group_name = local.operations_resource_group_name
-  scopes              = [azurerm_linux_function_app.wms.id]
+  scopes              = [azurerm_linux_function_app.wms[0].id]
   description         = "La Function WMS devolvió errores HTTP 5xx."
   enabled             = var.enable_legacy_metric_alerts
   severity            = 2
@@ -305,9 +318,11 @@ resource "azurerm_monitor_metric_alert" "function_http_5xx" {
 }
 
 resource "azurerm_monitor_metric_alert" "function_latency" {
+  count = var.deploy_legacy_consumption ? 1 : 0
+
   name                = "${var.name_prefix}-wms-fn-latency"
   resource_group_name = local.operations_resource_group_name
-  scopes              = [azurerm_linux_function_app.wms.id]
+  scopes              = [azurerm_linux_function_app.wms[0].id]
   description         = "La latencia media de la Function WMS superó el umbral esperado."
   enabled             = var.enable_legacy_metric_alerts
   severity            = 3

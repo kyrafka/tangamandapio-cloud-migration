@@ -7,11 +7,11 @@ output "storage_account_name" {
 }
 
 output "function_default_hostname" {
-  value = azurerm_linux_function_app.wms.default_hostname
+  value = var.deploy_legacy_consumption ? azurerm_linux_function_app.wms[0].default_hostname : null
 }
 
 output "function_principal_id" {
-  value = azurerm_linux_function_app.wms.identity[0].principal_id
+  value = var.deploy_legacy_consumption ? azurerm_linux_function_app.wms[0].identity[0].principal_id : null
 }
 
 output "log_analytics_workspace_id" {

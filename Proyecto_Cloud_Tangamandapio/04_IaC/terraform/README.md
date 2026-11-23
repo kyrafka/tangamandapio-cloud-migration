@@ -2,7 +2,7 @@
 
 | Raíz | Administra |
 |---|---|
-| [azure-rebuild](../../../iac/environments/azure-rebuild) | Servicios base del WMS, Storage, Queue e Insights. |
+| [azure-rebuild](../../../iac/environments/azure-rebuild) | Servicios compartidos del WMS, Storage, Queue, Key Vault y Application Insights. La Function Consumption anterior queda deshabilitada en esta raíz. |
 | [azure-private-network](../../../iac/environments/azure-private-network) | VNet, subredes y Key Vault de red. |
 | [azure-flex-private](../../../iac/environments/azure-flex-private) | Function Flex, identidad administrada, Private Endpoint y DNS privado. |
 | [aws-azure-tailscale](../../../iac/environments/aws-azure-tailscale) | Routers, conectividad y dependencias que pertenezcan a este estado. |
