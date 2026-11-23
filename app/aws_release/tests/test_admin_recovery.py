@@ -105,6 +105,7 @@ class AdministratorRecoveryTests(unittest.TestCase):
         self.assertEqual(rotated["auth_version"], repeated["auth_version"] + 1)
 
     def test_password_version_without_explicit_flag_does_not_reset(self):
+        initial = self.admin_row()
         self.application.config.update(
             BOOTSTRAP_ADMIN_PASSWORD="Must-Not-Replace-Existing!",
             RESET_BOOTSTRAP_ADMIN_PASSWORD=False,
@@ -116,12 +117,12 @@ class AdministratorRecoveryTests(unittest.TestCase):
             check_password_hash(existing["password_hash"], "Initial-Password-2026!")
         )
         self.assertFalse(existing["must_change_password"])
+        self.assertEqual(existing["auth_version"], initial["auth_version"])
         with portal.connect(self.database) as connection:
-            table = connection.execute(
-                "SELECT name FROM sqlite_master "
-                "WHERE type = 'table' AND name = 'portal_admin_recovery_events'"
-            ).fetchone()
-        self.assertIsNone(table)
+            events = connection.execute(
+                "SELECT secret_version FROM portal_admin_recovery_events"
+            ).fetchall()
+        self.assertEqual(events, [])
 
 
 if __name__ == "__main__":
