@@ -1,7 +1,8 @@
-export const maxRequestsPerSecond = 115;
+export const maxRequestsPerSecond = 150;
 export const maxRunSeconds = 300;
 export const maxRequestsPerRun = 28500;
-const maxInFlight = 40;
+const maxInFlight = 56;
+const maxCredit = 4;
 
 export async function runRequestLoad({ rate, seconds, signal, progress = () => {} }) {
   if (!Number.isInteger(rate) || rate < 1 || rate > maxRequestsPerSecond ||
@@ -62,7 +63,7 @@ export async function runRequestLoad({ rate, seconds, signal, progress = () => {
     const ticker = setInterval(() => {
       const now = performance.now();
       if (now - started >= seconds * 1000) { finish("complete"); return; }
-      credit = Math.min(3, credit + (now - lastTick) * rate / 1000);
+      credit = Math.min(maxCredit, credit + (now - lastTick) * rate / 1000);
       lastTick = now;
       while (!reason && credit >= 1 && inFlight < maxInFlight && sent < rate * seconds) {
         credit--;

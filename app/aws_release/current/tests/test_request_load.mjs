@@ -24,22 +24,23 @@ test("reports the responses it received and stops sending when cancelled", async
 });
 
 test("rejects settings above the rate or time limit even outside the form", async () => {
-  await assert.rejects(runRequestLoad({ rate: 116, seconds: 60 }), RangeError);
+  await assert.rejects(runRequestLoad({ rate: 151, seconds: 60 }), RangeError);
+  await assert.rejects(runRequestLoad({ rate: 150, seconds: 240 }), RangeError);
   await assert.rejects(runRequestLoad({ rate: 115, seconds: 300 }), RangeError);
   await assert.rejects(runRequestLoad({ rate: 20, seconds: 301 }), RangeError);
 });
 
-test("allows the higher rate and keeps more than 24 requests in flight", async (t) => {
+test("allows 150 per second and keeps more than 40 requests in flight", async (t) => {
   const stop = new AbortController();
   let sent = 0;
   t.mock.method(globalThis, "fetch", async (_path, { signal }) => {
     sent++;
-    if (sent === 30) queueMicrotask(() => stop.abort());
+    if (sent === 45) queueMicrotask(() => stop.abort());
     return new Promise((_resolve, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason), { once: true });
     });
   });
-  const result = await runRequestLoad({ rate: 115, seconds: 1, signal: stop.signal });
+  const result = await runRequestLoad({ rate: 150, seconds: 2, signal: stop.signal });
   assert.equal(result.reason, "stopped");
-  assert.ok(result.sent >= 30);
+  assert.ok(result.sent >= 45);
 });
