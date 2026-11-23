@@ -9,4 +9,4 @@
 | Conmutación privada | Primer HTTPS 200 en 2,64 y 2,60 s en las dos EC2 del ensayo. | [Registro de conmutación](https://github.com/kyrafka/tangamandapio-cloud-migration/blob/bf864d8df0e954d0bba72a7c5098dafc525f2419/evidence/current/aws/AWS-WMS-FAILOVER-RUBRIC-2026-11-19.json) |
 | Roles del ERP | Acceso y restricciones comprobados en navegador. | [Prueba por rol](https://github.com/kyrafka/tangamandapio-cloud-migration/blob/bf864d8df0e954d0bba72a7c5098dafc525f2419/evidence/current/aws/AWS-PORTAL-ROLES-BROWSER-2026-11-19.json) |
 
-Capturas, pruebas funcionales y alcance en el informe entregado por separado.
+El informe entregado por separado reúne las capturas y el alcance de las pruebas.

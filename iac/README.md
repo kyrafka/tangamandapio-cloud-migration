@@ -144,11 +144,12 @@ Cada directorio de `environments/` es una raíz Terraform independiente. No se d
 | Raíz | Propósito |
 |---|---|
 | `azure-rebuild/` | Reconstrucción del backend WMS y sus servicios de soporte; [`lifecycle.ps1`](environments/azure-rebuild/lifecycle.ps1) guía `up`/`down` y conserva el backend remoto de Terraform. |
-| `azure-private-network/` | VNet y subredes para OpenVPN P2S y Flex; el Key Vault VPN y su permiso acotado están planificados, pendientes de autorización tras el rechazo de revisión automática. Estado remoto independiente; no crea gateways. |
+| `azure-private-network/` | VNet, subredes y Key Vault de red en Azure. Usa un estado remoto independiente. La raíz deja el aprovisionamiento de gateways a otras configuraciones. |
 | `azure-flex-private/` | Plan Flex, Private Endpoint y resolución DNS privada. |
 | `azure-p2s-vpn/` | VPN Gateway P2S y configuración de acceso para el piloto privado. |
 | `azure-tfstate/` | Almacenamiento remoto del estado Terraform. |
-| `aws-azure-vpn/` | Diseño de VPN administrada entre nubes, sujeto a permisos de la cuenta. |
+| `aws-azure-tailscale/` | IaC de la conectividad Tailscale y de dependencias que deben reconciliarse con su propietario actual. |
+| `aws-azure-vpn/` | Diseño alternativo de VPN administrada entre nubes. |
 | `azure-demo/`, `demo/` | Entornos demostrativos separados; no aplicar sobre los recursos del portal. |
 
 Los prototipos locales de IPsec/WireGuard no están validados de extremo a extremo y no forman parte de la IaC publicada.
@@ -162,7 +163,7 @@ La infraestructura está descrita parcialmente en CloudFormation y Terraform, pe
 1. Un inventario vivo, la cuenta/región correctas y permisos suficientes para leer y crear recursos.
 2. El backup/snapshot de PostgreSQL que se decida conservar, credenciales nuevas y configuración segura de Secrets Manager/Key Vault.
 3. Un release del portal publicado en S3 y los paquetes de Functions requeridos.
-4. Certificados privados nuevos para la conexión P2S y material de configuración instalado por un canal seguro; nunca se versionan.
+4. Credenciales de enrolamiento de Tailscale, rutas aprobadas y configuración privada de DNS. Entrega las credenciales por el almacén de secretos.
 5. DNS y certificado HTTPS revalidados para el nombre disponible.
 6. Planes revisados y una restauración de datos probada antes de habilitar el tráfico.
 

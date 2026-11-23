@@ -1,11 +1,10 @@
 # AWS CloudFormation — portal y recuperación
 
-**Corte vigente 20/11/2026.** La cuenta activa es `481056890449` en `us-east-2`.
+**Entorno verificado el 22/11/2026.** El stack activo es `tangamandapio-live-20261116` en `us-east-2`.
 El portal tiene dos destinos sanos, RDS Multi-AZ está disponible con un día de
 retención, la VPN Tailscale transporta los eventos privados y la copia diaria
 cifrada de Blob permitió recuperar el ERP. El parámetro `DatabaseMultiAZ` del
-stack es `true` y el recurso RDS está `IN_SYNC`. Las entradas fechadas de abajo
-conservan el historial. [Estado y evidencias del 20/11](../ESTADO_REAL_2026-11-20.md).
+stack es `true`. [Verificación operativa del 22/11](../../Proyecto_Cloud_Tangamandapio/06_Pruebas/Verificacion_Operativa_2026-11-22.json).
 
 ## Qué administra
 
@@ -20,7 +19,7 @@ Plantillas auxiliares:
 
 ## Preparar un cambio
 
-1. Verifica la sesión, la cuenta y la región con credenciales temporales del laboratorio; nunca copies el token al repo ni a comandos guardados.
+1. Verifica la sesión, la cuenta y la región con credenciales temporales de la cuenta de destino; nunca copies el token al repo ni a comandos guardados.
 2. Obtén el nombre exacto del stack vivo. No uses un nombre de ejemplo ni supongas que el stack existe.
 3. Ejecuta `deploy.sh` para generar/revisar el change set. El primer paso no lo aplica. Comprueba especialmente reemplazos de RDS, VPC, ALB, almacenamiento o recursos con datos.
 4. Para aplicar, repite solo después de revisar el plan, con `APPLY_CHANGE_SET=true`, `CONFIRM_STACK_NAME` idéntico y la confirmación interactiva solicitada por el script.
