@@ -1,125 +1,26 @@
-# Tangamandapio — portal empresarial y arquitectura cloud
+# Tangamandapio
 
-Proyecto académico de una distribuidora ficticia. La arquitectura de referencia contempla 450 colaboradores, 220 cuentas internas, tres centros en Perú y picos de hasta 3,000 usuarios externos. Las cifras son supuestos de diseño, no mediciones de producción. El catálogo y el inventario son datos sintéticos.
+Proyecto integrador de Cloud Computing. El ERP de pedidos opera en AWS Ohio y se integra con un WMS privado en Azure West US.
 
-## Estado operativo al 21/11/2026
+- [**Carpeta de entrega académica**](Proyecto_Cloud_Tangamandapio/README.md). Índice numerado, diagramas, direccionamiento IP y evidencias.
+- [CloudFormation para AWS](Proyecto_Cloud_Tangamandapio/04_IaC/cloudformation/README.md) y [Terraform para Azure](Proyecto_Cloud_Tangamandapio/04_IaC/terraform/README.md).
+- [Portal Tangamandapio](https://tangamandapio.kendellnm.me/).
 
-El release vigente en AWS Ohio es `20261121-portal-auto-refresh`. El correo
-interno actualiza cada cinco segundos la bandeja, los mensajes sin leer y la
-confirmación de lectura. Seguimiento consulta cada diez segundos el pedido
-seleccionado. Las listas de Ventas y Compras se actualizan cada quince segundos
-con los estados registrados en el ERP. Las consultas se pausan en pestañas en
-segundo plano. [Pruebas de las actualizaciones](evidence/current/aws/AWS-PORTAL-AUTO-REFRESH-2026-11-21.json).
+## Estado operativo verificado el 22/11/2026
 
-El ERP usa su propio usuario PostgreSQL y el exportador cifrado usa un lector
-separado. En la verificación del 20/11 ambas EC2 recibieron acceso denegado al
-secreto maestro, pasaron 297 comprobaciones en diez sesiones y se comprobó el
-envío de Comercial a Almacén dentro del buzón del ERP.
-[Verificación de permisos](evidence/current/aws/AWS-ERP-SQL-ACCESS-2026-11-20.json).
-
-El 20/11 también se publicó `20261120-erp-card-assembly` en AWS Ohio. CloudFormation
-terminó la actualización y el balanceador quedó con dos destinos sanos.
-`/ready` devolvió HTTP 200 en las 34 muestras del recambio. Una sesión real
-de Administración confirmó el ensamblaje de las tarjetas desde **ERP y correo**,
-el cambio de módulo y el modo de movimiento reducido en móvil.
-[Registro de la publicación](evidence/current/aws/AWS-ERP-RELEASE-2026-11-20.json).
-
-El inventario comprobado el 19/11 registró un ASG con dos destinos sanos
-en dos zonas y capacidad de escalar hasta cinco. AWS usa un NAT Gateway
-compartido. Azure West US opera sin NAT Gateway.
-
-Un pedido sintético recorrió **pendiente → en cola → procesado** por la VPN
-privada AWS–Azure. El evento se verificó en Function, Queue, Blob y Application
-Insights. El portal muestra el avance según el rol. Operaciones y Administración
-pueden consultar las colas y reintentar envíos.
-
-La copia diaria cifrada del 20/11 recuperó 20 tablas. El ERP arrancó sobre esa
-copia y completó 19 comprobaciones en **12,75 s** en un entorno aislado. El RPO
-del ensayo del 19/11 fue de **15 h 39 min 44 s**. El ensayo más reciente de la ruta
-privada recuperó HTTPS en **2,64 y 2,60 s** desde ambas EC2. En los dos ensayos
-previos se midieron de 4,59 a 9,92 s. RDS está en **Multi-AZ** desde el 19/11 y
-conserva un día de retención. CloudFormation confirmó que el recurso RDS está
-sincronizado. La última prueba al ALB registró un HTTP 502 en
-10.000 solicitudes con 50 concurrentes.
-
-[Inventario y evidencias](iac/ESTADO_REAL_2026-11-20.md) ·
-[Costos actualizados](evidence/current/COSTOS-2026-11-20.md) ·
-[Guía de capturas](evidence/current/CAPTURAS_PENDIENTES.md#recorrido-para-la-defensa-del-20-de-noviembre-de-2026) ·
-[Matriz de rúbrica](core/04_matriz_rubrica.md) ·
-[Seguimiento y permisos](app/aws_release/PLATFORM_CONSOLE.md#seguimiento-de-pedidos-por-rol)
-
-## Uso e infraestructura
-
-El portal y el WMS se despliegan por separado. Antes de operar, verifica
-la cuenta AWS con `aws sts get-caller-identity` y la suscripción Azure con
-`az account show`. Guarda las credenciales, el estado y los planes fuera de Git.
-
-Para preparar el entorno AWS, revisa primero [la guía de CloudFormation](iac/cloudformation/README.md). `iac/cloudformation/lifecycle.sh up` requiere cuenta y nombre de stack explícitos, los datos de la Function y su secreto ya provisionado; HTTPS necesita el certificado y el dominio. Una base nueva exige aceptación expresa y solo recrea datos sintéticos. El script solicita confirmación y genera recursos facturables.
-
-En Azure, [la raíz de servicios base](iac/environments/azure-rebuild/README.md)
-prepara Storage, Queue e Insights. [Azure Flex privada](iac/environments/azure-flex-private/README.md)
-define el WMS activo y publica su ZIP mediante ARM OneDeploy. Revisa también
-el [orden de reconstrucción](iac/README.md#orden-de-reconstrucción) para la red,
-la VPN, los secretos y el respaldo.
-
-**Borrado y reconstrucción integral: pendientes.** No se ha probado un ciclo completo entre ambas nubes desde cero, ni hay un solo comando que restaure todos los datos, secretos, DNS y VPN. Terraform protege contra destrucción el almacenamiento y el Key Vault usados para recuperación; el comando general de destrucción de Azure se detendrá hasta resolver su conservación. AWS puede eliminar datos y snapshots según las opciones elegidas: revisa el alcance y los respaldos antes de ejecutar cualquier borrado. No ejecutes los comandos destructivos únicamente para comprobarlos.
-
-Los registros que siguen corresponden a despliegues anteriores.
-
-## Revalidación AWS–Azure — 03/11/2026, posterior a las 19:53 UTC
-
-Se reconstruyó temporalmente el entorno AWS en la cuenta `654654388734` y se comprobó RDS PostgreSQL privado y cifrado en Multi-AZ (`us-east-1a` y `us-east-1b`), con siete días de retención. WAF permitió una solicitud normal (200) y bloqueó las pruebas de XSS y SQLi (403). El inicio de sesión administrador y las consultas de usuarios, pedidos e inventario respondieron 200 desde EC2.
-
-El ASG escaló automáticamente de dos a tres instancias y se observaron tres destinos saludables. La carga recibió 28.187 respuestas 200 con p95 de 189,55 ms sobre un **archivo estático**; comprueba ese mecanismo de escalado, no la capacidad de 3.000 usuarios ni una carga transaccional sostenida. El resultado medido está en [la evidencia de escalado](evidence/current/aws-scale-revalidation-20261103.json).
-
-Un evento generado en AWS (`evt-04d16ff9f38e411bae44b95efcd598cb`) llegó a Azure y terminó en `demo_fulfillment_completed`: el inventario sintético pasó de 24 a 23. La reposición de prueba (`evt-restore-b16390c6d91c43da8241265db680b5ac`) terminó en `demo_restock_completed` y recuperó el saldo de 23 a 24. El tránsito utilizó el endpoint público HTTPS de Azure; la VPN y BGP no estaban activos. La prueba de permisos `CreateCustomerGateway` fue rechazada por una SCP.
-
-El desmontaje terminó con `PROJECT_STACKS_AND_RETAINED_DATA_PURGED`. En `us-east-1` solo quedó la pila base de Academy: no se observaron EC2, ASG, ALB, RDS, NAT, EIP, WAF ni buckets del proyecto, ni snapshots manuales o backups automáticos. Se conservaron cinco secretos de Tangamandapio, que pueden generar cargos. Academy mostró **Lab terminated**, AWS **Terminated** y `00:00`.
-
-El medidor de Academy indicó **US$18,60 de US$50** tanto al inicio como al cierre; Academy documenta un retraso de 8–12 horas, así que la lectura no permite calcular el costo real de esta sesión ni su promedio por hora. Azure Cost Management mostró **US$0,0023796** acumulados en el mes tanto al inicio como al cierre, también con posible retraso. Los recursos Azure preexistentes se conservaron y no se probó el ciclo integral de borrado y reconstrucción de Azure.
-
-### Corte anterior — 03/11/2026, 19:53 UTC
-
-- **Portal y dominio:** `https://tangamandapio.kendellnm.me/` y `/health` devuelven Cloudflare `530 / 1016`; el origen no resuelve actualmente. No se modificó Cloudflare.
-- **AWS (cuenta del laboratorio `654654388734`, `us-east-1`):** la consola muestra solo la pila base de Academy (`CREATE_COMPLETE`). No hay instancias EC2, grupos de Auto Scaling, balanceadores, bases RDS, colas SQS ni Web ACL de WAF del proyecto. Por eso hoy no se puede repetir el escalado 2→3 ni un recorrido iniciado en AWS. El perfil local de AWS CLI no quedó actualizado: la revisión automática bloqueó el cambio antes de escribir credenciales; las consultas anteriores de este corte se hicieron en la consola autenticada.
-- **Azure:** Function `tangama-wms-261030` está `Running` y HTTPS-only; `/api/health` devolvió 200. El ledger autenticado contiene 13 SKU sintéticos. Las lecturas protegidas y la recepción POST sin clave devolvieron 401. Existen `fulfillment-events` y `fulfillment-events-poison`; la consulta de poison devolvió 0 mensajes.
-- **Eventos WMS:** Application Insights registró dos solicitudes `health` en las últimas 24 horas, cero trazas `queued_event` y cero `wms_demo_` de resultado. El recorrido AWS→Azure sí se demostró históricamente desde EC2 hacia Azure Queue/Function por HTTPS público; no cruzó la VPN. Hoy no está activo ni revalidado porque no hay infraestructura AWS del proyecto.
-- **Conectividad privada:** el inventario actual de Azure no devuelve VNet, VPN Gateway ni Private Endpoint del proyecto; solo aparecen Network Watchers de plataforma. El piloto anterior de router EC2 + Azure P2S fue de un solo camino, sin alta disponibilidad ni BGP, y ya no se observa desplegado.
-- **BGP pendiente:** diseñar y probar luego VPN administrada AWS–Azure con BGP, rutas privadas propagadas y tolerancia a la caída de un túnel. El diseño IaC está descrito en [`iac/environments/aws-azure-vpn`](iac/environments/aws-azure-vpn/README.md), pero no está desplegado.
-- **Recuperación y escala:** no hay RDS vivo que exportar/restaurar ni ASG activo para medir escalado. No se cambiaron recursos AWS/Azure ni se envió un evento de prueba en este corte.
-
-Las observaciones de ese corte anterior preceden a la reconstrucción y pruebas descritas arriba. Los E2E, el piloto P2S y las pruebas de escalado de octubre son antecedentes fechados. Ver [evidencia histórica AWS→Azure](evidence/current/aws/AWS-AZURE-E2E-2026-10-16-0231UTC.md), [piloto P2S](evidence/current/azure/AZURE-AWS-INTEROP-2026-10-13.md), [prueba histórica de escalado](evidence/current/aws/AWS-AUTOSCALING-TEST-2026-10-14.json) y la [matriz de criterios](core/04_matriz_rubrica.md).
-
-## Qué hace el sistema
-
-El portal reúne funciones B2B para distribuidores y módulos ERP para equipos internos. El ERP cubre ventas, compras, finanzas operativas, datos maestros, permisos y mensajería dentro del portal. La mensajería interna no proporciona buzones corporativos ni SMTP saliente. Azure Functions procesa eventos del WMS de demostración y actualiza un ledger sintético idempotente; no administra stock físico.
-
-## Documentación principal
-
-- [Entregable final con evidencias](deliverables/Proyecto_Final_Tangamandapio_2026-11-22.docx)
-- [Manual técnico y rutas de configuración](deliverables/Manual_Tecnico_Tangamandapio_2026-11-22.docx)
-- [Infraestructura y estado de AWS/Azure](iac/README.md)
-- [CloudFormation de AWS: despliegue y recuperación](iac/cloudformation/README.md)
-- [Terraform: entornos y módulos](iac/)
-- [Matriz de criterios y evidencia](core/04_matriz_rubrica.md)
-- [Arquitectura empresarial y alcance del ERP](core/12_arquitectura_empresarial_portal_erp_correo.md)
-- [Índice de capturas y evidencia seleccionada](evidence/README.md)
-- [Portal y servicios de aplicación](app/README.md)
-- [Plan de pruebas](tests/README.md)
-
-## Estructura
-
-| Ruta | Contenido |
+| Componente | Verificación |
 |---|---|
-| `app/` | Portal, API, ERP, paquete de release AWS, Azure Functions y pruebas de aplicación. |
-| `iac/cloudformation/` | Plantillas AWS y scripts con preflight para revisar, reconstruir y eliminar stacks. |
-| `iac/environments/` | Raíces Terraform independientes para Azure, red y pruebas de laboratorio. |
-| `iac/modules/` | Módulos reutilizables de red y operaciones. |
-| `core/` | Caso, arquitectura, costos, propuesta y rúbrica. |
-| `evidence/current/screenshots/` | Capturas de consola y del portal. Cada imagen debe conservar su fecha y contexto. |
+| Portal AWS | HTTPS 200 en /health y /ready. Dos destinos sanos. ASG de 2 a 5. |
+| Datos AWS | RDS PostgreSQL disponible, privada, cifrada y Multi-AZ. Un día de retención administrada. |
+| WMS privado | Las dos EC2 obtuvieron HTTPS 200 de la Function por el Private Endpoint 10.20.1.4. El acceso público de la Function está deshabilitado. |
+| Respaldo | Systems Manager reportó Success en la ejecución diaria. La restauración se ensayó en PostgreSQL aislado. |
+| Alertas | Gmail y UPeU figuran confirmados como suscriptores en SNS. |
 
-## Alcance y reconstrucción
+Los [registros de pruebas](Proyecto_Cloud_Tangamandapio/06_Pruebas/README.md) detallan la fecha y alcance de cada ensayo. Queda por probar la recuperación regional, la promoción de RDS y la reconstrucción integral desde cuentas vacías.
 
-La IaC describe los recursos, pero no contiene credenciales, certificados privados, snapshots de base de datos ni todos los artefactos y secretos necesarios para recuperar el servicio. Por eso aún no se ha demostrado una reconstrucción limpia de punta a punta desde una cuenta vacía. Antes de aplicar IaC, confirma la cuenta y región, inspecciona el estado remoto, protege los datos y secretos requeridos y revisa el change set o plan. Nunca publiques credenciales del laboratorio ni archivos `.tfstate`/planes.
+## Código y operación
 
-Las guías de IaC describen preflight, confirmaciones, costos y límites de cada entorno. Esta documentación no afirma que un despliegue esté funcionando si la evidencia viva no lo confirma.
+- [Código del ERP y WMS](app) · [IaC y orden de reconstrucción](iac/README.md) · [Pruebas automatizadas](tests/README.md).
+- [Seguridad](Proyecto_Cloud_Tangamandapio/05_Seguridad/README.md) · [Monitoreo](Proyecto_Cloud_Tangamandapio/07_Monitoreo/README.md) · [Recuperación](Proyecto_Cloud_Tangamandapio/08_Backup_DR/README.md) · [Costos](Proyecto_Cloud_Tangamandapio/09_Costos/README.md).
+
+El proyecto utiliza datos sintéticos. El informe y el manual técnico se entregan por separado.

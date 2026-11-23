@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="topologia-94" name="Topología AWS–Azure">
+    <mxGraphModel grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1200" pageHeight="750" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="aws-body" parent="1" vertex="1" value="" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=3;fillColor=#FFFAF3;strokeColor=#D8B789;strokeWidth=1.35;movable=0;">
+          <mxGeometry x="24" y="154" width="548" height="521" as="geometry" />
+        </mxCell>
+        <mxCell id="azure-body" parent="1" vertex="1" value="" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=3;fillColor=#F3FAFD;strokeColor=#A1C7D7;strokeWidth=1.35;movable=0;">
+          <mxGeometry x="628" y="154" width="548" height="521" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" vertex="1" value="Topología de red de Tangamandapio" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=31;fontColor=#172C40;fontStyle=1;">
+          <mxGeometry x="28" y="12" width="1140" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" parent="1" vertex="1" value="Entrada HTTPS al ERP y conexión privada del ERP al WMS" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=16;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="28" y="54" width="1140" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-title" parent="1" vertex="1" value="AWS Ohio  /  us-east-2" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=22;fontColor=#875419;fontStyle=1;">
+          <mxGeometry x="65" y="169" width="470" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-cidr" parent="1" vertex="1" value="VPC 10.10.0.0/16  ·  us-east-2a y us-east-2b" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=15;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="66" y="199" width="470" height="19" as="geometry" />
+        </mxCell>
+        <mxCell id="azure-title" parent="1" vertex="1" value="Azure West US" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=22;fontColor=#216483;fontStyle=1;">
+          <mxGeometry x="650" y="169" width="492" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="azure-cidr" parent="1" vertex="1" value="VNet vnet-tangama-private  ·  10.20.0.0/16" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=15;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="651" y="199" width="482" height="19" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Usuarios ERP&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Cliente B2B y personal&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#AEC0CE;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="65" y="88" width="185" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="cf" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Cloudflare&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;DNS público y TLS&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#AEC0CE;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="308" y="88" width="190" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;WAF y ALB público&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;HTTPS 443 · subredes públicas&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#D0AB73;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="65" y="238" width="225" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="igw" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Internet Gateway&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Adjunto a la VPC&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#D0AB73;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="338" y="238" width="195" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="app" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;ASG de aplicación&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;EC2 privadas en dos zonas&lt;br&gt;Mínimo 2 · máximo 5&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#D0AB73;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="65" y="355" width="225" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="nat" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;NAT Gateway&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Egreso compartido · us-east-2a&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#D0AB73;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="338" y="355" width="195" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="rds" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;RDS PostgreSQL&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Privado · Multi-AZ&lt;br&gt;Pedidos y outbox&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#D0AB73;strokeWidth=1.4;fontColor=#172C40;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="65" y="525" width="225" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="routers-aws" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Routers AWS&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Tailscale · principal y respaldo&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#F3FBF7;strokeColor=#75B39B;strokeWidth=1.4;fontColor=#087452;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="338" y="525" width="195" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="routers-az" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Routers Azure&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Tailscale · dos routers&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#F3FBF7;strokeColor=#75B39B;strokeWidth=1.4;fontColor=#087452;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="662" y="525" width="198" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="pe" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Private Endpoint&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;10.20.1.4 · HTTPS 443&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#F3FBF7;strokeColor=#75B39B;strokeWidth=1.4;fontColor=#087452;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="932" y="525" width="205" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="function" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Function Flex · WMS&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Procesamiento privado&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#90B5C8;strokeWidth=1.4;fontColor=#216483;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="932" y="355" width="205" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="queue" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Queue y Blob&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Cola, evento y resultado&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#90B5C8;strokeWidth=1.4;fontColor=#216483;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="662" y="355" width="198" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="insights" parent="1" vertex="1" value="&lt;b style='font-size:17px'&gt;Application Insights&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:13px;color:#456074'&gt;Trazas por evento&lt;/span&gt;" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=13;fillColor=#FFFFFF;strokeColor=#90B5C8;strokeWidth=1.4;fontColor=#216483;whiteSpace=wrap;spacingTop=3;">
+          <mxGeometry x="932" y="238" width="205" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="public-web" parent="1" edge="1" source="users" target="cf" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#172C40;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="https" parent="1" edge="1" source="cf" target="alb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#172C40;exitX=0.5;exitY=1;entryX=0;entryY=0.55;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="403" y="158" />
+              <mxPoint x="46" y="158" />
+              <mxPoint x="46" y="273" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="http-app" parent="1" edge="1" source="alb" target="app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#172C40;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sql" parent="1" edge="1" source="app" target="rds" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#172C40;exitX=0.28;exitY=1;entryX=0.28;entryY=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="outbound" parent="1" edge="1" source="app" target="nat" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#875419;exitX=1;exitY=0.5;entryX=0;entryY=0.5;dashed=1;dashPattern=5 4;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="internet" parent="1" edge="1" source="nat" target="igw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#875419;exitX=0.5;exitY=0;entryX=0.5;entryY=1;dashed=1;dashPattern=5 4;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="app-private" parent="1" edge="1" source="app" target="routers-aws" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#087452;exitX=0.68;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="218" y="475" />
+              <mxPoint x="435" y="475" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tunnel" parent="1" edge="1" source="routers-aws" target="routers-az" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#087452;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="private-ingress" parent="1" edge="1" source="routers-az" target="pe" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#087452;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="private-function" parent="1" edge="1" source="pe" target="function" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#087452;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="storage" parent="1" edge="1" source="function" target="queue" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#216483;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="telemetry" parent="1" edge="1" source="function" target="insights" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;endArrow=block;endFill=1;strokeWidth=2.3;strokeColor=#216483;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="label-http" parent="1" vertex="1" value="HTTP 8080" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="190" y="315" width="110" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label-rds" parent="1" vertex="1" value="TCP 5432" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="137" y="481" width="92" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label-route" parent="1" vertex="1" value="Ruta 10.20.1.4/32" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=14;fontColor=#087452;fontStyle=1;">
+          <mxGeometry x="266" y="446" width="185" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label-tunnel" parent="1" vertex="1" value="Tailscale" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#087452;fontStyle=1;">
+          <mxGeometry x="567" y="532" width="87" height="21" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-subnets-1" parent="1" vertex="1" value="Públicas  10.10.0.0/24 · 10.10.1.0/24" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="65" y="598" width="480" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-subnets-2" parent="1" vertex="1" value="Aplicación  10.10.10.0/24 · 10.10.11.0/24" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="65" y="617" width="480" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aws-subnets-3" parent="1" vertex="1" value="Base de datos  10.10.20.0/24 · 10.10.21.0/24" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="65" y="636" width="480" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="azure-subnets-1" parent="1" vertex="1" value="Workloads  10.20.0.0/24  ·  Endpoints  10.20.1.0/24" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="662" y="604" width="500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="azure-subnets-2" parent="1" vertex="1" value="Flex  10.20.2.0/27  ·  GatewaySubnet  10.20.255.0/27" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=13;fontColor=#456074;fontStyle=0;">
+          <mxGeometry x="662" y="628" width="500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="footer" parent="1" vertex="1" value="" style="html=1;fontFamily=Segoe UI;rounded=1;arcSize=15;strokeColor=none;fillColor=#EEF3F6;">
+          <mxGeometry x="24" y="692" width="1152" height="39" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-1" parent="1" vertex="1" value="Ruta privada al WMS" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=14;fontColor=#087452;fontStyle=1;">
+          <mxGeometry x="52" y="699" width="330" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-2" parent="1" vertex="1" value="Egreso a Internet (línea discontinua)" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=14;fontColor=#875419;fontStyle=1;">
+          <mxGeometry x="418" y="699" width="400" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-3" parent="1" vertex="1" value="Azul oscuro: tráfico del ERP" style="html=1;fontFamily=Segoe UI;text;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;spacing=0;fontSize=14;fontColor=#172C40;fontStyle=1;">
+          <mxGeometry x="835" y="699" width="330" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

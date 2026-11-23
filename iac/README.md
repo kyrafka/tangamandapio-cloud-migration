@@ -2,8 +2,7 @@
 
 ## Estado y recuperación vigentes
 
-Consulta el [corte del 19/11](ESTADO_REAL_2026-11-19.md) para el resultado de la
-restauración, el estado de la VPN, las alertas y el costo. CloudFormation
+Consulta el [índice de entrega](../Proyecto_Cloud_Tangamandapio/README.md) y las [guías de operación](../Proyecto_Cloud_Tangamandapio/04_IaC/README.md). CloudFormation
 administra los logs del ALB mediante `EnableAlbAccessLogs` y la retención del
 prefijo `alb-access/`. El [presupuesto ARM](azure-monitoring/subscription-budget.json)
 se despliega a nivel de suscripción, fuera de las raíces Terraform existentes.
@@ -125,118 +124,6 @@ crea usuarios de ensayo en la base aislada, comprueba pedidos, permisos y correo
 interno, y elimina el clúster local al finalizar. Las integraciones de envío
 externo quedan desactivadas en el ensayo. [Registro de recuperación del 20/11](../evidence/current/azure/AZURE-ERP-RECOVERY-2026-11-20.json).
 
-## Estado real de nube — 16/11/2026
-
-La verificación actual de la cuenta nueva está en
-[ESTADO_REAL_2026-11-16.md](ESTADO_REAL_2026-11-16.md). Ese corte reemplaza los
-estados de AWS Academy y los cortes locales anteriores para describir lo que
-está desplegado ahora. La pila principal de CloudFormation está activa; el
-tráfico privado AWS–Azure, los respaldos PostgreSQL hacia Blob y la restauración
-aislada siguen pendientes de sus dependencias indicadas allí.
-
-> **Actualizado en consulta cloud — 16/11/2026:** la infraestructura dibujada en
-> [estado real y observaciones pendientes](architecture/cambios-esperados.svg)
-> refleja el inventario AWS/Azure de ese día; ámbar/discontinuo marca lo que
-> aún falta desplegar o probar. El [original editable de Draw.io](architecture/cambios-esperados.drawio)
-> mantiene los mismos estados. El plan conserva la secuencia de remediación;
-> el [registro vivo](ESTADO_REAL_2026-11-16.md) prevalece sobre toda evidencia
-> fechada antes de ese corte.
-
-## Corte histórico de recuperación y costos — previo al 16/11/2026
-
-Los datos de esta sección pertenecen a la cuenta/laboratorio y a las
-comprobaciones previas; no describen los recursos de la cuenta AWS activa.
-Para el inventario vigente, usa [ESTADO_REAL_2026-11-16](ESTADO_REAL_2026-11-16.md).
-
-La comprobación más reciente encontró el laboratorio AWS Academy en estado
-`Terminated`. Esto no demuestra que todos los recursos de AWS estén eliminados:
-al terminar la sesión pueden permanecer RDS, almacenamiento, balanceadores y
-otros recursos facturables. La última consulta EC2 con credenciales válidas
-mostró cuatro instancias del proyecto; no se ha confirmado su estado después de
-terminar la sesión.
-
-En Azure se desasignaron `vm-tangama-ts-pilot` y `vm-tangama-ts-backup`;
-ambas quedaron en `VM deallocated`. Las Functions `tangama-flex-261104` y
-`tangama-wms-261030` quedaron en `Stopped`. No se borraron la VNet, el Private
-Endpoint, las cuentas de almacenamiento ni los almacenes de claves. Los
-recursos conservados pueden generar cargos independientemente de AWS Academy.
-Para reanudar, inicia las dos VM y ambas Functions, y comprueba el enrolamiento,
-las rutas y el recorrido privado antes de considerar que el servicio funciona.
-
-El último medidor observado en Academy mostraba US$25.10 de US$50. Es un
-acumulado con retraso; no acredita que el gasto actual sea cero. No se pudo
-comprobar si RDS y otros recursos facturables siguieron activos tras terminar la
-sesión, pues las credenciales de AWS CLI estaban vencidas.
-
-En la revisión posterior se encontró la instancia PostgreSQL en la consola y
-se solicitó su detención temporal. AWS indicó que se reanudará automáticamente
-el 12/11/2026 a las 23:30 (UTC-05:00). Al cerrar el laboratorio la solicitud
-seguía en transición: no se confirmó el estado final `stopped`. Aunque esté
-detenida, el almacenamiento, los respaldos y otros recursos conservados pueden
-seguir generando cargos. Academy volvió a mostrar `Lab terminated` y `00:00`.
-
-La configuración de las seis raíces Azure se validó sintácticamente. Pasar
-`terraform validate` no prueba que los recursos puedan recrearse ni restaura
-datos. El estado de `azure-rebuild` incluye la política de retención, pero no
-el contenedor `tangama-postgres-backups`, que existe en Azure y requiere una
-importación revisada antes de aplicar cambios a esa raíz. Con acceso de lectura
-temporal se confirmó que existe `postgres/20261105-manual-validation.json`
-(86.362 bytes) y que la versión de la clave usada en la prueba histórica está
-habilitada. Después se retiró el permiso temporal. Esta comprobación solo leyó
-metadatos: no se comprobó de nuevo la integridad ni se restauró esa copia, y no
-se ha demostrado una copia automática o reciente recuperable.
-
-El comando de AWS no reconstruye por sí solo la VPN Tailscale completa y su
-borrado se detiene si detecta los routers o DNS privado no administrados. El
-comando de Azure cubre solamente `azure-rebuild`, no las raíces de red privada
-y routers. El enrolamiento de Tailscale y la restauración integral de los datos
-siguen siendo pasos independientes. No se ha validado un ciclo completo de
-destrucción y reconstrucción de ambas nubes; conserva los datos, el backend de
-estado, las claves y la configuración externa hasta comprobar su recuperación.
-
-## Registro histórico de recuperación — 05/11/2026 (no describe el corte actual)
-
-Las secciones anteriores al 05/11 son históricas. El piloto actual usa routers Tailscale propios en AWS y Azure; se verificaron un pedido privado y una conmutación del router AWS, sin afirmar BGP ni VPN Site-to-Site administrada. Hubo dos pruebas manuales distintas: una utilizó una clave y artefactos temporales; otra registró una copia cifrada en Blob con su clave protegida en Key Vault y una restauración aislada de 20 tablas. Esta evidencia histórica no confirma que la copia y la clave sigan disponibles hoy. El respaldo periódico y la recuperación multirregión siguen pendientes.
-
-CloudFormation y Terraform tienen validaciones de plantilla y pruebas automatizadas, pero no se ha completado un ciclo integral de destruir y reconstruir ambas nubes. No ejecutes el borrado general como prueba. El contenedor de copias de Azure requiere importación al estado Terraform y el Key Vault debe conservarse para descifrarlas; la política ya fue importada. Consulta los requisitos de [CloudFormation](cloudformation/README.md) y [Azure](environments/azure-rebuild/README.md).
-
-## Nueva comprobación — 04/11/2026
-
-**Actualización posterior:** HTTPS se habilitó mediante un change set sobre la plantilla desplegada. CloudFormation terminó `UPDATE_COMPLETE`, con dos destinos saludables; el portal y `/health` respondieron 200. Una venta y reposición sintéticas recorrieron AWS→Azure y devolvieron el stock de 10 a 10; la evidencia identifica ambos eventos. El acceso admin y la lectura WMS también respondieron 200 con cabeceras de navegador. Se creó la raíz `azure-private-network` y seis recursos de VNet/subredes; el plan posterior mostró `No changes` antes de añadir localmente el plan pendiente del Key Vault VPN. La Function Flex, gateway P2S, clientes OpenVPN y failover siguen sin desplegarse. La conectividad AWS–Azure comprobada usa el endpoint público existente. Las dos suscripciones SNS solicitadas figuran confirmadas; no se probó una alerta nueva.
-
-Se reconstruyó temporalmente la pila `tangamandapio-live-20261103` en la cuenta Academy `654654388734`. Se observó RDS PostgreSQL `available`, Multi-AZ y retención de siete días; el balanceador tenía listeners HTTP y HTTPS y el WAF estaba asociado. Tras finalizar la sesión Academy y volver a iniciarla, la primera captura mostró ASG sin instancias y errores `Client.InternalError`; no se identificó una causa específica. Después se recuperaron dos instancias saludables. No se completaron pruebas cloud autenticadas de todos los roles ni restauración PostgreSQL desde Azure Blob.
-
-La Function `tangama-wms-261030` respondió 200 en `/api/health` y después se detuvo de forma reversible. No había gateways de red Azure en el inventario consultado; el storage, las claves y la telemetría preexistentes se conservaron. El helper opcional `scripts/postgres_dr_pilot.py` cuenta con pruebas simuladas: no automatiza por sí solo el cifrado ni la transferencia a Blob, y no constituye evidencia de recuperación real.
-
-El medidor de Academy mostró US$18,60 antes y US$18,80 después de una interrupción de varias horas. Dado su retraso de 8–12 horas no se atribuye esa diferencia con precisión a esta ejecución. Al revisar el SNS recreado se encontraron cero suscripciones confirmadas y cero pendientes.
-
-En una etapa anterior del 04/11 el desmontaje finalizó con `PROJECT_STACKS_AND_RETAINED_DATA_PURGED`: se observó solo la pila base, se purgaron las copias de RDS y se conservaron cinco secretos; Academy figuró `Terminated`. **Después hubo una nueva reconstrucción temporal**, descrita en la fila superior y en la evidencia de puntos únicos de fallo. Por eso, ese registro de borrado no representa el último estado de AWS y no debe usarse como prueba de que los recursos siguen apagados.
-
-Tras la recuperación se enviaron 10.000 solicitudes a `/health` con 40 procesos; todas devolvieron 200 en unos 46 segundos, pero el ASG siguió en 2/2/5 y no escaló. Ese endpoint ejecuta `SELECT 1` en PostgreSQL, así que la prueba también cargó RDS; se detuvo la carga adicional hasta revisar métricas de base de datos. El escalado 2→3 sí ocurrió en el ensayo estático independiente del 03/11, documentado abajo.
-
-## Revalidación de servicios — 03/11/2026
-
-La reconstrucción temporal en AWS Academy, cuenta `654654388734`, levantó RDS privado y cifrado con Multi-AZ en `us-east-1a`/`us-east-1b` y siete días de retención. WAF respondió 200 al tráfico normal y 403 a las pruebas XSS y SQLi. El ASG escaló automáticamente de 2 a 3 y los tres destinos quedaron saludables; la carga sobre un archivo estático obtuvo 28.187 respuestas 200 y p95 de 189,55 ms. Esta prueba no establece la capacidad transaccional para 3.000 usuarios. [Resultado de escalado](../evidence/current/aws-scale-revalidation-20261103.json).
-
-El acceso administrador y las consultas de usuarios, pedidos e inventario devolvieron 200 desde EC2. El evento AWS→Azure terminó como `demo_fulfillment_completed` y la reposición compensatoria como `demo_restock_completed`, con saldo sintético de 24→23→24. El recorrido usó HTTPS público de Azure; no se validó una ruta privada. No hay VPN/BGP activa y la SCP rechazó el dry-run de `CreateCustomerGateway`.
-
-El desmontaje terminó con `PROJECT_STACKS_AND_RETAINED_DATA_PURGED`: en `us-east-1` solo quedó la pila base de Academy, sin EC2, ASG, ALB, RDS, NAT, EIP, WAF ni buckets del proyecto, ni snapshots manuales o backups automáticos observados. Se conservaron cinco secretos de Tangamandapio, con posibles cargos. Academy mostró **Lab terminated**, AWS **Terminated** y `00:00`.
-
-El medidor de Academy permaneció en US$18,60/50 al inicio y al cierre; como Academy documenta un retraso de 8–12 horas, no determina el costo real ni un promedio horario de esta sesión. Azure Cost Management mostró US$0,0023796 acumulados en el mes en ambas consultas, también sujeto a retraso. Los recursos Azure preexistentes se conservaron; su ciclo integral de borrado y reconstrucción no se probó. El estado de antes de reconstruir se conserva a continuación como referencia histórica.
-
-## Estado anterior — corte 30/10/2026
-
-Este es el estado que se pudo observar; no equivale a una aprobación para desplegar.
-
-| Plataforma | Recursos/funciones del proyecto | Estado y límite de verificación |
-|---|---|---|
-| AWS | Cuenta Academy `654654388734`, `us-east-1`. | El 30/10 confirmé en consola que solo queda la pila base del laboratorio; la pila principal y las pilas de grabaciones/router se eliminaron. RDS y el snapshot final se eliminaron; backups automáticos/retenidos de RDS: 0. EC2: no hay instancias activas, volúmenes, snapshots ni EIP. S3: 0 buckets; AWS Backup: 0 recovery points. Se conservan tres secretos del proyecto por decisión del usuario (aprox. US$1.20/mes más llamadas API). La próxima reconstrucción requiere base nueva: los datos transaccionales y grabaciones no se recuperan; el portal vuelve a sembrar maestros sintéticos. Azure no se modificó. |
-| Azure | Function Y1 y Function Flex privada; Storage, Key Vault, Application Insights, Log Analytics, alertas, VNet, Private Endpoint, DNS privado y VPN Gateway P2S. | El 29/10 Y1 health respondió 200, el inventario sintético y poison queue se consultaron y una recepción real de Queue/Function se procesó e identificó en App Insights. Flex da 403 desde Internet, esperado; Private Endpoint `Approved`. El gateway está `Succeeded`, pero la métrica P2S no tuvo puntos recientes. |
-| Interconexión | Azure OpenVPN Point-to-Site más router EC2 como alternativa de acceso al WMS Private Endpoint. | La métrica registró máximo 1 cliente P2S entre 17:50–18:10 UTC, no ahora; route table vacío y AWS no revalidable por permisos. No es AWS Site-to-Site administrada ni BGP; no hay recorrido extremo a extremo vigente demostrado. |
-| Recuperación | Storage de operaciones Azure con cifrado Blob y soft delete de 7 días; existe evidencia histórica de fixture S3 → Blob. | No se exportó PostgreSQL a Blob ni se restauró desde esa copia. El storage no tiene versionado de blobs y permite acceso de red pública; hace falta backup de DB, cifrado, retención aprobada y restore aislado. |
-
-El portal público respondió 200 en esta revisión. El usuario confirmó que la cuenta AWS Academy se cambió intencionalmente; el inventario del 27/10 pertenece a la cuenta anterior y no se debe reutilizar como estado de la cuenta nueva. En el reintento del 29/10 a las 21:27 UTC, STS autenticó y AWS denegó CloudFormation, EC2, Auto Scaling, ALB y RDS por `voc-cancel-cred`. Evidencia: [`AWS-LIVE-ACCESS-CHECK`](../evidence/current/aws/AWS-LIVE-ACCESS-CHECK-2026-10-29.json).
-
 ## Mapa de IaC
 
 ### AWS — CloudFormation
@@ -292,13 +179,3 @@ Un `.tfstate` no reemplaza el código ni un backup. El estado Terraform activo e
 - No guardes credenciales de AWS/Azure, llaves VPN, PFX, state ni planes en Git o en argumentos de consola.
 
 Guía operativa AWS: [`cloudformation/README.md`](cloudformation/README.md). Los scripts de costo y conectividad están en `scripts/`.
-
-## Revalidación de puntos únicos de fallo — 2026-11-04
-
-En la revisión histórica del 04/11 el inventario mostró WAF, RDS PostgreSQL Multi-AZ con 7 días de retención y ASG hasta 5; la captura inicial del ASG en cero fue seguida por una recuperación a dos instancias. La prueba posterior `/health` no escaló. En ese momento había un único NAT y no se observaba un túnel activo; el piloto Tailscale se probó posteriormente, como indica el corte del 05/11. RDS es `db.t3.micro`; `rebuild.sh` pasa 7 días por defecto, alineado con `aws-lab.yaml`; puede reducirse explícitamente con `DATABASE_BACKUP_RETENTION_DAYS`, pero eso cambia el margen de recuperación.
-
-`us-west-2` no tiene una pila del proyecto: se observó únicamente la VPC predeterminada. La recuperación regional queda como backup-and-restore/pilot light no desplegado ni probado. La alternativa OpenVPN propia no está activa: el template router histórico no configura ni inicia un túnel y no aporta failover. No presentar una respuesta HTTPS pública como prueba de la ruta privada. Los lanzadores actuales operan raíces independientes y no reconstruyen VPN ni región secundaria; no existe todavía un ciclo integral verificado de “levantar todo / borrar todo”.
-
-En una primera comprobación local, AWS CLI no encontró credenciales y Azure CLI no pudo leer su perfil por permisos. Una reconsulta posterior autenticó en AWS con el token temporal y en Azure con acceso autorizado; sus resultados están en el registro de puntos únicos de fallo. No se modificó la nube. El comando `down` no termina por sí solo el laboratorio AWS Academy.
-
-Para el cierre de esta sesión se autorizó perder los datos del portal y conservar los secretos de Secrets Manager/SSM y la pila Academy. El `destroy.sh` ahora exige la cuenta esperada y ejecuta detección de deriva cuando CloudFormation aún muestra `NOT_CHECKED`; si la deriva no termina en `IN_SYNC` o el inventario no coincide, se detiene antes de vaciar datos. El contador Academy consultado el 04/11 era US$19.90/US$50; es acumulado, no un cargo horario ni un valor que baje al borrar.

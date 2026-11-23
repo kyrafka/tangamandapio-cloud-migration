@@ -1,0 +1,46 @@
+{
+  "fecha_lima": "2026-11-22",
+  "regiones": {
+    "AWS": "us-east-2",
+    "Azure": "West US"
+  },
+  "portal": {
+    "health_http": 200,
+    "ready_http": 200,
+    "destinos_sanos": 2,
+    "asg_min": 2,
+    "asg_deseada": 2,
+    "asg_max": 5,
+    "cloudformation": "UPDATE_COMPLETE"
+  },
+  "rds": {
+    "estado": "available",
+    "multi_az": true,
+    "acceso_publico": false,
+    "cifrado": true,
+    "retencion_dias": 1
+  },
+  "wms": {
+    "estado_function": "Running",
+    "acceso_publico": "Disabled",
+    "private_endpoint": "Approved",
+    "ip": "10.20.1.4",
+    "http_desde_ec2": [
+      200,
+      200
+    ],
+    "comando_ssm": "7b094b49-1850-4515-996a-2b8cd83564e6"
+  },
+  "respaldo_automatico": {
+    "inicio_lima": "2026-11-22T03:00:57-05:00",
+    "estado": "Success"
+  },
+  "sns": {
+    "suscripciones_confirmadas": 2,
+    "dominios": [
+      "gmail.com",
+      "upeu.edu.pe"
+    ]
+  },
+  "alcance": "Consulta operativa de lectura. Los ensayos de pedido, carga, conmutación y restauración se citan por separado."
+}

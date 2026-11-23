@@ -18,10 +18,6 @@ Plantillas auxiliares:
 - `aws-azure-p2s-router.yaml`: infraestructura base para el router EC2 de la alternativa Azure P2S. Requiere configurar el perfil y certificados OpenVPN fuera del repositorio; crear la instancia no crea por sí solo un túnel funcional.
 - Los prototipos locales de IPsec/WireGuard no están validados de extremo a extremo y no forman parte de la IaC publicada.
 
-## Verificación histórica del 16/11
-
-La verificación viva del 16/11 consultó la cuenta `481056890449` con el perfil `main`. El stack principal figura `UPDATE_COMPLETE`; el ASG tiene dos instancias y dos destinos saludables, con capacidad min 2 / desired 2 / max 5. RDS está disponible, cifrada, Single-AZ y con un día de retención. El escalado 2→4→5 y el scale-in 5→4→3→2 fueron automáticos. La prueba de 300.000 solicitudes tuvo 1,47% de errores; el postcheck de 3.000 tuvo cero. CloudFormation drift quedó `IN_SYNC` con cero recursos desviados. Esto no demuestra ruta privada hacia Azure, recuperación regional ni restore de RDS desde Blob.
-
 ## Preparar un cambio
 
 1. Verifica la sesión, la cuenta y la región con credenciales temporales del laboratorio; nunca copies el token al repo ni a comandos guardados.
@@ -66,7 +62,7 @@ El script conserva parámetros existentes con `UsePreviousValue` y tiene preflig
 
 `rebuild.sh` requiere un nombre nuevo explícito y se detiene ante errores de autenticación, red o permisos. La plantilla usa `BootstrapMode` para crear primero la infraestructura sin instancias. Publica el paquete versionado antes de habilitar EC2. `package_portal_artifact.sh` crea el release localmente o lo publica en el bucket indicado.
 
-El valor predeterminado para un laboratorio sigue siendo Single-AZ y un día de retención. El RDS en producción ya usa Multi-AZ y conserva un día de retención. Usar `DATABASE_MULTI_AZ=true` en el próximo conjunto de cambios del stack de producción y revisar las acciones antes de ejecutarlo. La conversión directa quedó completa. El conjunto de cambios que intentó adoptar el estado también propuso reemplazos de red y cambios en SNS, por lo que la sincronización del parámetro del stack sigue pendiente.
+El valor predeterminado para un laboratorio sigue siendo Single-AZ y un día de retención. El RDS en producción ya usa Multi-AZ y conserva un día de retención. Usar `DATABASE_MULTI_AZ=true` en el próximo conjunto de cambios del stack de producción y revisar las acciones antes de ejecutarlo. Revisa que el conjunto de cambios conserve Multi-AZ y las suscripciones SNS requeridas.
 
 Para recuperar **Administración → Respaldos**, pasa
 `ADMIN_AZURE_BACKUP_ACCOUNT=sttangama261030r` y, si cambia el nombre por
@@ -75,10 +71,7 @@ permiso de lectura fuera de CloudFormation en el parámetro cifrado
 `/tangamandapio/dr/blob-read/portal`. La escritura diaria usa otra
 autorización y la [pila de respaldo programado](aws-azure-postgres-backup.yaml).
 
-La revisión activa registrada es `20261119-order-tracking-and-contingency`.
-El [registro operativo](../ESTADO_REAL_2026-11-19.md) enlaza el paquete y la
-prueba del pedido privado. La reconstrucción empaqueta el código versionado
-del repositorio y calcula el SHA-256 antes de habilitar EC2.
+El [índice de operación](../../Proyecto_Cloud_Tangamandapio/04_IaC/cloudformation/README.md) identifica el stack vigente y los pasos actuales. Empaqueta y verifica el SHA-256 del artefacto antes de habilitar EC2.
 
 La IaC no contiene datos ni todos los insumos de recuperación. Antes de reconstruir:
 
@@ -95,10 +88,10 @@ No se ha demostrado una reconstrucción integral desde una cuenta limpia. El fix
 `lifecycle.sh` comprueba la cuenta AWS esperada antes de delegar en `rebuild.sh` o `destroy.sh`. Ejecuta desde Git Bash/WSL con el perfil temporal ya cargado; no guarda credenciales. El aviso del comando aclara el límite: AWS en una región; no despliega la VPN, la recuperación regional, las raíces Azure ni finaliza el laboratorio Academy. No es un lanzador multinube integral. Ejemplos:
 
 ```bash
-EXPECTED_AWS_ACCOUNT_ID=123456789012 STACK_NAME=tangamandapio-live-20261104 \
+AWS_REGION=us-east-2 EXPECTED_AWS_ACCOUNT_ID=123456789012 STACK_NAME=tangamandapio-ensayo \
   AZURE_FULFILLMENT_URL=https://your-function.azurewebsites.net \
   AZURE_FUNCTION_KEY_SECRET=tangamandapio/azure/function-key \
-  CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000 \
+  CERTIFICATE_ARN=arn:aws:acm:us-east-2:123456789012:certificate/00000000-0000-0000-0000-000000000000 \
   PORTAL_DOMAIN_NAME=portal.example.com \
   ALARM_NOTIFICATION_EMAIL_PRIMARY=operador@example.com \
   ALARM_NOTIFICATION_EMAIL_ALTERNATE=alterno@example.com \
@@ -106,8 +99,8 @@ EXPECTED_AWS_ACCOUNT_ID=123456789012 STACK_NAME=tangamandapio-live-20261104 \
 ```
 
 ```bash
-EXPECTED_AWS_ACCOUNT_ID=123456789012 STACK_NAME=tangamandapio-live-20261104 \
-  CONFIRM_STACK_NAME=tangamandapio-live-20261104 CONFIRM_DELETE_DATA=true PURGE_PROJECT_RESOURCES=true \
+AWS_REGION=us-east-2 EXPECTED_AWS_ACCOUNT_ID=123456789012 STACK_NAME=tangamandapio-ensayo \
+  CONFIRM_STACK_NAME=tangamandapio-ensayo CONFIRM_DELETE_DATA=true PURGE_PROJECT_RESOURCES=true \
   bash iac/cloudformation/lifecycle.sh down
 ```
 
@@ -119,15 +112,13 @@ El borrado necesita Python 3 con PyYAML para comprobar las políticas del templa
 
 `destroy.sh` bloquea por defecto, exige `EXPECTED_AWS_ACCOUNT_ID`, `STACK_NAME` explícito y confirmaciones coincidentes. Verifica que la base tenga políticas de snapshot y los secretos estén retenidos durante el borrado del stack. Si la deriva aún está `NOT_CHECKED`, inicia una detección y espera el resultado; cualquier estado distinto a `IN_SYNC` detiene el proceso antes de vaciar buckets. Luego purga snapshots y backups; las credenciales de Secrets Manager/SSM se conservan salvo que `PURGE_PROJECT_SECRETS=true` y una confirmación independiente identifique exactamente el stack.
 
-En la revisión histórica del 04/11/2026 el inventario inicial mostró el stack `tangamandapio-live-20261104` con 49 recursos, grabaciones activas, ASG en 0, RDS disponible/Multi-AZ y WAF asociado. Después se recuperaron dos instancias; una prueba de 10.000 solicitudes a `/health` obtuvo 200 pero no escaló y sí consultó RDS. En ese momento no se encontró un túnel privado; el piloto Tailscale se verificó posteriormente. `us-west-2` no tenía una pila Tangamandapio. El registro de borrado previo fue seguido por esta nueva reconstrucción, así que no prueba apagado actual. No existe un ciclo integral probado que levante y elimine también VPN y recuperación regional.
-
 No destruyas una cuenta si el snapshot, artefacto, DNS, secretos y procedimiento de reconstrucción no están comprobados. El token temporal de AWS Academy no es un respaldo y puede expirar o perder permisos.
 
 ## Dominio y HTTPS
 
-El dominio `tangamandapio.kendellnm.me` respondió HTTPS 200 en `/` y `/health` el 29/10/2026. El certificado y la respuesta pública funcionaron; por la denegación de inventario AWS no se pudo comprobar desde AWS el listener, los destinos ni el certificado ACM. No cambies Cloudflare mientras no haya permiso de solo lectura. El DNS proxied no debe apuntar a una IP fija del borde. Los CNAME de validación ACM permanecen DNS-only.
+El entorno operativo usa HTTPS en Ohio. Los CNAME de validación ACM permanecen DNS-only.
 
-Para otro hostname, solicita en ACM `us-east-1` un certificado para el nombre exacto, publica el CNAME de validación DNS-only, espera `ISSUED`, genera y revisa un change set que conecte el listener HTTPS y solo entonces configura el CNAME del subdominio hacia el DNS del ALB. Conserva intactos nombres que ya use otro proyecto.
+Para otro hostname, solicita en ACM us-east-2 un certificado para el nombre exacto, publica el CNAME de validación DNS-only, espera `ISSUED`, genera y revisa un change set que conecte el listener HTTPS y solo entonces configura el CNAME del subdominio hacia el DNS del ALB. Conserva intactos nombres que ya use otro proyecto.
 
 ## Validación local de plantillas
 
