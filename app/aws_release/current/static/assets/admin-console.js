@@ -467,12 +467,13 @@ const maxRequestsPerRun = requestLoad.maxRequestsPerRun ?? maxRequestsPerSecond 
       startVisibleRefresh((signal) => state.section === "scaling" && loadScaling(signal), 20000);
       $("#user-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const button = event.currentTarget.querySelector("button[type=submit]");
-        const form = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const button = form.querySelector("button[type=submit]");
+        const values = new FormData(form);
         setBusy(button, true, "Creando…");
         try {
-          await api("/api/admin/users", { method: "POST", body: JSON.stringify({ username: form.get("username"), password: form.get("password"), role: form.get("role"), company_id: Number(form.get("company_id")) }) });
-          event.currentTarget.reset();
+          await api("/api/admin/users", { method: "POST", body: JSON.stringify({ username: values.get("username"), password: values.get("password"), role: values.get("role"), company_id: Number(values.get("company_id")) }) });
+          form.reset();
           notice("Cuenta creada. El usuario deberá cambiar la contraseña temporal al ingresar.");
           await loadUsers();
         } catch (error) { notice(error.message, "error"); }
@@ -480,12 +481,13 @@ const maxRequestsPerRun = requestLoad.maxRequestsPerRun ?? maxRequestsPerSecond 
       });
       $("#company-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const button = event.currentTarget.querySelector("button[type=submit]");
-        const form = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const button = form.querySelector("button[type=submit]");
+        const values = new FormData(form);
         setBusy(button, true, "Creando…");
         try {
-          await api("/api/admin/companies", { method: "POST", body: JSON.stringify({ name: form.get("name"), slug: form.get("slug") }) });
-          event.currentTarget.reset();
+          await api("/api/admin/companies", { method: "POST", body: JSON.stringify({ name: values.get("name"), slug: values.get("slug") }) });
+          form.reset();
           notice("Empresa creada y lista para asignar a sus cuentas.");
           state.companies = await api("/api/admin/companies");
           renderCompanies();
@@ -495,12 +497,13 @@ const maxRequestsPerRun = requestLoad.maxRequestsPerRun ?? maxRequestsPerSecond 
       });
       $("#alert-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const button = event.currentTarget.querySelector("button[type=submit]");
-        const email = new FormData(event.currentTarget).get("email");
+        const form = event.currentTarget;
+        const button = form.querySelector("button[type=submit]");
+        const email = new FormData(form).get("email");
         setBusy(button, true, "Enviando…");
         try {
           const result = await api("/api/admin/alarm-subscriptions", { method: "POST", body: JSON.stringify({ email }) });
-          event.currentTarget.reset();
+          form.reset();
           notice(result.already_exists ? "Ese correo ya está suscrito o esperando confirmación." : "Se envió el correo de confirmación. El destinatario debe aceptarlo antes de recibir avisos.");
           await loadAlerts();
         } catch (error) { notice(error.message, "error"); }

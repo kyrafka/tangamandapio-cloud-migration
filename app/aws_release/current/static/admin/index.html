@@ -92,7 +92,7 @@
                   <p id="companies-empty" class="admin-empty" hidden>No hay empresas registradas.</p>
                 </section>
                 <section class="admin-card admin-form-card"><p class="eyebrow">Nuevo tenant</p><h3>Registrar empresa</h3>
-                  <form id="company-form"><label>Razón social<input name="name" type="text" maxlength="160" required /></label><label>Identificador técnico<input name="slug" type="text" pattern="[a-z0-9-]+" maxlength="80" placeholder="distribuidor-norte" required /><small>Usa minúsculas, números y guiones.</small></label><button class="admin-button primary" type="submit">Crear empresa</button></form>
+                  <form id="company-form"><label>Razón social<input name="name" type="text" maxlength="160" required /></label><label>Identificador técnico<input name="slug" type="text" pattern="(?:[a-z0-9]|-)+" maxlength="80" placeholder="distribuidor-norte" required /><small>Usa minúsculas, números y guiones.</small></label><button class="admin-button primary" type="submit">Crear empresa</button></form>
                 </section>
               </div>
             </section>

@@ -109,6 +109,9 @@ jobs:
           pnpm run test:access
           pnpm run test:csv
 
+      - name: Test portal form validation and submission
+        run: node --test ../aws_release/current/tests/test_portal_forms.mjs
+
       - name: Build without replacing Flask-served assets
         run: pnpm run build:check
 
