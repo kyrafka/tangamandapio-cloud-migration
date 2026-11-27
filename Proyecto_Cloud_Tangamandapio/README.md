@@ -2,6 +2,8 @@
 
 Proyecto integrador de Cloud Computing. José Dario Zúñiga Medina · Octavo ciclo · Docente Fernando Manuel Asin Gomez.
 
+El entorno de demostración se apagó al concluir la evaluación. Los registros de consola, diagramas y mediciones documentan el despliegue durante las pruebas.
+
 **Empieza por los [diagramas](02_Arquitectura/README.md), el [direccionamiento IP](03_Redes/README.md) y la [guía de IaC](04_IaC/README.md).**
 
 | Carpeta | Contenido |

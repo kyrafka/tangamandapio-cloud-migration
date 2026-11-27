@@ -1,8 +1,10 @@
 # Tangamandapio · ERP B2B en AWS y Azure
 
-Proyecto de portafolio de **José Dario Zúñiga Medina**. El ERP de pedidos se ejecuta en AWS y se integra con un WMS privado en Azure. El proyecto incluye el código de la aplicación, infraestructura como código y pruebas de permisos, escalado y recuperación.
+Proyecto de portafolio de **José Dario Zúñiga Medina**. El ERP de pedidos se desplegó en AWS y se integró con un WMS privado en Azure. El proyecto incluye el código de la aplicación, infraestructura como código y pruebas de permisos, escalado y recuperación.
 
-[Portal de demostración](https://tangamandapio.kendellnm.me/) · [Arquitectura](Proyecto_Cloud_Tangamandapio/02_Arquitectura/README.md) · [Pruebas y evidencias](Proyecto_Cloud_Tangamandapio/06_Pruebas/README.md) · [Entrega académica](Proyecto_Cloud_Tangamandapio/README.md)
+[Arquitectura](Proyecto_Cloud_Tangamandapio/02_Arquitectura/README.md) · [Pruebas y evidencias](Proyecto_Cloud_Tangamandapio/06_Pruebas/README.md) · [Entrega académica](Proyecto_Cloud_Tangamandapio/README.md)
+
+**Demostración finalizada.** El entorno académico se apagó al concluir la evaluación. Los resultados corresponden al entorno desplegado durante las pruebas.
 
 [![Arquitectura híbrida de Tangamandapio en AWS y Azure](Proyecto_Cloud_Tangamandapio/02_Arquitectura/Arquitectura_Hibrida.png)](Proyecto_Cloud_Tangamandapio/02_Arquitectura/README.md)
 
@@ -33,4 +35,4 @@ Las mediciones aplican a los escenarios de cada [registro de prueba](Proyecto_Cl
 | [`tests/`](tests/README.md#puerta-local-sin-costo-cloud) | Pruebas locales y procedimientos de validación. |
 | [`Proyecto_Cloud_Tangamandapio/`](Proyecto_Cloud_Tangamandapio/README.md) | Diagramas editables, direccionamiento, evidencia y [cortes de costos](Proyecto_Cloud_Tangamandapio/09_Costos/README.md). |
 
-La demo utiliza datos sintéticos. El portal requiere una cuenta autorizada para consultar los módulos internos.
+Las pruebas se realizaron con datos sintéticos.
