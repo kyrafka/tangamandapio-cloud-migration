@@ -1,5 +1,16 @@
 # Costos de la infraestructura
 
+## Corte del 26/11/2026
+
+| Presupuesto | Período | Gasto registrado (USD) | Límite (USD) | Margen (USD) |
+| --- | --- | ---: | ---: | ---: |
+| AWS Budgets | 16/11–07/12 | 44,34 | 200,00 | 155,66 |
+| Azure Budgets | Noviembre | 15,36 | 25,00 | 9,64 |
+
+AWS Cost Explorer registró USD 44,34 de consumo en noviembre y USD 0,00 netos tras los créditos aplicados. El margen de cada presupuesto indica cuánto falta para llegar al límite configurado. El saldo de créditos se consulta por separado.
+
+## Corte y proyección de la entrega
+
 Consumo de noviembre al 22/11/2026 en USD.
 
 | Nube | Consumo observado | Presupuesto vigente | Uso informado por presupuesto |
